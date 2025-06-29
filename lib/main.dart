@@ -1,0 +1,21 @@
+import 'package:fodamarket/views/onbording/OnBording.dart';
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+
+void main() {
+  runApp(FodaMarket());
+}
+
+class FodaMarket extends StatelessWidget {
+  const FodaMarket({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return GetMaterialApp(
+      locale: Locale('ar'),
+      theme: ThemeData(fontFamily: 'Gilroy'),
+      debugShowCheckedModeBanner: false,
+      home: OnBording(),
+    );
+  }
+}
