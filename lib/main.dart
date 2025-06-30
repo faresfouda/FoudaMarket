@@ -1,3 +1,4 @@
+import 'package:fodamarket/views/home/main_screen.dart';
 import 'package:fodamarket/views/onbording/OnBording.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -15,7 +16,7 @@ class FodaMarket extends StatelessWidget {
       locale: Locale('ar'),
       theme: ThemeData(fontFamily: 'Gilroy'),
       debugShowCheckedModeBanner: false,
-      home: OnBording(),
+      home: MainScreen(),
     );
   }
 }
