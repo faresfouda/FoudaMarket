@@ -343,25 +343,42 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     );
   }
   Widget _buildReviewTile(String user, String comment, double rating) {
-    return Column(
+    return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
+      textDirection: TextDirection.rtl,
       children: [
-        Text(
-          user,
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        CircleAvatar(
+          radius: 22,
+          backgroundColor: Colors.grey[300],
+          child: Text(
+            user.isNotEmpty ? user[0] : '?',
+            style: const TextStyle(fontSize: 20, color: Colors.black, fontWeight: FontWeight.bold),
+          ),
         ),
-        const SizedBox(height: 4),
-        RatingBarIndicator(
-          rating: rating,
-          itemBuilder: (context, _) => const Icon(Icons.star, color: Colors.amber),
-          itemCount: 5,
-          itemSize: 18.0,
-          direction: Axis.horizontal,
-        ),
-        const SizedBox(height: 4),
-        Text(
-          comment,
-          style: const TextStyle(fontSize: 14),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                user,
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+              const SizedBox(height: 4),
+              RatingBarIndicator(
+                rating: rating,
+                itemBuilder: (context, _) => const Icon(Icons.star, color: Colors.amber),
+                itemCount: 5,
+                itemSize: 18.0,
+                direction: Axis.horizontal,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                comment,
+                style: const TextStyle(fontSize: 14),
+              ),
+            ],
+          ),
         ),
       ],
     );
@@ -390,6 +407,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              textDirection: TextDirection.rtl,
               children: [
                 Text(
                   title,
@@ -400,6 +418,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   ),
                 ),
                 Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     if (!isExpanded && trailingText != null)
                       Text(

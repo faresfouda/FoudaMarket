@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:fodamarket/theme/appcolors.dart';
+import 'package:fodamarket/views/home/search_screen.dart';
 
 class SearchButton extends StatelessWidget {
   const SearchButton({super.key});
@@ -9,6 +10,7 @@ class SearchButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
+        Navigator.push(context, MaterialPageRoute(builder: (context) => SearchScreen()));
       },
       child: Container(
         padding:

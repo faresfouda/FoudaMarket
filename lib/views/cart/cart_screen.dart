@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:fodamarket/components/Button.dart';
 import 'package:fodamarket/theme/appcolors.dart';
+import 'package:fodamarket/views/cart/order_accepted_screen.dart';
 import 'package:fodamarket/views/cart/widgets/cart_product.dart';
+import 'package:fodamarket/views/product/product_screen.dart';
 
 class CartScreen extends StatelessWidget {
   const CartScreen({super.key});
@@ -10,24 +12,63 @@ class CartScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Cart'),
+        title: const Text('عربة التسوق'),
         centerTitle: true,
       ),
       body: ListView.builder(
-        itemCount: 10, // Example item count
+        itemCount: 3, // Example item count
         itemBuilder: (context, index) {
-          return ProductQuantityControl(
-            imageUrl: 'https://i.pinimg.com/736x/14/fb/f5/14fbf589a2f366f1c3c38a217bf04876.jpg',
-            productName: 'Organic Bananas',
-            quantityInfo: '7pcs, Price',
-            price: '\$4.99',
+          // Arabic mock data
+          final products = [
+            {
+              'imageUrl': 'https://i.pinimg.com/736x/14/fb/f5/14fbf589a2f366f1c3c38a217bf04876.jpg',
+              'productName': 'موز عضوي',
+              'quantityInfo': '٧ قطع، السعر',
+              'price': '٤٩ ج.م',
+            },
+            {
+              'imageUrl': 'https://i.pinimg.com/736x/7a/aa/a5/7aaaa545e00e8a434850e80b8910dd94.jpg',
+              'productName': 'تفاح أحمر',
+              'quantityInfo': '٢ كجم',
+              'price': '٦٠ ج.م',
+            },
+            {
+              'imageUrl': 'https://i.pinimg.com/736x/7a/aa/a5/7aaaa545e00e8a434850e80b8910dd94.jpg',
+              'productName': 'برتقال عصير',
+              'quantityInfo': '١.٥ كجم',
+              'price': '٣٥ ج.م',
+            },
+          ];
+          final product = products[index];
+          return InkWell(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ProductDetailScreen(
+                    imageUrl: product['imageUrl']!,
+                    productName: product['productName']!,
+                    quantityInfo: product['quantityInfo']!,
+                    price: product['price']!,
+                  ),
+                ),
+              );
+            },
+            child: ProductQuantityControl(
+              imageUrl: product['imageUrl']!,
+              productName: product['productName']!,
+              quantityInfo: product['quantityInfo']!,
+              price: product['price']!,
+            ),
           );
         },
       ),
       bottomNavigationBar: Padding(
         padding: const EdgeInsets.all(8.0),
         child: Button(
-          onPressed: (){},
+          onPressed: (){
+            Navigator.push(context, MaterialPageRoute(builder: (context) => OrderAcceptedScreen()));
+          },
           buttonContent: Row(
             children: [
               const Text(
@@ -39,7 +80,7 @@ class CartScreen extends StatelessWidget {
               ),
               const Spacer(),
               const Text(
-                'LE 100.00',
+                '١٤٤ ج.م',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 18,
