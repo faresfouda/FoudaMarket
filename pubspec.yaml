@@ -68,7 +68,6 @@ flutter:
   assets:
     - assets/getstarted/
     - assets/login/
-    - assets/flags/
     - assets/socialmedia/
     - assets/selectLocation/
     - assets/marketlogo/

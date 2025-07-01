@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:fodamarket/components/item_container.dart';
-import 'package:fodamarket/theme/appcolors.dart';
 import 'package:fodamarket/views/home/search_filter_sheet.dart';
 
 class SearchScreen extends StatefulWidget {

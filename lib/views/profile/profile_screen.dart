@@ -7,7 +7,6 @@ import 'package:fodamarket/views/profile/promo_code_screen.dart';
 import 'package:fodamarket/views/profile/notifications_screen.dart';
 import 'package:fodamarket/views/profile/help_screen.dart';
 import 'package:fodamarket/views/profile/about_screen.dart';
-import 'package:fodamarket/views/profile/edit_profile_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({Key? key}) : super(key: key);

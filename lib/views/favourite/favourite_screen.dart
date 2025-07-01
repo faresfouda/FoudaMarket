@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:fodamarket/views/cart/widgets/cart_product.dart';
 import 'package:fodamarket/views/favourite/widgets/product_favourite.dart';
 
 class FavouriteScreen extends StatelessWidget {

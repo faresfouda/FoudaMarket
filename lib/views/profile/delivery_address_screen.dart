@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:fodamarket/theme/appcolors.dart';
 import 'package:fodamarket/views/profile/edit_address_screen.dart';
 
 class DeliveryAddressScreen extends StatelessWidget {

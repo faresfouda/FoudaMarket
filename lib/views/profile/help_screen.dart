@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class HelpScreen extends StatefulWidget {
-  const HelpScreen({Key? key}) : super(key: key);
+  const HelpScreen({super.key});
 
   @override
   State<HelpScreen> createState() => _HelpScreenState();
@@ -38,21 +38,21 @@ class _HelpScreenState extends State<HelpScreen> with SingleTickerProviderStateM
     super.dispose();
   }
 
-  void _sendMessage() {
-    if (_chatController.text.trim().isNotEmpty) {
-      setState(() {
-        chatMessages.add({'from': 'user', 'msg': _chatController.text.trim()});
-        _chatController.clear();
-      });
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
-      });
-    }
-  }
+  // void _sendMessage() {
+  //   if (_chatController.text.trim().isNotEmpty) {
+  //     setState(() {
+  //       chatMessages.add({'from': 'user', 'msg': _chatController.text.trim()});
+  //       _chatController.clear();
+  //     });
+  //     WidgetsBinding.instance.addPostFrameCallback((_) {
+  //       _scrollController.animateTo(
+  //         _scrollController.position.maxScrollExtent,
+  //         duration: const Duration(milliseconds: 300),
+  //         curve: Curves.easeOut,
+  //       );
+  //     });
+  //   }
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -153,7 +153,7 @@ class _HelpScreenState extends State<HelpScreen> with SingleTickerProviderStateM
                                             ),
                                             boxShadow: [
                                               BoxShadow(
-                                                color: Colors.black.withOpacity(0.04),
+                                                color: Colors.black,
                                                 blurRadius: 4,
                                                 offset: const Offset(0, 2),
                                               ),

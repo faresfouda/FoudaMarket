@@ -1,5 +1,4 @@
 import 'package:fodamarket/views/home/main_screen.dart';
-import 'package:fodamarket/views/onbording/OnBording.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
