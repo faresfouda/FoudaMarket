@@ -16,15 +16,14 @@ class FavouriteScreen extends StatelessWidget {
         itemCount: 10, // Example item count
         itemBuilder: (context, index) {
           return FavoriteItemCard(
-            imageUrl: 'https://i.pinimg.com/736x/14/fb/f5/14fbf589a2f366f1c3c38a217bf04876.jpg',
-            productName: 'Apple',
-            quantityInfo: '1kg',
-            price: '\$4.99',
+            imageUrl: 'https://images.unsplash.com/photo-1567306226416-28f0efdc88ce?auto=format&fit=crop&w=400&q=80',
+            productName: 'تفاح أحمر',
+            quantityInfo: '٢ كجم',
+            price: '٦٠ ج.م',
             onRemove: () {
               // remove from favorites logic
             },
-          )
-          ;
+          );
         },
       ),
     );

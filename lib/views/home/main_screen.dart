@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../cart/cart_screen.dart';
 import '../categories/categories_screen.dart';
 import '../favourite/favourite_screen.dart';
+import '../profile/profile_screen.dart';
 import 'home_screen.dart';
 import 'widgets/my_navigationbar.dart';
 
@@ -20,9 +21,7 @@ class _HomeScreenState extends State<MainScreen> {
     const CategoriesScreen(),
     const CartScreen(),
     const FavouriteScreen(),
-    const Center(
-      child: Text('Profile Screen'),
-    ),
+    const ProfileScreen(),
   ];
   @override
   Widget build(BuildContext context) {

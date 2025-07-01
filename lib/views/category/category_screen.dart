@@ -14,27 +14,27 @@ class CategoryScreen extends StatelessWidget {
         title: Text(categoryName),
         centerTitle: true,
       ),
-        body: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: GridView.builder(
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              crossAxisSpacing: 16.0,
-              mainAxisSpacing: 16.0,
-              childAspectRatio: 0.75,
-            ),
-            itemCount: 10,
-            itemBuilder: (context, index) {
-              return ProductCard(
-                imageUrl: 'https://i.pinimg.com/736x/14/fb/f5/14fbf589a2f366f1c3c38a217bf04876.jpg',
-                productName: 'Organic Bananas',
-                quantityInfo: '7pcs, Priceg', // consider correcting to '7pcs, Price'
-                price: '\$4.99',
-                onAddPressed: () => print('Organic Bananas added to cart!'),
-              );
-            },
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: GridView.builder(
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            crossAxisSpacing: 16.0,
+            mainAxisSpacing: 16.0,
+            childAspectRatio: 0.75,
           ),
+          itemCount: 10,
+          itemBuilder: (context, index) {
+            return ProductCard(
+              imageUrl: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=400&q=80',
+              productName: 'خيار طازج',
+              quantityInfo: '١ كجم',
+              price: '٢٠ ج.م',
+              onAddPressed: () {},
+            );
+          },
         ),
+      ),
     );
   }
 }

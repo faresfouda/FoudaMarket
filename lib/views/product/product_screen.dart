@@ -3,6 +3,7 @@ import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:fodamarket/components/Button.dart' show Button;
 import 'package:fodamarket/theme/appcolors.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
+import 'package:fodamarket/components/item_container.dart';
 
 class ProductDetailScreen extends StatefulWidget {
   final String imageUrl;
@@ -27,17 +28,34 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   bool _isNutritionsExpanded = true; // State for Nutritions expansion
   bool _isReviewExpanded = false; // State for Review expansion
   final PageController _pageController = PageController();
-  final List<String> banners = [
-    'https://i.pinimg.com/736x/14/fb/f5/14fbf589a2f366f1c3c38a217bf04876.jpg',
-    'https://i.pinimg.com/736x/14/fb/f5/14fbf589a2f366f1c3c38a217bf04876.jpg',
-    'https://i.pinimg.com/736x/14/fb/f5/14fbf589a2f366f1c3c38a217bf04876.jpg',
-  ]; // Example image URLs for the product images
+  late final List<String> banners;
+
+  final List<Map<String, String>> otherProducts = const [
+    {
+      'image': 'https://i.pinimg.com/736x/7a/aa/a5/7aaaa545e00e8a434850e80b8910dd94.jpg',
+      'name': 'تفاح أحمر',
+      'quantity': '٢ كجم',
+      'price': '٦٠ ج.م',
+    },
+    {
+      'image': 'https://i.pinimg.com/736x/7a/aa/a5/7aaaa545e00e8a434850e80b8910dd94.jpg',
+      'name': 'برتقال عصير',
+      'quantity': '١.٥ كجم',
+      'price': '٣٥ ج.م',
+    },
+  ];
+
   List<bool> isSelected = [true, false];
   List<String> quantityOptions = ['100 جرام', '250 جرام'];
   String selectedQuantity = '100 جرام';
 
-
-
+  @override
+  void initState() {
+    super.initState();
+    banners = [widget.imageUrl];
+    banners.add('https://i.pinimg.com/736x/7a/aa/a5/7aaaa545e00e8a434850e80b8910dd94.jpg');
+    banners.add('https://i.pinimg.com/736x/7a/aa/a5/7aaaa545e00e8a434850e80b8910dd94.jpg');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -66,49 +84,50 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                const SizedBox(height: 32.0),
                 // Product Image Section
-        SizedBox(
-        height: 300,
-        width: double.infinity,
-        child: Stack(
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(0),
-              child: PageView.builder(
-                controller: _pageController,
-                itemCount: banners.length,
-                itemBuilder: (context, index) {
-                  return Image.network(
-                    banners[index],
-                    fit: BoxFit.contain,
-                    errorBuilder: (context, error, stackTrace) =>
-                    const Center(child: Icon(Icons.error)),
-                  );
-                },
-              ),
-            ),
-            Positioned(
-              bottom: 12,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: SmoothPageIndicator(
-                  controller: _pageController,
-                  count: banners.length,
-                  effect: ExpandingDotsEffect(
-                    dotHeight: 8,
-                    dotWidth: 8,
-                    spacing: 10,
-                    expansionFactor: 4,
-                    activeDotColor: AppColors.orangeColor,
-                    dotColor: AppColors.lightGrayColor,
+                SizedBox(
+                  height: 300,
+                  width: double.infinity,
+                  child: Stack(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(0),
+                        child: PageView.builder(
+                          controller: _pageController,
+                          itemCount: banners.length,
+                          itemBuilder: (context, index) {
+                            return Image.network(
+                              banners[index],
+                              fit: BoxFit.contain,
+                              errorBuilder: (context, error, stackTrace) =>
+                              const Center(child: Icon(Icons.error)),
+                            );
+                          },
+                        ),
+                      ),
+                      Positioned(
+                        bottom: 12,
+                        left: 0,
+                        right: 0,
+                        child: Center(
+                          child: SmoothPageIndicator(
+                            controller: _pageController,
+                            count: banners.length,
+                            effect: ExpandingDotsEffect(
+                              dotHeight: 8,
+                              dotWidth: 8,
+                              spacing: 10,
+                              expansionFactor: 4,
+                              activeDotColor: AppColors.orangeColor,
+                              dotColor: AppColors.lightGrayColor,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ),
-            ),
-          ],
-        ),
-      ),
                 Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Column(
@@ -200,7 +219,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       ),
                       const SizedBox(height: 24.0),
 
-
+                      const SizedBox(height: 32.0),
 
                       // Nutritions Section
                       _buildExpandableSection(
@@ -254,6 +273,34 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                           itemCount: 5,
                           itemSize: 20.0,
                           direction: Axis.horizontal,
+                        ),
+                      ),
+                      const SizedBox(height: 16.0),
+                      Text(
+                        'منتجات مشابهة',
+                        style: TextStyle(
+                          fontSize: 20.0,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                        ),
+                      ),
+                      const SizedBox(height: 12.0),
+                      SizedBox(
+                        height: 240,
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: otherProducts.length,
+                          separatorBuilder: (context, index) => SizedBox(width: 20),
+                          itemBuilder: (context, index) {
+                            final product = otherProducts[index];
+                            return ProductCard(
+                              imageUrl: product['image'] ?? '',
+                              productName: product['name'] ?? 'غير متوفر',
+                              quantityInfo: product['quantity'] ?? 'غير متوفر',
+                              price: product['price'] ?? 'غير متوفر',
+                              onAddPressed: () {},
+                            );
+                          },
                         ),
                       ),
 
