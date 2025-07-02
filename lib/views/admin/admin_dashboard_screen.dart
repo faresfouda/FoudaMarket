@@ -1,5 +1,10 @@
+// NOTE: This screen includes الرئيسية (dashboard) in the navigation bar.
+// For data entry, see DataEntryHomeScreen, which excludes الرئيسية from the navigation bar.
 import 'package:flutter/material.dart';
+import 'package:fodamarket/views/admin/admin_orders_screen.dart';
 import 'package:fodamarket/views/admin/admin_products_categories_screen.dart';
+import 'package:fodamarket/views/admin/admin_profile_screen.dart';
+import 'package:fodamarket/views/admin/admin_reviews_screen.dart';
 
 class AdminDashboardMain extends StatefulWidget {
   @override
@@ -11,9 +16,9 @@ class _AdminDashboardMainState extends State<AdminDashboardMain> {
   final List<Widget> _screens = [
     AdminDashboardSection(),
     AdminProductsCategoriesScreen(),
-    AdminOrdersSection(),
-    AdminReviewSection(),
-    AdminSettingsSection(),
+    AdminOrdersScreen(),
+    AdminReviewsScreen(),
+    AdminProfileScreen(),
   ];
 
   static const List<String> _titles = [
@@ -27,29 +32,33 @@ class _AdminDashboardMainState extends State<AdminDashboardMain> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: _selectedIndex == 1
-          ? null
-          : AppBar(
+      appBar:  AppBar(
               backgroundColor: Colors.white,
               elevation: 0,
-              title: Text(_titles[_selectedIndex], style: TextStyle(color: Colors.black)),
-              actions: _selectedIndex == 0
-                  ? [
-                      IconButton(
-                        icon: Icon(Icons.notifications, color: Colors.orange),
-                        onPressed: () {},
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                        child: CircleAvatar(
-                          backgroundImage: AssetImage('assets/home/logo.jpg'),
-                          radius: 18,
-                        ),
-                      ),
-                    ]
-                  : null,
-              iconTheme: IconThemeData(color: Colors.black),
-            ),
+              title: Text(
+                _titles[_selectedIndex],
+                style: const TextStyle(
+                  color: Colors.black,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 22,
+                ),
+              ),
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.notifications, color: Colors.orange),
+                  onPressed: () {},
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                  child: const CircleAvatar(
+                    backgroundImage: AssetImage('assets/home/logo.jpg'),
+                    radius: 18,
+                  ),
+                ),
+              ],
+              iconTheme: const IconThemeData(color: Colors.black),
+            )
+          ,
       body: _screens[_selectedIndex],
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
@@ -61,7 +70,7 @@ class _AdminDashboardMainState extends State<AdminDashboardMain> {
             _selectedIndex = index;
           });
         },
-        items: [
+        items: const [
           BottomNavigationBarItem(icon: Icon(Icons.dashboard), label: 'الرئيسية'),
           BottomNavigationBarItem(icon: Icon(Icons.inventory), label: 'المنتجات'),
           BottomNavigationBarItem(icon: Icon(Icons.shopping_cart), label: 'الطلبات'),
