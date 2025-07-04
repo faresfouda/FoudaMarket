@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../theme/appcolors.dart';
+import 'update_password_screen.dart';
 
 class AdminProfileScreen extends StatelessWidget {
   const AdminProfileScreen({Key? key}) : super(key: key);
@@ -66,12 +67,12 @@ class AdminProfileScreen extends StatelessWidget {
                   _ProfileListTile(
                     title: 'تغيير كلمة المرور',
                     icon: Icons.lock_outline,
-                    onTap: () {},
-                  ),
-                  _ProfileListTile(
-                    title: 'الإشعارات',
-                    icon: Icons.notifications_none,
-                    onTap: () {},
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const UpdatePasswordScreen()),
+                      );
+                    },
                   ),
                   _ProfileListTile(
                     title: 'حول',

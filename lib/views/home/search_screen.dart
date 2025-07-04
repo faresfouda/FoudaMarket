@@ -4,7 +4,8 @@ import 'package:fodamarket/components/item_container.dart';
 import 'package:fodamarket/views/home/search_filter_sheet.dart';
 
 class SearchScreen extends StatefulWidget {
-  const SearchScreen({super.key});
+  final bool openFilterOnStart;
+  const SearchScreen({super.key, this.openFilterOnStart = false});
 
   @override
   State<SearchScreen> createState() => _SearchScreenState();
@@ -54,6 +55,30 @@ class _SearchScreenState extends State<SearchScreen> {
       'price': '100L.E',
     },
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.openFilterOnStart) {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        await showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          backgroundColor: Colors.transparent,
+          builder: (context) => SearchFilterSheet(
+            selectedCategory: _selectedCategory,
+            selectedBrand: _selectedBrand,
+            onApply: (category, brand) {
+              setState(() {
+                _selectedCategory = category;
+                _selectedBrand = brand;
+              });
+            },
+          ),
+        );
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -165,8 +190,10 @@ class _SearchScreenState extends State<SearchScreen> {
                       imageUrl: product['imageUrl']!,
                       productName: product['productName']!,
                       quantityInfo: product['quantityInfo']!,
-                      price: product['price']!,
+                      originalPrice: product['price']!,
                       onAddPressed: () {},
+                      isFavorite: false,
+                      onFavoritePressed: () {},
                     );
                   },
                 ),

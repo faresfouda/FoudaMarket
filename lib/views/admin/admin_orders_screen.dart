@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:fodamarket/views/admin/order_details_screen.dart';
 import '../../theme/appcolors.dart';
 import '../../components/search_field.dart';
+import '../profile/order_details_screen.dart';
 
 class AdminOrdersScreen extends StatefulWidget {
-  const AdminOrdersScreen({Key? key}) : super(key: key);
+  final String? initialFilter;
+  const AdminOrdersScreen({Key? key, this.initialFilter}) : super(key: key);
 
   @override
   State<AdminOrdersScreen> createState() => _AdminOrdersScreenState();
@@ -28,7 +31,7 @@ class _Order {
 }
 
 class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
-  OrderStatus selectedStatus = OrderStatus.all;
+  late OrderStatus selectedStatus;
   final TextEditingController searchController = TextEditingController();
 
   final List<_Order> allOrders = [
@@ -37,6 +40,16 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
     _Order(id: '12343', customerName: 'محمد حسن', date: 'أمس، 11:45 ص', total: 320.25, status: OrderStatus.completed),
     _Order(id: '12342', customerName: 'سارة أحمد', date: 'أمس، 9:20 ص', total: 95.00, status: OrderStatus.cancelled),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialFilter == 'جديد') {
+      selectedStatus = OrderStatus.newOrder;
+    } else {
+      selectedStatus = OrderStatus.all;
+    }
+  }
 
   List<_Order> get filteredOrders {
     String query = searchController.text.trim();
@@ -77,6 +90,71 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
       default:
         return 'الكل';
     }
+  }
+
+  OrderStatus statusFromText(String text) {
+    switch (text) {
+      case 'جديد':
+        return OrderStatus.newOrder;
+      case 'قيد التنفيذ':
+        return OrderStatus.inProgress;
+      case 'مكتمل':
+        return OrderStatus.completed;
+      case 'ملغي':
+        return OrderStatus.cancelled;
+      default:
+        return OrderStatus.all;
+    }
+  }
+
+  Future<OrderStatus?> showStatusBottomSheet(BuildContext context, OrderStatus currentStatus) async {
+    final List<OrderStatus> statusOptions = [
+      OrderStatus.newOrder,
+      OrderStatus.inProgress,
+      OrderStatus.completed,
+      OrderStatus.cancelled,
+    ];
+    final Map<OrderStatus, IconData> statusIcons = {
+      OrderStatus.newOrder: Icons.fiber_new,
+      OrderStatus.inProgress: Icons.timelapse,
+      OrderStatus.completed: Icons.check_circle,
+      OrderStatus.cancelled: Icons.cancel,
+    };
+    final Map<OrderStatus, Color> statusColors = {
+      OrderStatus.newOrder: AppColors.orangeColor,
+      OrderStatus.inProgress: AppColors.orangeColor,
+      OrderStatus.completed: Colors.green,
+      OrderStatus.cancelled: Colors.red,
+    };
+    return await showModalBottomSheet<OrderStatus>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 16),
+            const Text('تغيير حالة الطلب', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const Divider(),
+            ...statusOptions.map((option) => ListTile(
+              leading: Icon(
+                statusIcons[option],
+                color: statusColors[option],
+              ),
+              title: Text(statusText(option), style: TextStyle(
+                color: option == currentStatus ? statusColors[option] : Colors.black,
+                fontWeight: option == currentStatus ? FontWeight.bold : FontWeight.normal,
+              )),
+              trailing: option == currentStatus ? const Icon(Icons.check, color: Colors.blue) : null,
+              onTap: () => Navigator.pop(context, option),
+            )),
+            const SizedBox(height: 16),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -190,55 +268,35 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
                         const SizedBox(height: 10),
                         Row(
                           children: [
-                            if (order.status == OrderStatus.newOrder || order.status == OrderStatus.inProgress)
-                              Padding(
-                                padding: const EdgeInsets.only(left: 8.0),
-                                child: ElevatedButton.icon(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.teal,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            Padding(
+                              padding: const EdgeInsets.only(left: 8.0),
+                              child: ElevatedButton.icon(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: statusColor(order.status),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
                                   ),
-                                  onPressed: () {},
-                                  icon: const Icon(Icons.edit, size: 18, color: Colors.white),
-                                  label: const Text('تحديث الحالة', style: TextStyle(color: Colors.white)),
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                                 ),
+                                onPressed: () async {
+                                  final newStatus = await showStatusBottomSheet(context, order.status);
+                                  if (newStatus != null && newStatus != order.status) {
+                                    setState(() {
+                                      final idx = allOrders.indexOf(order);
+                                      allOrders[idx] = _Order(
+                                        id: order.id,
+                                        customerName: order.customerName,
+                                        date: order.date,
+                                        total: order.total,
+                                        status: newStatus,
+                                      );
+                                    });
+                                  }
+                                },
+                                icon: const Icon(Icons.edit, size: 18, color: Colors.white),
+                                label: const Text('تحديث الحالة', style: TextStyle(color: Colors.white)),
                               ),
-                            if (order.status == OrderStatus.completed)
-                              Padding(
-                                padding: const EdgeInsets.only(left: 8.0),
-                                child: ElevatedButton.icon(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.grey[200],
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                    elevation: 0,
-                                  ),
-                                  onPressed: null,
-                                  icon: const Icon(Icons.check, size: 18, color: Colors.green),
-                                  label: const Text('مكتمل', style: TextStyle(color: Colors.green)),
-                                ),
-                              ),
-                            if (order.status == OrderStatus.cancelled)
-                              Padding(
-                                padding: const EdgeInsets.only(left: 8.0),
-                                child: ElevatedButton.icon(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.red,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                  ),
-                                  onPressed: () {},
-                                  icon: const Icon(Icons.delete, size: 18, color: Colors.white),
-                                  label: const Text('حذف', style: TextStyle(color: Colors.white)),
-                                ),
-                              ),
+                            ),
                             Expanded(
                               child: ElevatedButton.icon(
                                 style: ElevatedButton.styleFrom(
@@ -248,7 +306,39 @@ class _AdminOrdersScreenState extends State<AdminOrdersScreen> {
                                   ),
                                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                                 ),
-                                onPressed: () {},
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => AdminOrderDetailsScreen(
+                                        orderNumber: order.id,
+                                        date: order.date,
+                                        status: statusText(order.status),
+                                        total: 'ج.م ${order.total}',
+                                        items: [
+                                          {
+                                            'name': 'بيض بلدي',
+                                            'qty': '2',
+                                            'price': '40 ج.م',
+                                            'image': 'assets/home/logo.jpg',
+                                          },
+                                          {
+                                            'name': 'مكرونة',
+                                            'qty': '1',
+                                            'price': '20 ج.م',
+                                            'image': 'assets/home/logo.jpg',
+                                          },
+                                          {
+                                            'name': 'زيت',
+                                            'qty': '1',
+                                            'price': '60 ج.م',
+                                            'image': 'assets/home/logo.jpg',
+                                          },
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                },
                                 icon: const Icon(Icons.remove_red_eye, size: 18, color: Colors.white),
                                 label: const Text('عرض التفاصيل', style: TextStyle(color: Colors.white)),
                               ),

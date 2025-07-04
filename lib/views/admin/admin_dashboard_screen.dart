@@ -5,6 +5,8 @@ import 'package:fodamarket/views/admin/admin_orders_screen.dart';
 import 'package:fodamarket/views/admin/admin_products_categories_screen.dart';
 import 'package:fodamarket/views/admin/admin_profile_screen.dart';
 import 'package:fodamarket/views/admin/admin_reviews_screen.dart';
+import 'package:fodamarket/views/admin/send_notification_screen.dart';
+import 'package:fodamarket/views/admin/sales_reports_screen.dart';
 
 class AdminDashboardMain extends StatefulWidget {
   @override
@@ -13,10 +15,12 @@ class AdminDashboardMain extends StatefulWidget {
 
 class _AdminDashboardMainState extends State<AdminDashboardMain> {
   int _selectedIndex = 0;
-  final List<Widget> _screens = [
-    AdminDashboardSection(),
+  String? _ordersInitialFilter;
+
+  late final List<Widget> _screens = [
+    AdminDashboardSection(onTabChange: _onTabChange),
     AdminProductsCategoriesScreen(),
-    AdminOrdersScreen(),
+    AdminOrdersScreen(initialFilter: _ordersInitialFilter),
     AdminReviewsScreen(),
     AdminProfileScreen(),
   ];
@@ -29,36 +33,48 @@ class _AdminDashboardMainState extends State<AdminDashboardMain> {
     'الإعدادات',
   ];
 
+  void _onTabChange(int index, {String? filter}) {
+    setState(() {
+      _selectedIndex = index;
+      if (index == 2) {
+        _ordersInitialFilter = filter;
+        // Recreate the orders screen with the new filter
+        _screens[2] = AdminOrdersScreen(initialFilter: _ordersInitialFilter);
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
+    // Ensure the callback is always up to date
+    _screens[0] = AdminDashboardSection(onTabChange: _onTabChange);
     return Scaffold(
-      appBar:  AppBar(
-              backgroundColor: Colors.white,
-              elevation: 0,
-              title: Text(
-                _titles[_selectedIndex],
-                style: const TextStyle(
-                  color: Colors.black,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 22,
-                ),
-              ),
-              actions: [
-                IconButton(
-                  icon: const Icon(Icons.notifications, color: Colors.orange),
-                  onPressed: () {},
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                  child: const CircleAvatar(
-                    backgroundImage: AssetImage('assets/home/logo.jpg'),
-                    radius: 18,
-                  ),
-                ),
-              ],
-              iconTheme: const IconThemeData(color: Colors.black),
-            )
-          ,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        title: Text(
+          _titles[_selectedIndex],
+          style: const TextStyle(
+            color: Colors.black,
+            fontWeight: FontWeight.bold,
+            fontSize: 22,
+          ),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.notifications, color: Colors.orange),
+            onPressed: () {},
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            child: const CircleAvatar(
+              backgroundImage: AssetImage('assets/home/logo.jpg'),
+              radius: 18,
+            ),
+          ),
+        ],
+        iconTheme: const IconThemeData(color: Colors.black),
+      ),
       body: _screens[_selectedIndex],
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
@@ -83,6 +99,9 @@ class _AdminDashboardMainState extends State<AdminDashboardMain> {
 }
 
 class AdminDashboardSection extends StatelessWidget {
+  final void Function(int, {String? filter})? onTabChange;
+  const AdminDashboardSection({Key? key, this.onTabChange}) : super(key: key);
+
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
@@ -138,30 +157,48 @@ class AdminDashboardSection extends StatelessWidget {
             runSpacing: 20,
             children: [
               _QuickActionCard(
-                icon: Icons.list_alt,
-                label: 'عرض الطلبات',
-                color: Colors.orange[50]!,
-                onTap: () {},
-              ),
-              _QuickActionCard(
                 icon: Icons.add,
                 label: 'إضافة منتج',
                 color: Colors.orange,
                 labelColor: Colors.white,
                 iconColor: Colors.white,
-                onTap: () {},
+                onTap: () {
+                  if (onTabChange != null) {
+                    onTabChange!(1);
+                  }
+                },
               ),
               _QuickActionCard(
-                icon: Icons.settings,
-                label: 'الإعدادات',
+                icon: Icons.notifications_active,
+                label: 'إرسال إشعار للعملاء',
                 color: Colors.orange[50]!,
-                onTap: () {},
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => SendNotificationScreen()),
+                  );
+                },
               ),
               _QuickActionCard(
-                icon: Icons.insert_chart,
-                label: 'التقارير',
+                icon: Icons.bar_chart,
+                label: 'تقارير المبيعات',
                 color: Colors.orange[50]!,
-                onTap: () {},
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => SalesReportsScreen()),
+                  );
+                },
+              ),
+              _QuickActionCard(
+                icon: Icons.list_alt,
+                label: 'طلبات جديدة',
+                color: Colors.orange[50]!,
+                onTap: () {
+                  if (onTabChange != null) {
+                    onTabChange!(2, filter: 'جديد');
+                  }
+                },
               ),
             ],
           ),
@@ -171,7 +208,15 @@ class AdminDashboardSection extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text('النشاط الأخير', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-              Text('عرض الكل', style: TextStyle(color: Colors.orange)),
+              GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => AllActivityScreen()),
+                  );
+                },
+                child: Text('عرض الكل', style: TextStyle(color: Colors.orange)),
+              ),
             ],
           ),
           SizedBox(height: 16),
@@ -424,6 +469,157 @@ class _ActivityItem extends StatelessWidget {
           title: Text(text, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
           subtitle: Text(details, style: TextStyle(fontSize: 14)),
           trailing: Text(time, style: TextStyle(color: Colors.grey, fontSize: 13)),
+        ),
+      ),
+    );
+  }
+}
+
+class AllActivityScreen extends StatefulWidget {
+  const AllActivityScreen({super.key});
+
+  @override
+  State<AllActivityScreen> createState() => _AllActivityScreenState();
+}
+
+class _AllActivityScreenState extends State<AllActivityScreen> {
+  DateTime? selectedDate;
+
+  // Example activity data
+  final List<Map<String, dynamic>> allActivities = [
+    {
+      'icon': Icons.check_circle,
+      'iconColor': Colors.green,
+      'text': 'تم تأكيد طلب جديد',
+      'time': 'منذ 3 دقائق',
+      'details': 'طلب رقم 1234 - أحمد محمد',
+      'date': DateTime.now(),
+    },
+    {
+      'icon': Icons.add_box,
+      'iconColor': Colors.orange,
+      'text': 'تم إضافة منتج جديد',
+      'time': 'منذ 10 دقائق',
+      'details': 'تفاح أحمر - 2 كجم',
+      'date': DateTime.now(),
+    },
+    {
+      'icon': Icons.warning_amber_rounded,
+      'iconColor': Colors.red,
+      'text': 'تنبيه مخزون منخفض',
+      'time': 'منذ ساعة',
+      'details': 'موز عضوي - بقى 5 قطع فقط',
+      'date': DateTime.now().subtract(Duration(days: 1)),
+    },
+    {
+      'icon': Icons.person,
+      'iconColor': Colors.blue,
+      'text': 'عميل جديد',
+      'time': 'منذ ساعتين',
+      'details': 'سارة أحمد انضمت للتطبيق',
+      'date': DateTime.now().subtract(Duration(days: 2)),
+    },
+    {
+      'icon': Icons.check_circle,
+      'iconColor': Colors.green,
+      'text': 'تم شحن طلب',
+      'time': 'منذ 3 أيام',
+      'details': 'طلب رقم 1235 - فاطمة علي',
+      'date': DateTime.now().subtract(Duration(days: 3)),
+    },
+    {
+      'icon': Icons.add_box,
+      'iconColor': Colors.orange,
+      'text': 'تم إضافة منتج جديد',
+      'time': 'منذ 5 أيام',
+      'details': 'موز عضوي - 1 كجم',
+      'date': DateTime.now().subtract(Duration(days: 5)),
+    },
+  ];
+
+  List<Map<String, dynamic>> get filteredActivities {
+    if (selectedDate != null) {
+      return allActivities.where((a) =>
+        a['date'].day == selectedDate!.day &&
+        a['date'].month == selectedDate!.month &&
+        a['date'].year == selectedDate!.year
+      ).toList();
+    }
+    return allActivities;
+  }
+
+  String get dateLabel {
+    if (selectedDate == null) return 'الكل';
+    final d = selectedDate!;
+    return '${d.year}/${d.month.toString().padLeft(2, '0')}/${d.day.toString().padLeft(2, '0')}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('كل النشاطات'),
+        centerTitle: true,
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.orange,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  icon: const Icon(Icons.calendar_today, size: 18),
+                  label: Text(selectedDate == null ? 'اختر يوم' : dateLabel),
+                  onPressed: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate: selectedDate ?? DateTime.now(),
+                      firstDate: DateTime.now().subtract(const Duration(days: 365)),
+                      lastDate: DateTime.now().add(const Duration(days: 365)),
+                    );
+                    if (picked != null) {
+                      setState(() => selectedDate = picked);
+                    }
+                  },
+                ),
+                const SizedBox(width: 8),
+                if (selectedDate != null)
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.grey[200],
+                      foregroundColor: Colors.orange,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    onPressed: () => setState(() => selectedDate = null),
+                    child: const Text('الكل'),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Expanded(
+              child: filteredActivities.isEmpty
+                  ? const Center(child: Text('لا يوجد نشاطات في هذا اليوم'))
+                  : ListView.separated(
+                      itemCount: filteredActivities.length,
+                      separatorBuilder: (context, index) => const SizedBox(height: 10),
+                      itemBuilder: (context, index) {
+                        final a = filteredActivities[index];
+                        return _ActivityItem(
+                          icon: a['icon'],
+                          iconColor: a['iconColor'],
+                          text: a['text'],
+                          time: a['time'],
+                          details: a['details'],
+                        );
+                      },
+                    ),
+            ),
+          ],
         ),
       ),
     );

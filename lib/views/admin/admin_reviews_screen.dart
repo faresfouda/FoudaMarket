@@ -118,6 +118,53 @@ class _AdminReviewsScreenState extends State<AdminReviewsScreen> {
     }
   }
 
+  Future<ReviewStatus?> showStatusBottomSheet(BuildContext context, ReviewStatus currentStatus) async {
+    final List<ReviewStatus> statusOptions = [
+      ReviewStatus.pending,
+      ReviewStatus.approved,
+      ReviewStatus.rejected,
+    ];
+    final Map<ReviewStatus, IconData> statusIcons = {
+      ReviewStatus.pending: Icons.hourglass_top,
+      ReviewStatus.approved: Icons.check_circle,
+      ReviewStatus.rejected: Icons.cancel,
+    };
+    final Map<ReviewStatus, Color> statusColors = {
+      ReviewStatus.pending: Colors.amber[700]!,
+      ReviewStatus.approved: Colors.green,
+      ReviewStatus.rejected: Colors.red,
+    };
+    return await showModalBottomSheet<ReviewStatus>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 16),
+            const Text('تغيير حالة المراجعة', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const Divider(),
+            ...statusOptions.map((option) => ListTile(
+              leading: Icon(
+                statusIcons[option],
+                color: statusColors[option],
+              ),
+              title: Text(statusText(option), style: TextStyle(
+                color: option == currentStatus ? statusColors[option] : Colors.black,
+                fontWeight: option == currentStatus ? FontWeight.bold : FontWeight.normal,
+              )),
+              trailing: option == currentStatus ? const Icon(Icons.check, color: Colors.blue) : null,
+              onTap: () => Navigator.pop(context, option),
+            )),
+            const SizedBox(height: 16),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return SafeArea(
@@ -268,63 +315,40 @@ class _AdminReviewsScreenState extends State<AdminReviewsScreen> {
                           const SizedBox(height: 10),
                           Row(
                             children: [
-                              if (review.status == ReviewStatus.pending)
-                                ...[
-                                  Expanded(
-                                    child: ElevatedButton.icon(
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.green,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(8),
-                                        ),
-                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                      ),
-                                      onPressed: () {},
-                                      icon: const Icon(Icons.check, size: 18, color: Colors.white),
-                                      label: const Text('قبول', style: TextStyle(color: Colors.white)),
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: statusColor(review.status),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
                                     ),
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                                   ),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: ElevatedButton.icon(
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.red,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(8),
-                                        ),
-                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                      ),
-                                      onPressed: () {},
-                                      icon: const Icon(Icons.close, size: 18, color: Colors.white),
-                                      label: const Text('رفض', style: TextStyle(color: Colors.white)),
-                                    ),
-                                  ),
-                                ]
-                              else
-                                Expanded(
-                                  child: ElevatedButton.icon(
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.grey[200],
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                      elevation: 0,
-                                    ),
-                                    onPressed: null,
-                                    icon: Icon(
-                                      review.status == ReviewStatus.approved ? Icons.check : Icons.close,
-                                      size: 18,
-                                      color: review.status == ReviewStatus.approved ? Colors.green : Colors.red,
-                                    ),
-                                    label: Text(
-                                      statusText(review.status),
-                                      style: TextStyle(
-                                        color: review.status == ReviewStatus.approved ? Colors.green : Colors.red,
-                                      ),
-                                    ),
-                                  ),
+                                  onPressed: () async {
+                                    final newStatus = await showStatusBottomSheet(context, review.status);
+                                    if (newStatus != null && newStatus != review.status) {
+                                      setState(() {
+                                        final idx = allReviews.indexOf(review);
+                                        allReviews[idx] = _Review(
+                                          customerName: review.customerName,
+                                          customerAvatar: review.customerAvatar,
+                                          productName: review.productName,
+                                          productImage: review.productImage,
+                                          reviewText: review.reviewText,
+                                          rating: review.rating,
+                                          date: review.date,
+                                          status: newStatus,
+                                        );
+                                      });
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(content: Text('تم تغيير حالة المراجعة إلى ${statusText(newStatus)}')),
+                                      );
+                                    }
+                                  },
+                                  icon: const Icon(Icons.edit, size: 18, color: Colors.white),
+                                  label: const Text('تغيير الحالة', style: TextStyle(color: Colors.white)),
                                 ),
+                              ),
                             ],
                           ),
                         ],

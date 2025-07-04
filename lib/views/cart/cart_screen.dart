@@ -63,32 +63,42 @@ class CartScreen extends StatelessWidget {
           );
         },
       ),
-      bottomNavigationBar: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Button(
-          onPressed: (){
-            Navigator.push(context, MaterialPageRoute(builder: (context) => OrderAcceptedScreen()));
-          },
-          buttonContent: Row(
+      bottomNavigationBar: Container(
+        color: Colors.transparent,
+        padding: const EdgeInsets.all(12.0),
+        child: Container(
+          height: 60,
+          decoration: BoxDecoration(
+            color: AppColors.orangeColor,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'الإجمالي',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Text(
+                  'الإجمالي',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
-              const Spacer(),
-              const Text(
-                '١٤٤ ج.م',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Text(
+                  '١٠٠ ج.م',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ],
           ),
-          buttonColor: AppColors.orangeColor,
         ),
       ),
     );

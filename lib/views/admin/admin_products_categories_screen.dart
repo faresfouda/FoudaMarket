@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../../components/search_field.dart';
+import 'category_items_screen.dart';
 
 class AdminProductsCategoriesScreen extends StatefulWidget {
   const AdminProductsCategoriesScreen({super.key});
@@ -317,6 +318,21 @@ class _AdminProductsCategoriesScreenState extends State<AdminProductsCategoriesS
                           ),
                         ],
                       ),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => CategoryItemsScreen(
+                              categoryName: category.name,
+                              items: [
+                                CategoryItem(name: 'منتج 1', imageUrl: 'https://img.icons8.com/color/48/000000/apple.png', price: 20, available: true),
+                                CategoryItem(name: 'منتج 2', imageUrl: 'https://img.icons8.com/color/48/000000/bread.png', price: 15, available: false),
+                                CategoryItem(name: 'منتج 3', imageUrl: 'https://img.icons8.com/color/48/000000/fish-food.png', price: 30, available: true),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
                     ),
                   );
                 },

@@ -29,7 +29,9 @@ class CategoryScreen extends StatelessWidget {
               imageUrl: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=400&q=80',
               productName: 'خيار طازج',
               quantityInfo: '١ كجم',
-              price: '٢٠ ج.م',
+              originalPrice: '٢٠ ج.م',
+              isFavorite: false,
+              onFavoritePressed: () {},
               onAddPressed: () {},
             );
           },

@@ -7,6 +7,8 @@ import 'package:fodamarket/views/category/category_screen.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 import 'package:fodamarket/theme/appcolors.dart';
 import 'widgets/my_searchbutton.dart';
+import 'search_screen.dart';
+
 
 
 class HomeScreen extends StatefulWidget {
@@ -60,44 +62,115 @@ class _HomeScreenState extends State<HomeScreen> {
       body: SafeArea(
         child: SingleChildScrollView(
           physics: BouncingScrollPhysics(),
-          padding: EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-          child: Column(
-            children: [
-              Image.asset('assets/home/logo.jpg', height: 50),
-              SizedBox(height: 10),
-              _LocationRow(),
-              SizedBox(height: 20),
-              SearchButton(),
-              SizedBox(height: 20),
-              _BannerCarousel(controller: _pageController, banners: _banners),
-              SizedBox(height: 30),
-              _SectionHeader(title: 'عروض خاصة', onTap: () {
-                Navigator.push(context, MaterialPageRoute(builder: (context) => CategoryScreen(categoryName: 'عروض خاصة',)));
-              }),
-              SizedBox(height: 20),
-              _HorizontalProductList(),
-              SizedBox(height: 30),
-              _SectionHeader(title: 'الاكثر مبيعاَ', onTap: () {
-                Navigator.push(context, MaterialPageRoute(builder: (context) => CategoryScreen(categoryName: 'الاكثر مبيعاَ',)));
-              }),
-              SizedBox(height: 20),
-              _HorizontalProductList(),
-              SizedBox(height: 30),
-              _SectionHeader(title: 'الاقسام', onTap: () {
-                Navigator.push(context, MaterialPageRoute(builder: (context) => CategoryScreen(categoryName: 'الاقسام',)));
-              }),
-              SizedBox(height: 20),
-              _CategoryList(),
-              SizedBox(height: 20),
-              _HorizontalProductList(),
-            ],
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        CircleAvatar(
+                          backgroundColor: AppColors.orangeColor.withOpacity(0.1),
+                          radius: 20,
+                          child: Image.asset('assets/home/logo.jpg', height: 28),
+                        ),
+                        const SizedBox(width: 10),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('فودة ماركت', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                            Row(
+                              children: [
+                                Icon(Icons.location_on, color: AppColors.orangeColor, size: 16),
+                                Text('دمياط، السنانية', style: TextStyle(fontSize: 12, color: Colors.grey[700])),
+                                Icon(Icons.keyboard_arrow_down, size: 16, color: Colors.grey[700]),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    Stack(
+                      children: [
+                        IconButton(
+                          icon: Icon(Icons.notifications, color: AppColors.orangeColor),
+                          onPressed: () {},
+                        ),
+                        Positioned(
+                          right: 10,
+                          top: 10,
+                          child: Container(
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: Colors.red,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 18),
+                // Search Bar
+                Row(
+                  children: [
+                    Expanded(child: SearchButton()),
+                    const SizedBox(width: 10),
+                    Container(
+                      height: 44,
+                      width: 44,
+                      decoration: BoxDecoration(
+                        color: AppColors.orangeColor,
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: IconButton(
+                        icon: Icon(Icons.tune, color: Colors.white),
+                        onPressed: () async {
+                          // Open SearchScreen and immediately open filter sheet
+                          await Navigator.push(context, MaterialPageRoute(builder: (context) => SearchScreen(openFilterOnStart: true)));
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 18),
+                // Banner Carousel (restored)
+                _BannerCarousel(controller: _pageController, banners: _banners),
+                const SizedBox(height: 18),
+                // Categories
+                Text('الأقسام', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                const SizedBox(height: 10),
+                _CategoryList(),
+                const SizedBox(height: 18),
+                // Special Offers
+                _SectionHeader(title: 'عروض خاصة', onTap: () {}),
+                const SizedBox(height: 10),
+                _HorizontalProductList(),
+                const SizedBox(height: 18),
+                // Best Sellers
+                _SectionHeader(title: 'الأكثر مبيعاً', onTap: () {}),
+                const SizedBox(height: 10),
+                _HorizontalProductList(),
+                const SizedBox(height: 18),
+                // Recommended for You
+                Text('موصى به لك', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                const SizedBox(height: 10),
+                _HorizontalProductList(),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
-
 }
+
 class _LocationRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -209,24 +282,27 @@ class _SectionHeader extends StatelessWidget {
     );
   }
 }
+
 class _HorizontalProductList extends StatelessWidget {
   final List<Map<String, String>> products = const [
     {
       'name': 'موز عضوي',
       'quantity': '١ كجم',
-      'price': '٤٥ ج.م',
+      'originalPrice': '٥٥ ج.م',
+      'discountedPrice': '٤٥ ج.م',
       'image': 'https://i.pinimg.com/736x/7a/aa/a5/7aaaa545e00e8a434850e80b8910dd94.jpg',
     },
     {
       'name': 'تفاح أحمر',
       'quantity': '٢ كجم',
-      'price': '٦٠ ج.م',
+      'originalPrice': '٦٠ ج.م',
       'image': 'https://images.unsplash.com/photo-1567306226416-28f0efdc88ce?auto=format&fit=crop&w=400&q=80',
     },
     {
       'name': 'برتقال عصير',
       'quantity': '١.٥ كجم',
-      'price': '٣٥ ج.م',
+      'originalPrice': '٤٠ ج.م',
+      'discountedPrice': '٣٥ ج.م',
       'image': 'https://images.unsplash.com/photo-1502741338009-cac2772e18bc?auto=format&fit=crop&w=400&q=80',
     },
   ];
@@ -243,7 +319,10 @@ class _HorizontalProductList extends StatelessWidget {
             imageUrl: product['image']!,
             productName: product['name']!,
             quantityInfo: product['quantity']!,
-            price: product['price']!,
+            isFavorite: false,
+            onFavoritePressed: () {},
+            originalPrice: product['originalPrice'],
+            discountedPrice: product['discountedPrice'],
             onAddPressed: () => print('${product['name']} أضيفت إلى العربة!'),
           );
         },
@@ -251,32 +330,45 @@ class _HorizontalProductList extends StatelessWidget {
     );
   }
 }
+
 class _CategoryList extends StatelessWidget {
-  final List<String> categories = const [
-    'خضروات',
-    'فواكه',
-    'مشروبات',
-    'مخبوزات',
-  ];
-  final List<String> categoryImages = const [
-    'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=400&q=80', // Vegetables
-    'https://i.pinimg.com/736x/7a/aa/a5/7aaaa545e00e8a434850e80b8910dd94.jpg', // Fruits
-    'https://i.pinimg.com/736x/7a/aa/a5/7aaaa545e00e8a434850e80b8910dd94.jpg', // Drinks
-    'https://images.unsplash.com/photo-1505250469679-203ad9ced0cb?auto=format&fit=crop&w=400&q=80', // Bakery
+  final List<Map<String, dynamic>> categories = const [
+    {
+      'name': 'خضروات',
+      'image': 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=400&q=80',
+      'color': Color(0xFFDCFCE7), // Soft green
+    },
+    {
+      'name': 'فواكه',
+      'image': 'https://i.pinimg.com/736x/7a/aa/a5/7aaaa545e00e8a434850e80b8910dd94.jpg',
+      'color': Color(0xFFFEE2E2), // Soft pink
+    },
+    {
+      'name': 'مأكولات بحرية',
+      'image': 'https://i.pinimg.com/736x/7a/aa/a5/7aaaa545e00e8a434850e80b8910dd94.jpg',
+      'color': Color(0xFFDBEAFE), // Soft blue
+    },
+    {
+      'name': 'مخبوزات',
+      'image': 'https://images.unsplash.com/photo-1505250469679-203ad9ced0cb?auto=format&fit=crop&w=400&q=80',
+      'color': Color(0xFFFEF9C3), // Soft yellow
+    },
   ];
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 110,
+      height: 90,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         itemCount: categories.length,
         itemBuilder: (context, index) {
+          final category = categories[index];
           return CategoryCard(
-            imageUrl: categoryImages[index % categoryImages.length],
-            categoryName: categories[index],
+            imageUrl: category['image'],
+            categoryName: category['name'],
+            bgColor: category['color'],
             onTap: () {
-              Navigator.push(context, MaterialPageRoute(builder: (context) => CategoryScreen(categoryName: categories[index],)));
+              Navigator.push(context, MaterialPageRoute(builder: (context) => CategoryScreen(categoryName: category['name'],)));
             },
           );
         },

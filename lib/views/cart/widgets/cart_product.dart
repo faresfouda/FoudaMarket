@@ -6,7 +6,7 @@ class ProductQuantityControl extends StatefulWidget {
   final String productName;
   final String quantityInfo;
   final String price;
-  final VoidCallback? onClosePressed;
+  final VoidCallback? onRemove;
 
   const ProductQuantityControl({
     super.key,
@@ -14,7 +14,7 @@ class ProductQuantityControl extends StatefulWidget {
     required this.productName,
     required this.quantityInfo,
     required this.price,
-    this.onClosePressed,
+    this.onRemove,
   });
 
   @override
@@ -36,116 +36,148 @@ class _ProductQuantityControlState extends State<ProductQuantityControl> {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Stack(
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 25, horizontal: 20),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Image.network(
-                  widget.imageUrl,
-                  height: 80.0,
-                  width: 80.0,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Container(
-                    height: 60.0,
-                    width: 60.0,
-                    color: Colors.grey[300],
-                    child: const Icon(Icons.image_not_supported, color: Colors.grey, size: 40),
-                  ),
+    return Stack(
+      children: [
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.grey.shade200, width: 1),
+          ),
+          child: Row(
+            textDirection: TextDirection.rtl,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // Image
+              Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  color: Colors.grey[200],
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                const SizedBox(width: 30),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        widget.productName,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black,
+                child: widget.imageUrl.isNotEmpty
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Image.network(
+                          widget.imageUrl,
+                          width: 64,
+                          height: 64,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) => Center(child: Text('IMG\n64×64', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey, fontSize: 12))),
                         ),
+                      )
+                    : Center(child: Text('IMG\n64×64', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey, fontSize: 12))),
+              ),
+              const SizedBox(width: 12),
+              // Product info and price
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.productName,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black,
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        widget.quantityInfo,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: AppColors.lightGrayColor2,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textDirection: TextDirection.rtl,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      widget.quantityInfo,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey[600],
+                      ),
+                      textDirection: TextDirection.rtl,
+                    ),
+                    const SizedBox(height: 25),
+                    Row(
+                      children: [
+                        // + button
+                        Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: AppColors.orangeColor,
+                            shape: BoxShape.circle,
+                          ),
+                          child: IconButton(
+                            icon: Icon(Icons.add, color: Colors.white, size: 22),
+                            onPressed: _incrementQuantity,
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Container(
-                            width: 40,
-                            height: 40,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(15),
-                              border: Border.all(color: AppColors.lightGrayColor3, width: 1),
-                            ),
-                            child: IconButton(
-                              icon: Icon(Icons.remove, color: AppColors.orangeColor, size: 20),
-                              onPressed: _decrementQuantity,
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(),
-                            ),
+                        const SizedBox(width: 10),
+                        // Quantity
+                        Text(
+                          '$_quantity',
+                          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(width: 10),
+                        // - button
+                        Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: AppColors.orangeColor,
+                            shape: BoxShape.circle,
                           ),
-                          const SizedBox(width: 10),
-                          Text(
-                            '$_quantity',
-                            style: const TextStyle(fontSize: 16, color: Colors.black),
+                          child: IconButton(
+                            icon: Icon(Icons.remove, color: Colors.white, size: 22),
+                            onPressed: _decrementQuantity,
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
                           ),
-                          const SizedBox(width: 10),
-                          Container(
-                            width: 40,
-                            height: 40,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(15),
-                              border: Border.all(color: AppColors.lightGrayColor3, width: 1),
-                            ),
-                            child: IconButton(
-                              icon: Icon(Icons.add, color: AppColors.orangeColor, size: 20),
-                              onPressed: _incrementQuantity,
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(),
-                            ),
-                          ),
-                          const Spacer(),
-                          Text(
-                            widget.price,
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black,
-                            ),
-                          ),
-
-                        ],
-                      ),
-                    ],
-                  ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-
-              ],
+              ),
+              const SizedBox(width: 12),
+              // Price
+              Text(
+                widget.price,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFFFF6F00), // Orange
+                ),
+              ),
+              const SizedBox(width: 12),
+            ],
+          ),
+        ),
+        // Remove button (top left)
+        Positioned(
+          top: 6,
+          left: 6,
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(16),
+              onTap: widget.onRemove,
+              child: Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: Colors.red,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.close, color: Colors.white, size: 18),
+              ),
             ),
           ),
-          Positioned(
-            top: 4,
-            left: 4,
-            child: IconButton(
-              icon: const Icon(Icons.close, color: Colors.grey),
-              onPressed: widget.onClosePressed,
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

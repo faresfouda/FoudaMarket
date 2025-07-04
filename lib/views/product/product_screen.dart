@@ -297,8 +297,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                               imageUrl: product['image'] ?? '',
                               productName: product['name'] ?? 'غير متوفر',
                               quantityInfo: product['quantity'] ?? 'غير متوفر',
-                              price: product['price'] ?? 'غير متوفر',
+                              originalPrice: product['price'] ?? 'غير متوفر',
                               onAddPressed: () {},
+                              isFavorite: false,
+                              onFavoritePressed: () {},
                             );
                           },
                         ),
