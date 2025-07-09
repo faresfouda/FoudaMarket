@@ -25,6 +25,7 @@ class CategoriesScreen extends StatelessWidget {
                   crossAxisCount: 2,
                   crossAxisSpacing: 16.0,
                   mainAxisSpacing: 20.0,
+                  childAspectRatio: 0.8,
                 ),
                 itemCount: 10, // Example item count
                 itemBuilder: (context, index) {

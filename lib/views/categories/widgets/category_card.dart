@@ -21,7 +21,7 @@ Widget CategoryCardGrid({
     },
     child: Container(
       width: 200,
-      height: 250,
+      // height: 250,
       decoration: BoxDecoration(
         color: backgroundColor,
         borderRadius: BorderRadius.circular(15),

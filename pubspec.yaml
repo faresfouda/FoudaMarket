@@ -43,6 +43,26 @@ dependencies:
   flutter_rating_bar: ^4.0.1
   image_picker: ^1.0.7
   permission_handler: ^11.0.1
+  
+  # Firebase dependencies
+  firebase_core:
+  firebase_auth:
+  cloud_firestore:
+  firebase_messaging:
+  firebase_analytics:
+  firebase_crashlytics:
+  firebase_performance:
+  firebase_remote_config:
+  firebase_dynamic_links:
+  
+  # Additional utilities
+  flutter_secure_storage: ^9.0.0
+  cached_network_image: ^3.3.1
+  
+  # State management
+  flutter_bloc: ^8.1.4
+  equatable: ^2.0.5
+  shared_preferences: ^2.2.2
 
 dev_dependencies:
   flutter_test:

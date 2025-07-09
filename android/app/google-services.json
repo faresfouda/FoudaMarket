@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "964251925023",
+    "project_id": "fouda-market",
+    "storage_bucket": "fouda-market.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:964251925023:android:d3844ee262f35a1ad1332a",
+        "android_client_info": {
+          "package_name": "com.example.deliveryapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDmCKDgKuxibxkg3eyiZgUd3UgOzFwh99o"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

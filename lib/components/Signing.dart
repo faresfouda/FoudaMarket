@@ -20,7 +20,7 @@ class Signing extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 20),
         child: Column(
           children: [
-            Image(image: AssetImage('assets/marketlogo/marketlogo.png')),
+            Image(image: AssetImage('assets/home/logo.jpg',),width: 100,height: 100,),
             SizedBox(height: 30),
             Row(
               mainAxisAlignment: MainAxisAlignment.start,
