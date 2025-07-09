@@ -3,14 +3,13 @@ import 'package:fodamarket/views/admin/data_entry_home_screen.dart';
 import 'package:fodamarket/views/home/main_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:fodamarket/views/onbording/OnBording.dart';
-import 'package:fodamarket/views/role_selection_screen.dart';
+
 import 'package:get/get.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'firebase_options.dart';
-import 'controllers/auth_controller.dart';
 import 'blocs/auth/index.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:fodamarket/views/login/Login.dart';
