@@ -1,9 +1,7 @@
 import 'package:fodamarket/components/Button.dart';
 import 'package:flutter/material.dart';
 import 'package:fodamarket/theme/appcolors.dart';
-import 'package:fodamarket/views/SignIn/SignIn.dart';
 import 'package:fodamarket/views/login/Login.dart';
-import 'package:get/get.dart';
 
 class OnBording extends StatelessWidget {
   final VoidCallback? onFinish;

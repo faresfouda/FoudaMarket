@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:fodamarket/components/Button.dart';
 import 'package:fodamarket/theme/appcolors.dart';
-import 'package:fodamarket/views/cart/order_accepted_screen.dart';
 import 'package:fodamarket/views/cart/widgets/cart_product.dart';
 import 'package:fodamarket/views/product/product_screen.dart';
 

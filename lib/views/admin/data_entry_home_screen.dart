@@ -81,12 +81,3 @@ class _DataEntryHomeScreenState extends State<DataEntryHomeScreen> {
   }
 }
 
-class _AdminSettingsScreen extends StatelessWidget {
-  const _AdminSettingsScreen();
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Text('شاشة الإعدادات (قريباً)', style: TextStyle(fontSize: 22, color: Colors.grey[700])),
-    );
-  }
-} 

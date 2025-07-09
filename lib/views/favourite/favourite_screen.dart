@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:fodamarket/views/favourite/widgets/product_favourite.dart';
-import 'package:fodamarket/components/item_container.dart';
 import 'package:fodamarket/theme/appcolors.dart';
 
 class FavouriteScreen extends StatefulWidget {

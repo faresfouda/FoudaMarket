@@ -171,28 +171,28 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-class _LocationRow extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Icon(Icons.location_on, color: AppColors.lightGrayColor),
-        SizedBox(width: 5),
-        Text(
-          'دمياط، السنانية',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: AppColors.lightGrayColor,
-          ),
-        ),
-        SizedBox(width: 4),
-        Icon(Icons.keyboard_arrow_down, color: Colors.black, size: 22),
-      ],
-    );
-  }
-}
+// class _LocationRow extends StatelessWidget {
+//   @override
+//   Widget build(BuildContext context) {
+//     return Row(
+//       mainAxisAlignment: MainAxisAlignment.center,
+//       children: [
+//         Icon(Icons.location_on, color: AppColors.lightGrayColor),
+//         SizedBox(width: 5),
+//         Text(
+//           'دمياط، السنانية',
+//           style: TextStyle(
+//             fontSize: 18,
+//             fontWeight: FontWeight.bold,
+//             color: AppColors.lightGrayColor,
+//           ),
+//         ),
+//         SizedBox(width: 4),
+//         Icon(Icons.keyboard_arrow_down, color: Colors.black, size: 22),
+//       ],
+//     );
+//   }
+// }
 
 class _BannerCarousel extends StatelessWidget {
   final PageController controller;

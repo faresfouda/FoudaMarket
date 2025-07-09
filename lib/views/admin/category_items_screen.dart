@@ -67,19 +67,19 @@ class _CategoryItemsScreenState extends State<CategoryItemsScreen> {
     return filtered;
   }
 
-  Future<void> _pickImage(Function(File? file, String? url) onPicked, {String? initialUrl}) async {
-    final picker = ImagePicker();
-    final picked = await picker.pickImage(source: ImageSource.gallery);
-    if (picked != null) {
-      onPicked(File(picked.path), null);
-    } else {
-      onPicked(null, initialUrl);
-    }
-  }
+  // Future<void> _pickImage(Function(File? file, String? url) onPicked, {String? initialUrl}) async {
+  //   final picker = ImagePicker();
+  //   final picked = await picker.pickImage(source: ImageSource.gallery);
+  //   if (picked != null) {
+  //     onPicked(File(picked.path), null);
+  //   } else {
+  //     onPicked(null, initialUrl);
+  //   }
+  // }
 
   void _showEditBottomSheet({int? editIndex}) async {
     final isEdit = editIndex != null;
-    final CategoryItem? editing = isEdit ? items[editIndex!] : null;
+    final CategoryItem? editing = isEdit ? items[editIndex] : null;
     final nameController = TextEditingController(text: editing?.name ?? '');
     final priceController = TextEditingController(text: editing?.price.toString() ?? '');
     File? pickedImage = editing?.imageFile;
@@ -230,7 +230,7 @@ class _CategoryItemsScreenState extends State<CategoryItemsScreen> {
                           }
                           setState(() {
                             if (isEdit) {
-                              items[editIndex!] = CategoryItem(
+                              items[editIndex] = CategoryItem(
                                 name: name,
                                 imageFile: pickedImage,
                                 imageUrl: imageUrl,

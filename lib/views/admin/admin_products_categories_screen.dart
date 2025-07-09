@@ -94,11 +94,11 @@ class _AdminProductsCategoriesScreenState extends State<AdminProductsCategoriesS
 
   Future<void> _showCategoryForm({int? editIndex}) async {
     final isEdit = editIndex != null;
-    final _Category? editing = isEdit ? categories[editIndex!] : null;
+    final _Category? editing = isEdit ? categories[editIndex] : null;
     final TextEditingController nameController = TextEditingController(text: editing?.name ?? '');
     Color selectedColor = editing?.color ?? _colorOptions[0];
-    File? pickedImage = isEdit ? categories[editIndex!].imageFile : null;
-    String? initialImageUrl = isEdit ? categories[editIndex!].imageUrl : null;
+    File? pickedImage = isEdit ? categories[editIndex].imageFile : null;
+    String? initialImageUrl = isEdit ? categories[editIndex].imageUrl : null;
     try {
       await showModalBottomSheet(
         context: context,
@@ -216,7 +216,7 @@ class _AdminProductsCategoriesScreenState extends State<AdminProductsCategoriesS
                             if (name.isEmpty) return;
                             setState(() {
                               if (isEdit) {
-                                categories[editIndex!] = categories[editIndex!].copyWith(
+                                categories[editIndex] = categories[editIndex].copyWith(
                                   name: name,
                                   color: selectedColor,
                                   imageFile: pickedImage,
