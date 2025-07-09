@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:fodamarket/theme/appcolors.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 
 class CategoryCard extends StatelessWidget {
   final String imageUrl; // URL for the category image
