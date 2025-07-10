@@ -3,7 +3,7 @@ import 'package:fodamarket/components/Button.dart';
 import 'package:fodamarket/components/CustomTextField.dart';
 import 'package:fodamarket/components/navigatorbutton.dart';
 import 'package:fodamarket/theme/appcolors.dart';
-import 'package:fodamarket/views/login/Login.dart';
+import 'package:fodamarket/views/SignIn/SignIn.dart';
 
 class Selectlocation extends StatelessWidget {
   const Selectlocation({super.key});
@@ -57,7 +57,7 @@ class Selectlocation extends StatelessWidget {
                   Button(
                     onPressed: () {
                       Navigator.of(context).push(
-                        MaterialPageRoute(builder: (context) => Login()),
+                        MaterialPageRoute(builder: (context) => SignIn()),
                       );
                     },
                     buttonContent: Text(

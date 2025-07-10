@@ -3,6 +3,14 @@ import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import '../../theme/appcolors.dart';
 import '../../components/Button.dart';
+import '../../services/cloudinary_service.dart';
+import '../../services/firebase_service.dart';
+import '../../models/product_model.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../blocs/products/product_bloc.dart';
+import '../../blocs/products/product_event.dart';
+import '../../blocs/products/product_state.dart';
+import 'add_product_screen.dart';
 
 class CategoryItem {
   String name;
@@ -25,69 +33,51 @@ class CategoryItem {
 
 enum ItemAvailabilityFilter { all, available, unavailable }
 
-class CategoryItemsScreen extends StatefulWidget {
+class CategoryItemsScreen extends StatelessWidget {
   final String categoryName;
-  final List<CategoryItem> items;
-  const CategoryItemsScreen({Key? key, required this.categoryName, required this.items}) : super(key: key);
+  final String categoryId;
+  const CategoryItemsScreen({Key? key, required this.categoryName, required this.categoryId}) : super(key: key);
 
   @override
-  State<CategoryItemsScreen> createState() => _CategoryItemsScreenState();
+  Widget build(BuildContext context) {
+    final productBloc = ProductBloc()..add(FetchProducts(categoryId));
+    return BlocProvider<ProductBloc>(
+      create: (_) => productBloc,
+      child: _CategoryItemsScreenBody(
+        categoryName: categoryName,
+        categoryId: categoryId,
+        productBloc: productBloc,
+      ),
+    );
+  }
 }
 
-class _CategoryItemsScreenState extends State<CategoryItemsScreen> {
-  late List<CategoryItem> items;
+class _CategoryItemsScreenBody extends StatefulWidget {
+  final String categoryName;
+  final String categoryId;
+  final ProductBloc productBloc;
+  const _CategoryItemsScreenBody({Key? key, required this.categoryName, required this.categoryId, required this.productBloc}) : super(key: key);
+
+  @override
+  State<_CategoryItemsScreenBody> createState() => _CategoryItemsScreenBodyState();
+}
+
+class _CategoryItemsScreenBodyState extends State<_CategoryItemsScreenBody> {
   String searchQuery = '';
   final TextEditingController searchController = TextEditingController();
   ItemAvailabilityFilter selectedFilter = ItemAvailabilityFilter.all;
+  bool isUploading = false;
 
-  @override
-  void initState() {
-    super.initState();
-    items = widget.items.map((e) => CategoryItem(
-      name: e.name,
-      imageUrl: e.imageUrl,
-      imageFile: e.imageFile,
-      price: e.price,
-      available: e.available,
-      hasOffer: e.hasOffer,
-      offerPrice: e.offerPrice,
-    )).toList();
-  }
-
-  List<CategoryItem> get filteredItems {
-    List<CategoryItem> filtered = items;
-    if (selectedFilter == ItemAvailabilityFilter.available) {
-      filtered = filtered.where((item) => item.available).toList();
-    } else if (selectedFilter == ItemAvailabilityFilter.unavailable) {
-      filtered = filtered.where((item) => !item.available).toList();
-    }
-    if (searchQuery.isNotEmpty) {
-      filtered = filtered.where((item) => item.name.contains(searchQuery)).toList();
-    }
-    return filtered;
-  }
-
-  // Future<void> _pickImage(Function(File? file, String? url) onPicked, {String? initialUrl}) async {
-  //   final picker = ImagePicker();
-  //   final picked = await picker.pickImage(source: ImageSource.gallery);
-  //   if (picked != null) {
-  //     onPicked(File(picked.path), null);
-  //   } else {
-  //     onPicked(null, initialUrl);
-  //   }
-  // }
-
-  void _showEditBottomSheet({int? editIndex}) async {
-    final isEdit = editIndex != null;
-    final CategoryItem? editing = isEdit ? items[editIndex] : null;
-    final nameController = TextEditingController(text: editing?.name ?? '');
-    final priceController = TextEditingController(text: editing?.price.toString() ?? '');
-    File? pickedImage = editing?.imageFile;
-    String? imageUrl = editing?.imageUrl;
-    bool available = editing?.available ?? true;
-    bool hasOffer = editing?.hasOffer ?? false;
-    final offerPriceController = TextEditingController(text: editing?.offerPrice?.toString() ?? '');
+  void _showEditBottomSheet({required ProductModel editing}) async {
+    final nameController = TextEditingController(text: editing.name);
+    final priceController = TextEditingController(text: editing.price.toString());
+    File? pickedImage = null; // لا نحاول إنشاء File من URL
+    String? imageUrl = (editing.images.isNotEmpty) ? editing.images.first : null;
+    bool available = editing.isActive;
+    bool hasOffer = editing.isSpecialOffer;
+    final offerPriceController = TextEditingController(text: editing.originalPrice?.toString() ?? '');
     String? offerError;
+    final parentContext = context;
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -106,6 +96,7 @@ class _CategoryItemsScreenState extends State<CategoryItemsScreen> {
             builder: (context, setModalState) {
               Future<void> pickImage() async {
                 final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
+                if (!mounted) return;
                 if (picked != null) {
                   setModalState(() {
                     pickedImage = File(picked.path);
@@ -118,7 +109,7 @@ class _CategoryItemsScreenState extends State<CategoryItemsScreen> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text(isEdit ? 'تعديل المنتج' : 'إضافة منتج',
+                    Text('تعديل المنتج',
                         style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
                     const SizedBox(height: 16),
                     TextField(
@@ -190,6 +181,29 @@ class _CategoryItemsScreenState extends State<CategoryItemsScreen> {
                                       width: 80,
                                       height: 80,
                                       fit: BoxFit.cover,
+                                      loadingBuilder: (context, child, loadingProgress) {
+                                        if (loadingProgress == null) return child;
+                                        return Container(
+                                          width: 80,
+                                          height: 80,
+                                          decoration: BoxDecoration(
+                                            color: Colors.grey[200],
+                                            borderRadius: BorderRadius.circular(12),
+                                          ),
+                                          child: const Center(
+                                            child: CircularProgressIndicator(),
+                                          ),
+                                        );
+                                      },
+                                      errorBuilder: (context, error, stackTrace) => Container(
+                                        width: 80,
+                                        height: 80,
+                                        decoration: BoxDecoration(
+                                          color: Colors.grey[200],
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        child: const Icon(Icons.image, size: 32, color: Colors.grey),
+                                      ),
                                     ),
                                   )
                                 : Container(
@@ -217,41 +231,198 @@ class _CategoryItemsScreenState extends State<CategoryItemsScreen> {
                     Padding(
                       padding: const EdgeInsets.only(bottom: 20),
                       child: Button(
-                        buttonContent: Text(isEdit ? 'حفظ التعديلات' : 'إضافة', style: const TextStyle(color: Colors.white)),
-                        buttonColor: AppColors.orangeColor,
-                        onPressed: () {
+                        buttonContent: isUploading 
+                          ? const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                                ),
+                                SizedBox(width: 8),
+                                Text('جاري الحفظ...', style: TextStyle(color: Colors.white)),
+                              ],
+                            )
+                          : const Text('حفظ التعديلات', style: TextStyle(color: Colors.white)),
+                        buttonColor: isUploading ? Colors.grey : AppColors.orangeColor,
+                        onPressed: () async {
+                          try {
+                            if (isUploading) return;
                           final name = nameController.text.trim();
-                          final price = double.tryParse(priceController.text.trim()) ?? 0.0;
-                          double? offerPrice = hasOffer ? double.tryParse(offerPriceController.text.trim()) : null;
-                          if (name.isEmpty || (pickedImage == null && (imageUrl == null || imageUrl!.isEmpty))) return;
-                          if (hasOffer && (offerPrice == null || offerPrice >= price)) {
+                            final price = double.tryParse(priceController.text.trim());
+                            if (price == null || price <= 0) {
+                              ScaffoldMessenger.of(parentContext).showSnackBar(
+                                const SnackBar(
+                                  content: Row(
+                                    children: [
+                                      Icon(Icons.error, color: Colors.white),
+                                      SizedBox(width: 8),
+                                      Text('يرجى إدخال سعر صحيح'),
+                                    ],
+                                  ),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                              return;
+                            }
+                            double? offerPrice;
+                            if (hasOffer) {
+                              offerPrice = double.tryParse(offerPriceController.text.trim());
+                              if (offerPrice == null || offerPrice <= 0) {
+                                ScaffoldMessenger.of(parentContext).showSnackBar(
+                                  const SnackBar(
+                                    content: Row(
+                                      children: [
+                                        Icon(Icons.error, color: Colors.white),
+                                        SizedBox(width: 8),
+                                        Text('يرجى إدخال سعر عرض صحيح'),
+                                      ],
+                                    ),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                                return;
+                              }
+                            }
+                            if (name.isEmpty) {
+                              ScaffoldMessenger.of(parentContext).showSnackBar(
+                                const SnackBar(
+                                  content: Row(
+                                    children: [
+                                      Icon(Icons.error, color: Colors.white),
+                                      SizedBox(width: 8),
+                                      Text('يرجى إدخال اسم المنتج'),
+                                    ],
+                                  ),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                              return;
+                            }
+                            
+                            if (pickedImage == null && (imageUrl == null || imageUrl!.isEmpty)) {
+                              ScaffoldMessenger.of(parentContext).showSnackBar(
+                                const SnackBar(
+                                  content: Row(
+                                    children: [
+                                      Icon(Icons.error, color: Colors.white),
+                                      SizedBox(width: 8),
+                                      Text('يرجى اختيار صورة للمنتج'),
+                                    ],
+                                  ),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                              return;
+                            }
+                            
+                            if (hasOffer && offerPrice! >= price) {
+                                if (!mounted) return;
                             setModalState(() => offerError = 'سعر العرض يجب أن يكون أقل من السعر الأصلي');
+                                ScaffoldMessenger.of(parentContext).showSnackBar(
+                                  const SnackBar(
+                                    content: Row(
+                                      children: [
+                                        Icon(Icons.error, color: Colors.white),
+                                        SizedBox(width: 8),
+                                        Text('سعر العرض يجب أن يكون أقل من السعر الأصلي'),
+                                      ],
+                                    ),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                                return;
+                              }
+                            if (!mounted) return;
+                            setModalState(() => isUploading = true);
+                            String? uploadedImageUrl = imageUrl;
+                            if (pickedImage != null) {
+                              uploadedImageUrl = await CloudinaryService().uploadImage(pickedImage!.path);
+                              if (!mounted) return;
+                              if (uploadedImageUrl == null) {
+                                setModalState(() => isUploading = false);
+                                ScaffoldMessenger.of(parentContext).showSnackBar(
+                                  const SnackBar(
+                                    content: Row(
+                                      children: [
+                                        Icon(Icons.error, color: Colors.white),
+                                        SizedBox(width: 8),
+                                        Text('فشل رفع الصورة!'),
+                                      ],
+                                    ),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                                return;
+                              }
+                            }
+                            if (!mounted) return;
+                            setModalState(() => isUploading = false);
+                            if (uploadedImageUrl == null) {
+                              ScaffoldMessenger.of(parentContext).showSnackBar(
+                                const SnackBar(
+                                  content: Row(
+                                    children: [
+                                      Icon(Icons.error, color: Colors.white),
+                                      SizedBox(width: 8),
+                                      Text('الصورة غير موجودة!'),
+                                    ],
+                                  ),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
                             return;
                           }
-                          setState(() {
-                            if (isEdit) {
-                              items[editIndex] = CategoryItem(
-                                name: name,
-                                imageFile: pickedImage,
-                                imageUrl: imageUrl,
-                                price: price,
-                                available: available,
-                                hasOffer: hasOffer,
-                                offerPrice: hasOffer ? offerPrice : null,
-                              );
-                            } else {
-                              items.add(CategoryItem(
-                                name: name,
-                                imageFile: pickedImage,
-                                imageUrl: imageUrl,
-                                price: price,
-                                available: available,
-                                hasOffer: hasOffer,
-                                offerPrice: hasOffer ? offerPrice : null,
-                              ));
-                            }
-                          });
+                            // تحديث المنتج الموجود
+                            final updatedProduct = editing.copyWith(
+                              name: name,
+                              images: uploadedImageUrl != null ? [uploadedImageUrl] : editing.images,
+                              price: price,
+                              originalPrice: hasOffer ? offerPrice : null,
+                              isSpecialOffer: hasOffer,
+                              isActive: available,
+                              updatedAt: DateTime.now(),
+                            );
+                            parentContext.read<ProductBloc>().add(UpdateProduct(updatedProduct));
+                            if (mounted) {
+                              FocusManager.instance.primaryFocus?.unfocus();
                           Navigator.pop(context);
+                              ScaffoldMessenger.of(parentContext).showSnackBar(
+                                SnackBar(
+                                  content: Row(
+                                    children: [
+                                      const Icon(Icons.check_circle, color: Colors.white),
+                                      const SizedBox(width: 8),
+                                      const Text('تم تحديث المنتج بنجاح'),
+                                    ],
+                                  ),
+                                  backgroundColor: Colors.green,
+                                  duration: const Duration(seconds: 2),
+                                ),
+                              );
+                            }
+                          } catch (e, st) {
+                            if (!mounted) return;
+                            setModalState(() => isUploading = false);
+                            print('Error in add/edit product: $e');
+                            print(st);
+                            ScaffoldMessenger.of(parentContext).showSnackBar(
+                              SnackBar(
+                                content: Row(
+                                  children: [
+                                    const Icon(Icons.error, color: Colors.white),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text('حدث خطأ أثناء تحديث المنتج: $e'),
+                                    ),
+                                  ],
+                                ),
+                                backgroundColor: Colors.red,
+                                duration: const Duration(seconds: 3),
+                              ),
+                            );
+                          }
                         },
                       ),
                     ),
@@ -264,16 +435,20 @@ class _CategoryItemsScreenState extends State<CategoryItemsScreen> {
         );
       },
     );
-    nameController.dispose();
-    priceController.dispose();
-    offerPriceController.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.categoryName),
+        title: BlocBuilder<ProductBloc, ProductState>(
+          builder: (context, state) {
+            if (state is ProductsLoaded) {
+              return Text('${widget.categoryName} (${state.products.length})');
+            }
+            return Text(widget.categoryName);
+          },
+        ),
         centerTitle: true,
       ),
       body: Padding(
@@ -345,19 +520,95 @@ class _CategoryItemsScreenState extends State<CategoryItemsScreen> {
             ),
             const SizedBox(height: 12),
             Expanded(
-              child: GridView.builder(
+              child: BlocBuilder<ProductBloc, ProductState>(
+                builder: (context, state) {
+                  if (state is ProductsLoading) {
+                    return const Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          CircularProgressIndicator(),
+                          SizedBox(height: 16),
+                          Text(
+                            'جاري تحميل المنتجات...',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  } else if (state is ProductsLoaded) {
+                    final products = state.products;
+                    // فلترة حسب البحث والتوفر
+                    final filtered = products.where((product) {
+                      final matchesSearch = searchQuery.isEmpty || product.name.contains(searchQuery);
+                      final matchesFilter = selectedFilter == ItemAvailabilityFilter.all
+                        ? true
+                        : selectedFilter == ItemAvailabilityFilter.available
+                          ? product.isActive
+                          : !product.isActive;
+                      return matchesSearch && matchesFilter;
+                    }).toList();
+                    if (filtered.isEmpty) {
+                      return Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.inventory_2_outlined, size: 64, color: Colors.grey),
+                            const SizedBox(height: 16),
+                            Text(
+                              searchQuery.isNotEmpty 
+                                ? 'لا توجد منتجات تطابق البحث'
+                                : 'لا توجد منتجات في هذه الفئة',
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.grey,
+                              ),
+                            ),
+                            if (searchQuery.isNotEmpty) ...[
+                              const SizedBox(height: 8),
+                              Text(
+                                'جرب البحث بكلمات مختلفة',
+                                style: const TextStyle(
+                                  color: Colors.grey,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      );
+                    }
+                    
+                    return GridView.builder(
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
                   childAspectRatio: 0.75,
                   crossAxisSpacing: 16.0,
                   mainAxisSpacing: 16.0,
                 ),
-                itemCount: filteredItems.length,
+                      itemCount: filtered.length,
                 itemBuilder: (context, index) {
-                  final item = filteredItems[index];
-                  final realIndex = items.indexOf(item);
+                        final product = filtered[index];
                   return GestureDetector(
-                    onTap: () => _showEditBottomSheet(editIndex: realIndex),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => BlocProvider.value(
+                                  value: widget.productBloc,
+                                  child: AddProductScreen(
+                                    categoryId: widget.categoryId,
+                                    categoryName: widget.categoryName,
+                                    editing: product,
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
                     child: Container(
                       decoration: BoxDecoration(
                         color: Colors.white,
@@ -376,71 +627,99 @@ class _CategoryItemsScreenState extends State<CategoryItemsScreen> {
                           Expanded(
                             child: ClipRRect(
                               borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                              child: item.imageFile != null
-                                  ? Image.file(
-                                      item.imageFile!,
-                                      fit: BoxFit.cover,
-                                      width: double.infinity,
-                                    )
-                                  : (item.imageUrl != null && item.imageUrl!.isNotEmpty
+                                    child: product.images.isNotEmpty
                                       ? Image.network(
-                                          item.imageUrl!,
+                                            product.images.first,
                                           fit: BoxFit.cover,
                                           width: double.infinity,
-                                          errorBuilder: (context, error, stackTrace) => const Icon(Icons.image, size: 48, color: Colors.grey),
+                                            loadingBuilder: (context, child, loadingProgress) {
+                                              if (loadingProgress == null) return child;
+                                              return Container(
+                                                color: Colors.grey[200],
+                                                child: const Center(
+                                                  child: CircularProgressIndicator(),
+                                                ),
+                                              );
+                                            },
+                                            errorBuilder: (context, error, stackTrace) => Container(
+                                              color: Colors.grey[200],
+                                              child: const Icon(Icons.image, size: 48, color: Colors.grey),
+                                            ),
                                         )
                                       : Container(
                                           color: Colors.grey[200],
                                           child: const Icon(Icons.image, size: 48, color: Colors.grey),
                                         )),
-                            ),
                           ),
                           Padding(
                             padding: const EdgeInsets.all(8.0),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(item.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                                const SizedBox(height: 4),
-                                if (item.hasOffer && item.offerPrice != null) ...[
-                                  Row(
-                                    children: [
-                                      Text('ج.م ${item.price}',
+                                      Text(
+                                        product.name,
                                         style: const TextStyle(
-                                          color: Colors.red,
-                                          decoration: TextDecoration.lineThrough,
                                           fontWeight: FontWeight.bold,
+                                          fontSize: 14,
+                                        ),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: 4),
+                                      if (product.isSpecialOffer && product.originalPrice != null) ...[
+                                        Row(
+                                          children: [
+                                            Text('ج.م ${product.price.toStringAsFixed(2)}',
+                                              style: const TextStyle(
+                                                color: Colors.red,
+                                                decoration: TextDecoration.lineThrough,
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 12,
                                         ),
                                       ),
                                       const SizedBox(width: 6),
                                       Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                                         decoration: BoxDecoration(
-                                          color: Colors.red[50],
+                                                color: Colors.green[50],
                                           borderRadius: BorderRadius.circular(8),
                                         ),
-                                        child: Text('ج.م ${item.offerPrice}',
+                                              child: Text('ج.م ${product.originalPrice!.toStringAsFixed(2)}',
                                           style: const TextStyle(
                                             color: Colors.green,
                                             fontWeight: FontWeight.bold,
+                                                  fontSize: 12,
                                           ),
                                         ),
                                       ),
                                     ],
                                   ),
                                 ] else ...[
-                                  Text('ج.م ${item.price}', style: const TextStyle(color: Colors.black54)),
+                                        Text('ج.م ${product.price.toStringAsFixed(2)}', 
+                                          style: const TextStyle(
+                                            color: Colors.black54,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 14,
+                                          )
+                                        ),
                                 ],
                                 const SizedBox(height: 4),
                                 Row(
                                   children: [
                                     Icon(
-                                      item.available ? Icons.check_circle : Icons.cancel,
-                                      color: item.available ? Colors.green : Colors.red,
-                                      size: 18,
+                                            product.isActive ? Icons.check_circle : Icons.cancel,
+                                            color: product.isActive ? Colors.green : Colors.red,
+                                            size: 16,
                                     ),
                                     const SizedBox(width: 4),
-                                    Text(item.available ? 'متوفر' : 'غير متوفر', style: TextStyle(color: item.available ? Colors.green : Colors.red)),
+                                          Text(
+                                            product.isActive ? 'متوفر' : 'غير متوفر',
+                                            style: TextStyle(
+                                              color: product.isActive ? Colors.green : Colors.red,
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w500,
+                                            )
+                                          ),
                                   ],
                                 ),
                               ],
@@ -450,6 +729,43 @@ class _CategoryItemsScreenState extends State<CategoryItemsScreen> {
                       ),
                     ),
                   );
+                      },
+                    );
+                  } else if (state is ProductsError) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.error_outline, size: 64, color: Colors.red),
+                          const SizedBox(height: 16),
+                          Text(
+                            'حدث خطأ أثناء تحميل المنتجات',
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            state.message,
+                            style: const TextStyle(
+                              color: Colors.grey,
+                              fontSize: 14,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 16),
+                          ElevatedButton(
+                            onPressed: () {
+                              context.read<ProductBloc>().add(FetchProducts(widget.categoryId));
+                            },
+                            child: const Text('إعادة المحاولة'),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+                  return const SizedBox.shrink();
                 },
               ),
             ),
@@ -457,7 +773,20 @@ class _CategoryItemsScreenState extends State<CategoryItemsScreen> {
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showEditBottomSheet(),
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => BlocProvider.value(
+                value: widget.productBloc,
+                child: AddProductScreen(
+                  categoryId: widget.categoryId,
+                  categoryName: widget.categoryName,
+                ),
+              ),
+            ),
+          );
+        },
         icon: const Icon(Icons.add, color: Colors.white),
         label: const Text('إضافة منتج', style: TextStyle(color: Colors.white)),
         backgroundColor: AppColors.orangeColor,

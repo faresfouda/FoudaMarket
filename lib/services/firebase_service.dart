@@ -95,17 +95,26 @@ class FirebaseService {
   Future<List<ProductModel>> getProducts() async {
     final querySnapshot = await _firestore.collection('products').get();
     return querySnapshot.docs
-        .map((doc) => ProductModel.fromJson(doc.data()))
+        .map((doc) {
+          final data = doc.data();
+          data['id'] = doc.id; // إضافة ID الوثيقة
+          return ProductModel.fromJson(data);
+        })
         .toList();
   }
 
   Future<ProductModel?> getProduct(String productId) async {
     final doc = await _firestore.collection('products').doc(productId).get();
-    return doc.exists ? ProductModel.fromJson(doc.data()!) : null;
+    if (doc.exists) {
+      final data = doc.data()!;
+      data['id'] = doc.id; // إضافة ID الوثيقة
+      return ProductModel.fromJson(data);
+    }
+    return null;
   }
 
   Future<void> addProduct(ProductModel product) async {
-    await _firestore.collection('products').add(product.toJson());
+    await _firestore.collection('products').doc(product.id).set(product.toJson());
   }
 
   Future<void> updateProduct(String productId, Map<String, dynamic> data) async {
@@ -128,7 +137,27 @@ class FirebaseService {
   }
 
   Future<void> addCategory(CategoryModel category) async {
-    await _firestore.collection('categories').add(category.toJson());
+    await _firestore.collection('categories').doc(category.id).set(category.toJson());
+  }
+
+  Future<List<CategoryModel>> getCategoriesPaginated({int limit = 20, CategoryModel? lastCategory}) async {
+    var query = _firestore.collection('categories').orderBy('created_at').limit(limit);
+    if (lastCategory != null) {
+      query = query.startAfter([lastCategory.createdAt.toIso8601String()]);
+    }
+    final querySnapshot = await query.get();
+    return querySnapshot.docs.map((doc) => CategoryModel.fromJson(doc.data())).toList();
+  }
+
+  Future<void> updateCategory(String categoryId, Map<String, dynamic> data) async {
+    await _firestore.collection('categories').doc(categoryId).update({
+      ...data,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  Future<void> deleteCategory(String categoryId) async {
+    await _firestore.collection('categories').doc(categoryId).delete();
   }
 
   // Cart methods
@@ -245,8 +274,45 @@ class FirebaseService {
         .get();
     
     return querySnapshot.docs
-        .map((doc) => ProductModel.fromJson(doc.data()))
+        .map((doc) {
+          final data = doc.data();
+          data['id'] = doc.id; // إضافة ID الوثيقة
+          return ProductModel.fromJson(data);
+        })
         .toList();
+  }
+
+  Future<List<ProductModel>> getProductsPaginated({int limit = 20, ProductModel? lastProduct}) async {
+    var query = _firestore.collection('products').orderBy('created_at').limit(limit);
+    if (lastProduct != null) {
+      query = query.startAfter([lastProduct.createdAt.toIso8601String()]);
+    }
+    final querySnapshot = await query.get();
+    return querySnapshot.docs.map((doc) {
+      final data = doc.data();
+      data['id'] = doc.id; // إضافة ID الوثيقة
+      return ProductModel.fromJson(data);
+    }).toList();
+  }
+
+  Future<int> getProductCountForCategory(String categoryId) async {
+    final querySnapshot = await _firestore
+        .collection('products')
+        .where('category_id', isEqualTo: categoryId)
+        .get();
+    return querySnapshot.size;
+  }
+
+  Future<List<ProductModel>> getProductsForCategory(String categoryId) async {
+    final querySnapshot = await _firestore
+        .collection('products')
+        .where('category_id', isEqualTo: categoryId)
+        .get();
+    return querySnapshot.docs.map((doc) {
+      final data = doc.data();
+      data['id'] = doc.id; // إضافة ID الوثيقة
+      return ProductModel.fromJson(data);
+    }).toList();
   }
 
   // Analytics and reporting

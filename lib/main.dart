@@ -3,6 +3,7 @@ import 'package:fodamarket/views/admin/data_entry_home_screen.dart';
 import 'package:fodamarket/views/home/main_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:fodamarket/views/onbording/OnBording.dart';
+import 'package:fodamarket/views/SignIn/SignIn.dart';
 
 import 'package:get/get.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -12,7 +13,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'firebase_options.dart';
 import 'blocs/auth/index.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:fodamarket/views/login/Login.dart';
+import 'blocs/products/category_bloc.dart';
+// import 'package:fodamarket/views/login/Login.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -35,6 +37,9 @@ class FodaMarket extends StatelessWidget {
       providers: [
         BlocProvider<AuthBloc>(
           create: (context) => AuthBloc()..add(AuthCheckRequested()),
+        ),
+        BlocProvider<CategoryBloc>(
+          create: (context) => CategoryBloc(),
         ),
       ],
       child: GetMaterialApp(
@@ -79,8 +84,8 @@ class AuthWrapper extends StatelessWidget {
             return MainScreen();
           }
         } else {
-          print('AuthWrapper: Showing login');
-          return Login();
+          print('AuthWrapper: Showing SignIn');
+          return SignIn();
         }
       },
     );

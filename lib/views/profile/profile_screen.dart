@@ -9,7 +9,7 @@ import 'package:fodamarket/views/profile/notifications_screen.dart';
 import 'package:fodamarket/views/profile/help_screen.dart';
 import 'package:fodamarket/views/profile/about_screen.dart';
 import 'package:fodamarket/blocs/auth/index.dart';
-import 'package:fodamarket/views/login/Login.dart';
+import 'package:fodamarket/views/SignIn/SignIn.dart';
 import 'package:fodamarket/theme/appcolors.dart';
 
 class ProfileScreen extends StatelessWidget {
@@ -21,7 +21,7 @@ class ProfileScreen extends StatelessWidget {
       listener: (context, state) {
         if (state is Unauthenticated) {
           Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (context) => Login()),
+            MaterialPageRoute(builder: (context) => SignIn()),
             (route) => false,
           );
         }
@@ -31,6 +31,8 @@ class ProfileScreen extends StatelessWidget {
           if (state is Authenticated && state.userProfile != null) {
             // User is authenticated - show profile
             return _buildAuthenticatedProfile(context, state);
+          } else if (state is Guest) {
+            return _buildGuestProfile(context);
           } else {
             // User is not authenticated - show login option
             return _buildUnauthenticatedProfile(context);
@@ -82,13 +84,14 @@ class ProfileScreen extends StatelessWidget {
                                 ),
                               ),
                               SizedBox(height: 6),
-                              Text(
-                                state.userProfile!.email,
-                                style: TextStyle(
-                                  color: Color(0xFF9E9E9E),
-                                  fontSize: 15,
+                              if (state.userProfile!.email != null && state.userProfile!.email!.isNotEmpty)
+                                Text(
+                                  state.userProfile!.email!,
+                                  style: TextStyle(
+                                    color: Color(0xFF9E9E9E),
+                                    fontSize: 15,
+                                  ),
                                 ),
-                              ),
                               SizedBox(height: 4),
                               Container(
                                 padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -122,16 +125,30 @@ class ProfileScreen extends StatelessWidget {
                         vertical: 8,
                       ),
                       children: [
-                        _ProfileListTile(
-                          title: 'الطلبات',
-                          iconPath: 'assets/home/Orders icon.svg',
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (context) => const OrdersScreen()),
-                            );
-                          },
-                        ),
+                        if (state is! Guest) ...[
+                          _ProfileListTile(
+                            title: 'الطلبات',
+                            iconPath: 'assets/home/Orders icon.svg',
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (context) => const OrdersScreen()),
+                              );
+                            },
+                          ),
+                        ],
+                        if (state is Guest) ...[
+                          _ProfileListTile(
+                            title: 'الطلبات (متاحة بعد تسجيل الدخول)',
+                            iconPath: 'assets/home/Orders icon.svg',
+                            onTap: () {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('يجب تسجيل الدخول لعرض الطلبات')),
+                              );
+                            },
+                            enabled: false,
+                          ),
+                        ],
                         _ProfileListTile(
                           title: 'بياناتي',
                           iconPath: 'assets/home/My Details icon.svg',
@@ -329,7 +346,7 @@ class ProfileScreen extends StatelessWidget {
                               onPressed: () {
                                 Navigator.push(
                                   context,
-                                  MaterialPageRoute(builder: (context) => Login()),
+                                  MaterialPageRoute(builder: (context) => SignIn()),
                                 );
                               },
                               style: ElevatedButton.styleFrom(
@@ -355,6 +372,38 @@ class ProfileScreen extends StatelessWidget {
                   ),
                 ],
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGuestProfile(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.person_outline, size: 80, color: AppColors.orangeColor),
+            SizedBox(height: 24),
+            Text('أنت تتصفح التطبيق كزائر', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+            SizedBox(height: 16),
+            Text('سجّل الدخول أو أنشئ حسابًا للاستفادة من جميع الميزات', style: TextStyle(fontSize: 16, color: AppColors.mediumGrayColor)),
+            SizedBox(height: 32),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (context) => SignIn()),
+                  (route) => false,
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.orangeColor,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: Text('تسجيل الدخول أو إنشاء حساب', style: TextStyle(fontSize: 18, color: Colors.white)),
             ),
           ],
         ),
@@ -406,7 +455,8 @@ class _ProfileListTile extends StatelessWidget {
   final String title;
   final String iconPath;
   final VoidCallback? onTap;
-  const _ProfileListTile({required this.title, required this.iconPath, this.onTap});
+  final bool? enabled;
+  const _ProfileListTile({required this.title, required this.iconPath, this.onTap, this.enabled});
 
   @override
   Widget build(BuildContext context) {
@@ -431,7 +481,7 @@ class _ProfileListTile extends StatelessWidget {
           color: Colors.black,
           size: 18,
         ),
-        onTap: onTap,
+        onTap: enabled == false ? null : onTap,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 0),
         tileColor: Colors.white,

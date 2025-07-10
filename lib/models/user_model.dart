@@ -1,18 +1,17 @@
 class UserModel {
   final String id;
   final String name;
-  final String email;
+  final String? email;
   final String phone;
   final String role; // 'admin', 'user', 'data_entry'
   final String? avatarUrl;
   final DateTime createdAt;
   final DateTime updatedAt;
 
-
   UserModel({
     required this.id,
     required this.name,
-    required this.email,
+    this.email,
     required this.phone,
     required this.role,
     this.avatarUrl,

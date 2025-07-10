@@ -57,4 +57,9 @@ class SignUpSuccess extends AuthState {
 
   @override
   List<Object?> get props => [email, message];
+}
+
+class Guest extends AuthState {
+  @override
+  List<Object?> get props => [];
 } 

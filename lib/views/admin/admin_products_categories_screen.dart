@@ -6,6 +6,13 @@ import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../../components/search_field.dart';
 import 'category_items_screen.dart';
+import '../../services/cloudinary_service.dart';
+import '../../services/firebase_service.dart';
+import '../../models/category_model.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../blocs/products/category_bloc.dart';
+import '../../blocs/products/category_event.dart';
+import '../../blocs/products/category_state.dart';
 
 class AdminProductsCategoriesScreen extends StatefulWidget {
   const AdminProductsCategoriesScreen({super.key});
@@ -14,91 +21,32 @@ class AdminProductsCategoriesScreen extends StatefulWidget {
   State<AdminProductsCategoriesScreen> createState() => _AdminProductsCategoriesScreenState();
 }
 
-class _Category {
-  final String name;
-  final int productCount;
-  final Color color;
-  final String? imageUrl;
-  final File? imageFile;
-
-  const _Category({
-    required this.name,
-    required this.productCount,
-    required this.color,
-    this.imageUrl,
-    this.imageFile,
-  });
-
-  _Category copyWith({String? name, int? productCount, Color? color, String? imageUrl, File? imageFile}) {
-    return _Category(
-      name: name ?? this.name,
-      productCount: productCount ?? this.productCount,
-      color: color ?? this.color,
-      imageUrl: imageUrl ?? this.imageUrl,
-      imageFile: imageFile ?? this.imageFile,
-    );
-  }
-}
-
 class _AdminProductsCategoriesScreenState extends State<AdminProductsCategoriesScreen> {
-  List<_Category> categories = [
-    _Category(
-      name: 'الفواكه والخضروات',
-      productCount: 45,
-      color: const Color(0xFFEFF6EC),
-      imageUrl: 'https://img.icons8.com/color/48/000000/apple.png',
-    ),
-    _Category(
-      name: 'المخبوزات والألبان',
-      productCount: 28,
-      color: const Color(0xFFFFF6E5),
-      imageUrl: 'https://img.icons8.com/color/48/000000/bread.png',
-    ),
-    _Category(
-      name: 'اللحوم والمأكولات البحرية',
-      productCount: 32,
-      color: const Color(0xFFE5F2FF),
-      imageUrl: 'https://img.icons8.com/color/48/000000/fish-food.png',
-    ),
-    _Category(
-      name: 'المشروبات',
-      productCount: 19,
-      color: const Color(0xFFF3EFFF),
-      imageUrl: 'https://img.icons8.com/color/48/000000/cola.png',
-    ),
-    _Category(
-      name: 'الوجبات الخفيفة والحلويات',
-      productCount: 36,
-      color: const Color(0xFFFFF9E5),
-      imageUrl: 'https://img.icons8.com/color/48/000000/cookie.png',
-    ),
-  ];
+  late TextEditingController _categoryNameController;
+  static const int _pageLimit = 20;
 
-  final List<Color> _colorOptions = [
-    AppColors.orangeColor,
-    AppColors.primary,
-    AppColors.lightBlueColor,
-    AppColors.darkBlueColor,
-    Colors.green,
-    Colors.red,
-    Colors.purple,
-    Colors.teal,
-    Colors.amber,
-    Colors.deepOrange,
-    Colors.blueAccent,
-    Colors.pinkAccent,
-    Colors.indigo,
-    Colors.cyan,
-    Colors.lime,
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _categoryNameController = TextEditingController();
+    // Fetch categories using BLoC
+    Future.microtask(() => context.read<CategoryBloc>().add(const FetchCategories(limit: _pageLimit)));
+  }
 
-  Future<void> _showCategoryForm({int? editIndex}) async {
-    final isEdit = editIndex != null;
-    final _Category? editing = isEdit ? categories[editIndex] : null;
-    final TextEditingController nameController = TextEditingController(text: editing?.name ?? '');
-    Color selectedColor = editing?.color ?? _colorOptions[0];
-    File? pickedImage = isEdit ? categories[editIndex].imageFile : null;
-    String? initialImageUrl = isEdit ? categories[editIndex].imageUrl : null;
+  @override
+  void dispose() {
+    _categoryNameController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _showCategoryForm({int? editIndex, CategoryModel? editing}) async {
+    _categoryNameController.text = editing?.name ?? '';
+    Color selectedColor = editing?.color != null
+        ? Color(int.parse(editing!.color!.replaceFirst('#', '0xff')))
+        : _colorOptions[0];
+    File? pickedImage;
+    String? initialImageUrl = editing?.imageUrl;
+    bool isUploading = false;
     try {
       await showModalBottomSheet(
         context: context,
@@ -141,11 +89,11 @@ class _AdminProductsCategoriesScreenState extends State<AdminProductsCategoriesS
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Text(isEdit ? 'تعديل الفئة' : 'إضافة فئة',
+                      Text(editing != null ? 'تعديل الفئة' : 'إضافة فئة',
                           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
                       const SizedBox(height: 16),
                       TextField(
-                        controller: nameController,
+                        controller: _categoryNameController,
                         textDirection: TextDirection.rtl,
                         decoration: const InputDecoration(
                           labelText: 'اسم الفئة',
@@ -206,36 +154,43 @@ class _AdminProductsCategoriesScreenState extends State<AdminProductsCategoriesS
                         ),
                       ),
                       const SizedBox(height: 24),
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 20),
-                        child: Button(
-                          buttonContent: Text(isEdit ? 'حفظ التعديلات' : 'إضافة'),
-                          buttonColor: AppColors.primary,
-                          onPressed: () {
-                            final name = nameController.text.trim();
-                            if (name.isEmpty) return;
-                            setState(() {
-                              if (isEdit) {
-                                categories[editIndex] = categories[editIndex].copyWith(
-                                  name: name,
-                                  color: selectedColor,
-                                  imageFile: pickedImage,
-                                  imageUrl: initialImageUrl,
-                                );
-                              } else {
-                                categories.add(_Category(
-                                  name: name,
-                                  productCount: 0,
-                                  color: selectedColor,
-                                  imageFile: pickedImage,
-                                  imageUrl: initialImageUrl,
-                                ));
+                      if (isUploading)
+                        const Center(child: CircularProgressIndicator()),
+                      if (!isUploading)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 20),
+                          child: Button(
+                            buttonContent: Text(editing != null ? 'حفظ التعديلات' : 'إضافة'),
+                            buttonColor: AppColors.primary,
+                            onPressed: () async {
+                              final name = _categoryNameController.text.trim();
+                              if (name.isEmpty) return;
+                              setModalState(() => isUploading = true);
+                              String? imageUrl = initialImageUrl;
+                              if (pickedImage != null) {
+                                imageUrl = await CloudinaryService().uploadImage(pickedImage!.path);
                               }
-                            });
-                            Navigator.pop(context);
-                          },
+                              setModalState(() => isUploading = false);
+                              final now = DateTime.now();
+                              final categoryId = editing?.id ?? now.millisecondsSinceEpoch.toString();
+                              final categoryModel = CategoryModel(
+                                id: categoryId,
+                                name: name,
+                                imageUrl: imageUrl,
+                                color: '#${selectedColor.value.toRadixString(16).padLeft(8, '0')}',
+                                isActive: true,
+                                createdAt: editing?.createdAt ?? now,
+                                updatedAt: now,
+                              );
+                              if (editing != null) {
+                                context.read<CategoryBloc>().add(UpdateCategory(categoryModel));
+                              } else {
+                                context.read<CategoryBloc>().add(AddCategory(categoryModel));
+                              }
+                              Navigator.pop(context);
+                            },
+                          ),
                         ),
-                      ),
                       const SizedBox(height: 10),
                     ],
                   ),
@@ -246,111 +201,209 @@ class _AdminProductsCategoriesScreenState extends State<AdminProductsCategoriesS
         },
       );
     } finally {
-      nameController.dispose();
+      _categoryNameController.clear();
     }
   }
 
+  final List<Color> _colorOptions = [
+    AppColors.orangeColor,
+    AppColors.primary,
+    AppColors.lightBlueColor,
+    AppColors.darkBlueColor,
+    Colors.green,
+    Colors.red,
+    Colors.purple,
+    Colors.teal,
+    Colors.amber,
+    Colors.deepOrange,
+    Colors.blueAccent,
+    Colors.pinkAccent,
+    Colors.indigo,
+    Colors.cyan,
+    Colors.lime,
+  ];
+
   @override
   Widget build(BuildContext context) {
-    return Directionality(
-      textDirection: TextDirection.rtl,
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            // Search bar
-            SearchField(
-              hintText: 'ابحث عن الفئات...',
-            ),
-            const SizedBox(height: 16),
-            // Category list
-            Expanded(
-              child: ListView.separated(
-                itemCount: categories.length,
-                separatorBuilder: (context, index) => const SizedBox(height: 12),
-                itemBuilder: (context, index) {
-                  final category = categories[index];
-                  return Container(
-                    decoration: BoxDecoration(
-                      color: category.color,
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: Colors.white,
-                        radius: 24,
-                        child: ClipOval(
-                          child: category.imageFile != null
-                              ? Image.file(
-                                  category.imageFile!,
-                                  width: 36,
-                                  height: 36,
-                                  fit: BoxFit.cover,
-                                )
-                              : (category.imageUrl != null
-                                  ? Image.network(
-                                      category.imageUrl!,
-                                      width: 36,
-                                      height: 36,
-                                      fit: BoxFit.cover,
-                                      errorBuilder: (context, error, stackTrace) => const Icon(Icons.image_not_supported, color: Colors.grey),
-                                    )
-                                  : const Icon(Icons.image, color: Colors.grey)),
+    return BlocBuilder<CategoryBloc, CategoryState>(
+      builder: (context, state) {
+        if (state is CategoriesLoading) {
+          return const Center(child: CircularProgressIndicator());
+        } else if (state is CategoriesLoaded) {
+          final categories = state.categories;
+          return Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              children: [
+                // Search bar
+                SearchField(
+                  hintText: 'ابحث عن الفئات...',
+                ),
+                const SizedBox(height: 16),
+                // Category list
+                Expanded(
+                  child: categories.isEmpty
+                      ? Center(child: Text('لا توجد فئات متاحة حالياً'))
+                      : ListView.separated(
+                          itemCount: categories.length,
+                          separatorBuilder: (context, index) => const SizedBox(height: 12),
+                          itemBuilder: (context, index) {
+                            final category = categories[index];
+                            Color bgColor = Colors.white;
+                            if (category.color != null && category.color!.startsWith('#')) {
+                              try {
+                                bgColor = Color(int.parse(category.color!.replaceFirst('#', '0xff')));
+                              } catch (e) {
+                                bgColor = Colors.white;
+                              }
+                            }
+                            return InkWell(
+                              borderRadius: BorderRadius.circular(16),
+                              onTap: () async {
+                                showDialog(
+                                  context: context,
+                                  barrierDismissible: false,
+                                  builder: (context) => const Center(child: CircularProgressIndicator()),
+                                );
+                                final products = await FirebaseService().getProductsForCategory(category.id);
+                                Navigator.pop(context); // Remove loading dialog
+                                final items = products.map((product) => CategoryItem(
+                                  name: product.name,
+                                  imageUrl: product.images.isNotEmpty ? product.images.first : null,
+                                  price: product.price,
+                                  available: product.isActive,
+                                  hasOffer: product.isSpecialOffer,
+                                  offerPrice: product.originalPrice,
+                                )).toList();
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => CategoryItemsScreen(
+                                      categoryName: category.name,
+                                      categoryId: category.id,
+                                    ),
+                                  ),
+                                );
+                              },
+                              child: Container(
+                                margin: const EdgeInsets.symmetric(vertical: 6),
+                                padding: const EdgeInsets.all(14),
+                                decoration: BoxDecoration(
+                                  color: bgColor,
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(color: Colors.grey.shade200, width: 1),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.03),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    CircleAvatar(
+                                      radius: 32,
+                                      backgroundColor: Colors.white,
+                                      backgroundImage: (category.imageUrl != null && category.imageUrl!.isNotEmpty)
+                                          ? NetworkImage(category.imageUrl!)
+                                          : null,
+                                      child: (category.imageUrl == null || category.imageUrl!.isEmpty)
+                                          ? const Icon(Icons.category, size: 32)
+                                          : null,
+                                    ),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Expanded(
+                                                child: Text(
+                                                  category.name,
+                                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                              ),
+                                              Row(
+                                                children: [
+                                                  IconButton(
+                                                    icon: const Icon(Icons.edit, color: Colors.blue),
+                                                    tooltip: 'تعديل',
+                                                    onPressed: () => _showCategoryForm(editing: category),
+                                                  ),
+                                                  const SizedBox(width: 4),
+                                                  IconButton(
+                                                    icon: const Icon(Icons.delete, color: Colors.red),
+                                                    tooltip: 'حذف',
+                                                    onPressed: () {
+                                                      context.read<CategoryBloc>().add(DeleteCategory(category.id));
+                                                    },
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 4),
+                                          FutureBuilder<int>(
+                                            future: FirebaseService().getProductCountForCategory(category.id),
+                                            builder: (context, snapshot) {
+                                              if (snapshot.connectionState == ConnectionState.waiting) {
+                                                return const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2));
+                                              }
+                                              if (snapshot.hasError) {
+                                                return const Text('-', style: TextStyle(color: Colors.red, fontSize: 13));
+                                              }
+                                              return Text(
+                                                '${snapshot.data ?? 0} منتج',
+                                                style: TextStyle(fontSize: 13, color: AppColors.blackColor),
+                                              );
+                                            },
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
                         ),
-                      ),
-                      title: Text(
-                        category.name,
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                      ),
-                      subtitle: Text('${category.productCount} منتج'),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.edit, color: Color(0xFFFFB300)),
-                            onPressed: () => _showCategoryForm(editIndex: index),
-                            tooltip: 'تعديل',
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.delete, color: Colors.red),
-                            onPressed: () {},
-                            tooltip: 'حذف',
-                          ),
-                        ],
-                      ),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => CategoryItemsScreen(
-                              categoryName: category.name,
-                              items: [
-                                CategoryItem(name: 'منتج 1', imageUrl: 'https://img.icons8.com/color/48/000000/apple.png', price: 20, available: true),
-                                CategoryItem(name: 'منتج 2', imageUrl: 'https://img.icons8.com/color/48/000000/bread.png', price: 15, available: false),
-                                CategoryItem(name: 'منتج 3', imageUrl: 'https://img.icons8.com/color/48/000000/fish-food.png', price: 30, available: true),
-                              ],
-                            ),
-                          ),
-                        );
+                ),
+                // Add Category button (full width)
+                SizedBox(
+                  width: double.infinity,
+                  height: 70,
+                  child: Button(
+                    buttonContent: const Text('إضافة فئة', style: TextStyle(fontWeight: FontWeight.bold)),
+                    buttonColor: AppColors.primary,
+                    onPressed: () => _showCategoryForm(),
+                  ),
+                ),
+                if (state.hasMore)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8.0),
+                    child: ElevatedButton(
+                      onPressed: () {
+                        context.read<CategoryBloc>().add(FetchCategories(
+                          limit: _pageLimit,
+                          lastCategory: categories.isNotEmpty ? categories.last : null,
+                        ));
                       },
+                      child: const Text('تحميل المزيد'),
                     ),
-                  );
-                },
-              ),
+                  ),
+              ],
             ),
-            // Add Category button (full width)
-            SizedBox(
-              width: double.infinity,
-              height: 70,
-              child: Button(
-                buttonContent: const Text('إضافة فئة', style: TextStyle(fontWeight: FontWeight.bold)),
-                buttonColor: AppColors.primary,
-                onPressed: () => _showCategoryForm(),
-              ),
-            ),
-          ],
-        ),
-      ),
+          );
+        } else if (state is CategoriesError) {
+          return Center(child: Text('خطأ: ${state.message}'));
+        }
+        return const SizedBox.shrink();
+      },
     );
   }
 } 

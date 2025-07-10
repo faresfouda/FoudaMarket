@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../blocs/auth/auth_bloc.dart';
+import '../../blocs/auth/auth_event.dart';
 
 import '../cart/cart_screen.dart';
 import '../categories/categories_screen.dart';
@@ -8,13 +11,13 @@ import 'home_screen.dart';
 import 'widgets/my_navigationbar.dart';
 
 class MainScreen extends StatefulWidget {
+  const MainScreen({Key? key}) : super(key: key);
 
-  const MainScreen({super.key});
   @override
-  State<MainScreen> createState() => _HomeScreenState();
+  State<MainScreen> createState() => _MainScreenState();
 }
 
-class _HomeScreenState extends State<MainScreen> {
+class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
   final List <Widget> _screens = [
     const HomeScreen(),
@@ -23,6 +26,14 @@ class _HomeScreenState extends State<MainScreen> {
     const FavouriteScreen(),
     const ProfileScreen(),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    // أرسل حدث إعادة تحميل بيانات المستخدم عند الدخول
+    BlocProvider.of<AuthBloc>(context).add(AuthCheckRequested());
+  }
+
   @override
   Widget build(BuildContext context) {
 

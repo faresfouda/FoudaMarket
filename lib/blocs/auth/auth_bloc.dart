@@ -2,20 +2,26 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../services/firebase_service.dart';
+import '../../services/google_auth_service.dart';
 import '../../models/user_model.dart';
 import 'auth_event.dart';
 import 'auth_state.dart';
 
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final FirebaseService _firebaseService = FirebaseService();
+  final GoogleAuthService _googleAuthService = GoogleAuthService();
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
   AuthBloc() : super(AuthInitial()) {
     on<AuthCheckRequested>(_onAuthCheckRequested);
     on<SignInRequested>(_onSignInRequested);
     on<SignUpRequested>(_onSignUpRequested);
+    on<GoogleSignInRequested>(_onGoogleSignInRequested);
     on<SignOutRequested>(_onSignOutRequested);
     on<PasswordResetRequested>(_onPasswordResetRequested);
+    on<GuestLoginRequested>((event, emit) {
+      emit(Guest());
+    });
   }
 
   Future<void> _onAuthCheckRequested(
@@ -138,6 +144,34 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     }
   }
 
+  Future<void> _onGoogleSignInRequested(
+    GoogleSignInRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(AuthLoading());
+    print('AuthBloc: AuthLoading emitted (GoogleSignInRequested)');
+    try {
+      final userCredential = await _googleAuthService.signInWithGoogle();
+      
+      if (userCredential?.user != null) {
+        // Get user profile from Firestore
+        final userProfile = await _googleAuthService.getUserProfile(userCredential!.user!.uid);
+        UserModel? userModel;
+        if (userProfile != null) {
+          userModel = userProfile;
+        }
+        print('AuthBloc: Authenticated emitted (GoogleSignInRequested)');
+        emit(Authenticated(user: userCredential.user!, userProfile: userModel));
+      } else {
+        print('AuthBloc: AuthError emitted (GoogleSignInRequested): Google sign in cancelled or failed');
+        emit(AuthError(message: 'تم إلغاء تسجيل الدخول بجوجل'));
+      }
+    } catch (e) {
+      print('AuthBloc: AuthError emitted (GoogleSignInRequested): ' + e.toString());
+      emit(AuthError(message: _getErrorMessage(e)));
+    }
+  }
+
   Future<void> _onSignOutRequested(
     SignOutRequested event,
     Emitter<AuthState> emit,
@@ -174,33 +208,31 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     if (error is FirebaseAuthException) {
       switch (error.code) {
         case 'user-not-found':
-          return 'لا يوجد مستخدم بهذا البريد الإلكتروني';
+          return 'لا يوجد مستخدم بهذا البريد الإلكتروني.';
         case 'wrong-password':
-          return 'كلمة المرور غير صحيحة';
+          return 'كلمة المرور غير صحيحة.';
         case 'email-already-in-use':
-          return 'البريد الإلكتروني مستخدم بالفعل';
+          return 'البريد الإلكتروني مستخدم بالفعل.';
         case 'weak-password':
-          return 'كلمة المرور ضعيفة جداً';
+          return 'كلمة المرور ضعيفة جداً.';
         case 'invalid-email':
-          return 'البريد الإلكتروني غير صحيح';
+          return 'البريد الإلكتروني غير صحيح.';
         case 'too-many-requests':
-          return 'تم تجاوز الحد الأقصى للمحاولات، يرجى المحاولة لاحقاً';
+          return 'عدد كبير من المحاولات. يرجى المحاولة لاحقاً.';
         case 'network-request-failed':
-          return 'فشل في الاتصال بالشبكة، يرجى التحقق من اتصال الإنترنت';
+          return 'فشل في الاتصال بالإنترنت. تحقق من اتصالك.';
         case 'operation-not-allowed':
-          return 'العملية غير مسموح بها';
+          return 'هذه العملية غير مسموح بها.';
         default:
-          return error.message ?? 'حدث خطأ غير متوقع';
+          return 'حدث خطأ غير متوقع. يرجى المحاولة لاحقاً.';
       }
     }
-    
 
-    
-    // Handle network errors
     if (error.toString().contains('network') || error.toString().contains('connection')) {
-      return 'مشكلة في الاتصال بالشبكة، يرجى التحقق من اتصال الإنترنت';
+      return 'فشل في الاتصال بالشبكة. تحقق من الإنترنت.';
     }
-    
-    return error.toString();
+
+    return 'حدث خطأ غير متوقع: ${error.toString()}';
   }
+
 } 

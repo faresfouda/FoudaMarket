@@ -5,16 +5,21 @@ import 'package:fodamarket/theme/appcolors.dart';
 class PhoneTextField extends StatelessWidget {
   const PhoneTextField({
     super.key,
+    required this.controller,
     required this.autofocus,
     required this.onTap,
   });
+
+  final TextEditingController controller;
   final bool autofocus;
   final VoidCallback onTap;
+
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: TextField(
+        controller: controller,
         onTap: onTap,
         autofocus: autofocus,
         decoration: InputDecoration(

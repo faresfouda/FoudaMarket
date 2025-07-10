@@ -43,6 +43,7 @@ dependencies:
   flutter_rating_bar: ^4.0.1
   image_picker: ^1.0.7
   permission_handler: ^11.0.1
+  cloudinary_public: 
   
   # Firebase dependencies
   firebase_core:
@@ -54,6 +55,7 @@ dependencies:
   firebase_performance:
   firebase_remote_config:
   firebase_dynamic_links:
+  google_sign_in: ^6.2.1
   
   # Additional utilities
   flutter_secure_storage: ^9.0.0

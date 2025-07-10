@@ -1,7 +1,7 @@
 import 'package:fodamarket/components/Button.dart';
 import 'package:flutter/material.dart';
 import 'package:fodamarket/theme/appcolors.dart';
-import 'package:fodamarket/views/login/Login.dart';
+import 'package:fodamarket/views/SignIn/SignIn.dart';
 
 class OnBording extends StatelessWidget {
   final VoidCallback? onFinish;
@@ -60,7 +60,7 @@ class OnBording extends StatelessWidget {
                   if (onFinish != null) {
                     onFinish!();
                   } else {
-                    Navigator.push(context, MaterialPageRoute(builder: (context) => Login()));
+                    Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => SignIn()));
                   }
                 },
                 buttonContent: Text(
