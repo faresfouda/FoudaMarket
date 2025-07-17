@@ -134,12 +134,12 @@ class FirebaseService {
     return await _productService.getProductsPaginated(limit: limit, lastProduct: lastProduct);
   }
 
-  Future<List<ProductModel>> getBestSellers({int limit = 10}) async {
-    return await _productService.getBestSellers(limit: limit);
+  Future<List<ProductModel>> getBestSellers({int limit = 10, ProductModel? lastProduct}) async {
+    return await _productService.getBestSellers(limit: limit, lastProduct: lastProduct);
   }
 
-  Future<List<ProductModel>> getSpecialOffers({int limit = 10}) async {
-    return await _productService.getSpecialOffers(limit: limit);
+  Future<List<ProductModel>> getSpecialOffers({int limit = 10, ProductModel? lastProduct}) async {
+    return await _productService.getSpecialOffers(limit: limit, lastProduct: lastProduct);
   }
 
   Future<List<ProductModel>> getRecommendedProducts({int limit = 10}) async {

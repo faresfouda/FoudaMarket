@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../theme/appcolors.dart';
 import '../../components/Button.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class SendNotificationScreen extends StatelessWidget {
   final TextEditingController titleController = TextEditingController();
@@ -43,11 +46,57 @@ class SendNotificationScreen extends StatelessWidget {
                 style: TextStyle(color: Colors.white),
               ),
               buttonColor: AppColors.orangeColor,
-              onPressed: () {
-                // Implement send logic here
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('تم إرسال الإشعار!')),
-                );
+              onPressed: () async {
+                final title = titleController.text.trim();
+                final body = messageController.text.trim();
+
+                if (title.isEmpty || body.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('يرجى إدخال عنوان ومحتوى الإشعار')),
+                  );
+                  return;
+                }
+
+                try {
+                  // جلب جميع توكنات المستخدمين من Firestore
+                  final usersSnapshot = await FirebaseFirestore.instance.collection('users').get();
+                  final tokens = usersSnapshot.docs
+                      .map((doc) => doc.data()['fcmToken'])
+                      .where((token) => token != null && token.isNotEmpty)
+                      .toList();
+
+                  if (tokens.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('لا يوجد مستخدمين لديهم FCM Token')),
+                    );
+                    return;
+                  }
+
+                  // إرسال الطلب إلى Vercel API
+                  final response = await http.post(
+                    Uri.parse('https://fcm-api-seven.vercel.app/api/send-fcm'),
+                    headers: {'Content-Type': 'application/json'},
+                    body: json.encode({
+                      'fcmTokens': tokens,
+                      'title': title,
+                      'body': body,
+                    }),
+                  );
+
+                  if (response.statusCode == 200) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('تم إرسال الإشعار لجميع المستخدمين!')),
+                    );
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('فشل في إرسال الإشعار: \n${response.body}')),
+                    );
+                  }
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('حدث خطأ: $e')),
+                  );
+                }
               },
             ),
           ],

@@ -14,6 +14,7 @@ class PromoCodeModel {
   final DateTime createdAt;
   final DateTime updatedAt;
   final String createdBy; // معرف المدير الذي أنشأ الكود
+  final double? fixedAmount; // مبلغ خصم ثابت
 
   PromoCodeModel({
     required this.id,
@@ -29,6 +30,7 @@ class PromoCodeModel {
     required this.createdAt,
     required this.updatedAt,
     required this.createdBy,
+    this.fixedAmount,
   });
 
   factory PromoCodeModel.fromJson(Map<String, dynamic> json) {
@@ -63,6 +65,7 @@ class PromoCodeModel {
       createdAt: parseTimestamp(json['created_at']),
       updatedAt: parseTimestamp(json['updated_at']),
       createdBy: json['created_by'] ?? '',
+      fixedAmount: json['fixed_amount'] != null ? (json['fixed_amount'] as num).toDouble() : null,
     );
   }
 
@@ -81,6 +84,7 @@ class PromoCodeModel {
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
       'created_by': createdBy,
+      'fixed_amount': fixedAmount,
     };
   }
 
@@ -102,6 +106,7 @@ class PromoCodeModel {
     DateTime? createdAt,
     DateTime? updatedAt,
     String? createdBy,
+    double? fixedAmount,
   }) {
     return PromoCodeModel(
       id: id ?? this.id,
@@ -117,6 +122,7 @@ class PromoCodeModel {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       createdBy: createdBy ?? this.createdBy,
+      fixedAmount: fixedAmount ?? this.fixedAmount,
     );
   }
 } 

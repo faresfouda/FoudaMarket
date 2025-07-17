@@ -17,31 +17,52 @@ class _OrdersScreenState extends State<OrdersScreen> {
   List<OrderModel> _orders = [];
   bool _isLoading = true;
   String? _error;
+  bool _isLoadingMore = false;
+  bool _hasMore = true;
+  static const int _pageSize = 20;
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
     _loadOrders();
+    _scrollController.addListener(_onScroll);
   }
 
-  Future<void> _loadOrders() async {
-    try {
-      setState(() {
-        _isLoading = true;
-        _error = null;
-      });
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
 
+  Future<void> _loadOrders({bool refresh = false}) async {
+    try {
       final currentUser = FirebaseAuth.instance.currentUser;
       if (currentUser == null) {
         throw Exception('يرجى تسجيل الدخول');
       }
-
-      final orders = await OrderService().getUserOrders(currentUser.uid);
-      
+      if (refresh) {
+        setState(() {
+          _isLoading = true;
+          _error = null;
+          _orders = [];
+          _hasMore = true;
+        });
+      } else {
+        setState(() {
+          _isLoading = _orders.isEmpty;
+          _error = null;
+        });
+      }
+      final orders = await OrderService().getUserOrdersPaginated(
+        currentUser.uid,
+        limit: _pageSize,
+      );
       if (mounted) {
         setState(() {
           _orders = orders;
           _isLoading = false;
+          _hasMore = orders.length == _pageSize;
         });
       }
     } catch (e) {
@@ -51,6 +72,42 @@ class _OrdersScreenState extends State<OrdersScreen> {
           _isLoading = false;
         });
       }
+    }
+  }
+
+  Future<void> _loadMoreOrders() async {
+    if (_isLoadingMore || !_hasMore || _isLoading) return;
+    setState(() {
+      _isLoadingMore = true;
+    });
+    try {
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser == null) return;
+      final lastOrder = _orders.isNotEmpty ? _orders.last : null;
+      final moreOrders = await OrderService().getUserOrdersPaginated(
+        currentUser.uid,
+        limit: _pageSize,
+        lastOrder: lastOrder,
+      );
+      if (mounted) {
+        setState(() {
+          _orders.addAll(moreOrders);
+          _hasMore = moreOrders.length == _pageSize;
+          _isLoadingMore = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoadingMore = false;
+        });
+      }
+    }
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200 && !_isLoadingMore && _hasMore) {
+      _loadMoreOrders();
     }
   }
 
@@ -171,12 +228,19 @@ class _OrdersScreenState extends State<OrdersScreen> {
 
   Widget _buildOrdersList() {
     return RefreshIndicator(
-      onRefresh: _loadOrders,
+      onRefresh: () => _loadOrders(refresh: true),
       child: ListView.separated(
+        controller: _scrollController,
         padding: const EdgeInsets.only(bottom: 32, left: 16, right: 16),
-        itemCount: _orders.length,
+        itemCount: _orders.length + (_isLoadingMore ? 1 : 0),
         separatorBuilder: (_, __) => const SizedBox(height: 24),
         itemBuilder: (context, index) {
+          if (index == _orders.length && _isLoadingMore) {
+            return const Padding(
+              padding: EdgeInsets.symmetric(vertical: 16.0),
+              child: Center(child: CircularProgressIndicator()),
+            );
+          }
           final order = _orders[index];
           return _buildOrderCard(order);
         },

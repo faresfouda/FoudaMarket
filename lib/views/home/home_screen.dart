@@ -1,11 +1,11 @@
 import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fouda_market/components/category_card.dart';
 import 'package:fouda_market/components/item_container.dart';
 import 'package:fouda_market/views/category/category_screen.dart';
+import 'package:fouda_market/views/product/product_screen.dart';
 import 'package:fouda_market/views/profile/notifications_screen.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 import 'package:fouda_market/theme/appcolors.dart';
@@ -22,6 +22,12 @@ import 'search_screen.dart';
 import 'package:fouda_market/blocs/address/address_bloc.dart';
 import 'package:fouda_market/blocs/address/address_event.dart';
 import 'package:fouda_market/blocs/address/address_state.dart';
+import 'widgets/horizontal_product_list.dart';
+import 'widgets/header.dart';
+import 'widgets/search_bar.dart' as custom_widgets;
+import 'widgets/banner_carousel.dart';
+import 'widgets/section_header.dart';
+import 'widgets/category_list.dart';
 
 
 class HomeScreen extends StatefulWidget {
@@ -212,6 +218,15 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
   void didPopNext() {
     super.didPopNext();
     _isPageActive = true;
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      context.read<ProductBloc>().add(LoadFavorites(user.uid));
+      context.read<ProductBloc>().add(const ResetHomeProducts());
+      context.read<ProductBloc>().add(const FetchSpecialOffers(limit: 10));
+      context.read<ProductBloc>().add(const FetchBestSellers(limit: 10));
+      context.read<ProductBloc>().add(const FetchRecommendedProducts(limit: 10));
+    }
+    setState(() {}); // إعادة بناء الصفحة
     // إعادة تحميل البيانات عند العودة للصفحة
     if (mounted && !_isRefreshing) {
       Future.delayed(Duration(milliseconds: 200), () {
@@ -221,7 +236,6 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
       });
     }
     if (mounted) {
-      context.read<ProductBloc>().add(const ResetHomeProducts());
       context.read<CategoryBloc>().add(const FetchCategories());
       // تحميل العنوان الافتراضي عند العودة للصفحة
       final user = FirebaseAuth.instance.currentUser;
@@ -255,10 +269,15 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
   Widget build(BuildContext context) {
     super.build(context); // مطلوب لـ AutomaticKeepAliveClientMixin
     
-    return BlocListener<AddressBloc, AddressState>(
+    return BlocListener<ProductBloc, ProductState>(
+      listener: (context, state) {
+        if (state is FavoritesUpdated) {
+          setState(() {}); // إعادة بناء الصفحة عند تحديث المفضلة
+        }
+      },
+      child: BlocListener<AddressBloc, AddressState>(
       listener: (context, state) {
         if (state is AddressOperationSuccess) {
-          // إعادة تحميل العنوان الافتراضي بعد نجاح أي عملية
           final user = FirebaseAuth.instance.currentUser;
           if (user != null) {
             context.read<AddressBloc>().add(LoadDefaultAddress(user.uid));
@@ -272,7 +291,6 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
           onRefresh: () async {
             if (!_isRefreshing) {
               _refreshData();
-              // انتظار قليل لضمان تحديث البيانات
               await Future.delayed(Duration(milliseconds: 800));
             }
           },
@@ -287,20 +305,19 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildHeader(),
+                      Header(),
                   const SizedBox(height: 18),
-                  _buildSearchBar(),
+                      custom_widgets.SearchBar(),
                   const SizedBox(height: 18),
-                  _BannerCarousel(controller: _pageController, banners: _banners),
+                      BannerCarousel(controller: _pageController, banners: _banners),
                   const SizedBox(height: 18),
-                  _buildCategories(),
+                      CategoryListWidget(),
                   const SizedBox(height: 18),
                   _buildProductSection('عروض خاصة', _getSpecialOffers),
                   const SizedBox(height: 18),
                   _buildProductSection('الأكثر مبيعاً', _getBestSellers),
                   const SizedBox(height: 18),
                   _buildRecommendedSection(),
-                  // مساحة إضافية للـ RefreshIndicator
                   const SizedBox(height: 20),
                 ],
               ),
@@ -308,179 +325,8 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
           ),
         ),
       ),
-    ),
-  ); // <-- إغلاق BlocListener هنا
-}
-
-  Widget _buildHeader() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Expanded(
-          child: Row(
-            children: [
-              CircleAvatar(
-                backgroundColor: AppColors.orangeColor.withValues(alpha: 0.1),
-                radius: 20,
-                child: Image.asset('assets/home/logo.jpg', height: 28),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('فودة ماركت', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                    BlocBuilder<AddressBloc, AddressState>(
-                      builder: (context, state) {
-                        print('[DEBUG] BlocBuilder AddressState: ' + state.toString());
-                        if (state is DefaultAddressLoaded && state.defaultAddress != null) {
-                          print('[DEBUG] BlocBuilder: DefaultAddressLoaded with address: ' + state.defaultAddress!.toString());
-                          return GestureDetector(
-                            onTap: () => _showAddressSelectionDialog(context),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.location_on, color: AppColors.orangeColor, size: 16),
-                                Flexible(
-                                  child: Text(
-                                    state.defaultAddress!.name,
-                                    style: TextStyle(fontSize: 12, color: Colors.grey[700]),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                                Icon(Icons.keyboard_arrow_down, size: 16, color: Colors.grey[700]),
-                              ],
-                            ),
-                          );
-                        } else {
-                          print('[DEBUG] BlocBuilder: No default address, state is: ' + state.toString());
-                          // إذا لم يكن هناك عنوان افتراضي، اعرض زر لإضافة عنوان
-                          return GestureDetector(
-                            onTap: () => _showAddressSelectionDialog(context),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.location_on, color: AppColors.orangeColor, size: 16),
-                                Text('إضافة عنوان التوصيل', style: TextStyle(fontSize: 12, color: Colors.grey[700])),
-                                Icon(Icons.keyboard_arrow_down, size: 16, color: Colors.grey[700]),
-                              ],
-                            ),
-                          );
-                        }
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
         ),
-        Row(
-          children: [
-            // مؤشر التحديث
-            if (_isRefreshing)
-              Container(
-                margin: EdgeInsets.only(right: 8),
-                child: SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: AppColors.orangeColor,
-                  ),
-                ),
-              ),
-            Stack(
-              children: [
-                IconButton(
-                  icon: Icon(Icons.notifications, color: AppColors.orangeColor),
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const NotificationsScreen()),
-                    );
-                  },
-                ),
-                Positioned(
-                  right: 10,
-                  top: 10,
-                  child: Container(
-                    width: 8,
-                    height: 8,
-                    decoration: BoxDecoration(color: Colors.red, shape: BoxShape.circle),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSearchBar() {
-    return Row(
-      children: [
-        Expanded(child: SearchButton()),
-        const SizedBox(width: 10),
-        Container(
-          height: 44,
-          width: 44,
-          decoration: BoxDecoration(
-            color: AppColors.orangeColor,
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: IconButton(
-            icon: Icon(Icons.tune, color: Colors.white),
-            onPressed: () async {
-              await Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => SearchScreen(openFilterOnStart: true)),
-              );
-              // إعادة الصفحة الرئيسية لوضعها الطبيعي بعد البحث
-              context.read<ProductBloc>().add(const ResetHomeProducts());
-              context.read<CategoryBloc>().add(const FetchCategories());
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildCategories() {
-    return BlocBuilder<CategoryBloc, CategoryState>(
-      builder: (context, state) {
-        if (state is CategoriesLoading) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('الأقسام', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-              const SizedBox(height: 10),
-              _buildLoadingIndicator(90),
-            ],
-          );
-        } else if (state is CategoriesLoaded && state.categories.isNotEmpty) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('الأقسام', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-              const SizedBox(height: 10),
-              _CategoryList(categories: state.categories),
-            ],
-          );
-        } else if (state is CategoriesError) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('الأقسام', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-              const SizedBox(height: 10),
-              _buildErrorView('فشل في تحميل الفئات'),
-            ],
-          );
-        } else {
-          return SizedBox.shrink();
-        }
-      },
+      ),
     );
   }
 
@@ -488,7 +334,26 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _SectionHeader(title: title, onTap: () {}),
+        SectionHeader(
+          title: title,
+          onTap: () {
+            if (title == 'عروض خاصة') {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const SpecialOffersScreen(),
+                ),
+              );
+            } else if (title == 'الأكثر مبيعاً') {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const BestSellersScreen(),
+                ),
+              );
+            }
+          },
+        ),
         const SizedBox(height: 10),
         BlocBuilder<ProductBloc, ProductState>(
           builder: (context, state) {
@@ -504,12 +369,12 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
               if (isLoading) {
                 return _buildLoadingIndicator(240);
               } else {
-                return _HorizontalProductList(products: products);
+                return HorizontalProductList(products: products);
               }
             } else if (state is ProductsLoading) {
               return _buildLoadingIndicator(240);
             } else {
-              return _HorizontalProductList(products: []);
+              return HorizontalProductList(products: []);
             }
           },
         ),
@@ -530,12 +395,12 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
               if (state.isLoadingRecommended) {
                 return _buildLoadingIndicator(240);
               } else {
-                return _HorizontalProductList(products: products);
+                return HorizontalProductList(products: products);
               }
             } else if (state is ProductsLoading) {
               return _buildLoadingIndicator(240);
             } else {
-              return _HorizontalProductList(products: []);
+              return HorizontalProductList(products: []);
             }
           },
         ),
@@ -805,193 +670,5 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
     if (user != null) {
       context.read<AddressBloc>().add(LoadDefaultAddress(user.uid));
     }
-  }
-}
-
-class _BannerCarousel extends StatelessWidget {
-  final PageController controller;
-  final List<String> banners;
-
-  const _BannerCarousel({required this.controller, required this.banners});
-
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(15),
-          child: SizedBox(
-            height: 150,
-            width: double.infinity,
-            child: PageView.builder(
-              controller: controller,
-              itemCount: banners.length,
-              itemBuilder: (context, index) => Image.asset(banners[index], fit: BoxFit.cover, width: double.infinity),
-            ),
-          ),
-        ),
-        Positioned(
-          bottom: 10,
-          left: 0,
-          right: 0,
-          child: Center(
-            child: SmoothPageIndicator(
-              controller: controller,
-              count: banners.length,
-              effect: ExpandingDotsEffect(
-                dotHeight: 8,
-                dotWidth: 8,
-                expansionFactor: 4,
-                spacing: 10,
-                activeDotColor: AppColors.orangeColor,
-                dotColor: AppColors.lightGrayColor.withOpacity(0.4),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _SectionHeader extends StatelessWidget {
-  final String title;
-  final VoidCallback onTap;
-
-  const _SectionHeader({required this.title, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(title, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.blackColor)),
-        GestureDetector(
-          onTap: onTap,
-          child: Text('عرض الكل', style: TextStyle(fontSize: 16, color: AppColors.orangeColor)),
-        ),
-      ],
-    );
-  }
-}
-
-class _HorizontalProductList extends StatelessWidget {
-  final List<ProductModel> products;
-
-  const _HorizontalProductList({this.products = const []});
-
-  @override
-  Widget build(BuildContext context) {
-    if (products.isEmpty) {
-      return SizedBox(
-        height: 300,
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.inventory_2_outlined, size: 48, color: Colors.grey[400]),
-              const SizedBox(height: 8),
-              Text('لا توجد منتجات', style: TextStyle(color: Colors.grey[600])),
-            ],
-          ),
-        ),
-      );
-    }
-
-    return SizedBox(
-      height: 300,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        itemCount: products.length,
-        itemBuilder: (context, index) {
-          final product = products[index];
-          return ListenableBuilder(
-            listenable: context.read<ProductBloc>().favoritesNotifier,
-            builder: (context, child) {
-              final bloc = context.read<ProductBloc>();
-              final isFavorite = bloc.favoritesNotifier.isProductFavorite(product.id);
-              
-              return ProductCard(
-                product: product,
-                isFavorite: isFavorite,
-                onFavoritePressed: () {
-                  final user = FirebaseAuth.instance.currentUser;
-                  if (user != null) {
-                    if (isFavorite) {
-                      context.read<ProductBloc>().add(RemoveFromFavorites(user.uid, product.id));
-                    } else {
-                      context.read<ProductBloc>().add(AddToFavorites(user.uid, product.id));
-                    }
-                  }
-                },
-                onAddPressed: () {}, // سيتم التعامل معه داخل ProductCard
-              );
-            },
-          );
-        },
-      ),
-    );
-  }
-
-  List<ProductModel> _getDefaultProducts() {
-    return [];
-  }
-}
-
-class _CategoryList extends StatelessWidget {
-  final List<CategoryModel> categories;
-
-  const _CategoryList({required this.categories});
-
-  @override
-  Widget build(BuildContext context) {
-    if (categories.isEmpty) {
-      return SizedBox.shrink();
-    }
-    
-    return SizedBox(
-      height: 90,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        itemCount: categories.length,
-        itemBuilder: (context, index) {
-          final category = categories[index];
-          Color bgColor = Colors.white;
-          
-          if (category.color != null && category.color!.startsWith('#')) {
-            try {
-              bgColor = Color(int.parse(category.color!.replaceFirst('#', '0xff')));
-            } catch (e) {
-              bgColor = AppColors.lightGrayColor3;
-            }
-          }
-          
-          return CategoryCard(
-            imageUrl: category.imageUrl ?? '',
-            categoryName: category.name,
-            bgColor: bgColor,
-            onTap: () async {
-              await Navigator.push(
-                context, 
-                MaterialPageRoute(builder: (context) => CategoryScreen(
-                  categoryName: category.name,
-                  categoryId: category.id,
-                )),
-              );
-              // بعد العودة من القسم، أرسل أحداث Bloc لإعادة تحميل المنتجات
-              context.read<ProductBloc>().add(const FetchSpecialOffers(limit: 10));
-              context.read<ProductBloc>().add(const FetchBestSellers(limit: 10));
-              context.read<ProductBloc>().add(const FetchRecommendedProducts(limit: 10));
-              // يمكنك أيضاً إعادة تحميل الفئات إذا أردت:
-              // context.read<CategoryBloc>().add(const FetchCategories());
-            },
-          );
-        },
-      ),
-    );
-  }
-
-  List<CategoryModel> _getDefaultCategories() {
-    return [];
   }
 }

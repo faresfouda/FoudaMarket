@@ -26,7 +26,11 @@ class _OrdersScreenState extends State<OrdersScreen> {
   List<OrderModel> _allOrders = [];
   bool _isLoading = true;
   String? _error;
-
+  bool _isLoadingMore = false;
+  bool _hasMore = true;
+  static const int _pageSize = 20;
+  final ScrollController _scrollController = ScrollController();
+  
   @override
   void initState() {
     super.initState();
@@ -36,21 +40,36 @@ class _OrdersScreenState extends State<OrdersScreen> {
       selectedStatus = OrderStatus.all;
     }
     _loadOrders();
+    _scrollController.addListener(_onScroll);
   }
 
-  Future<void> _loadOrders() async {
-    try {
-      setState(() {
-        _isLoading = true;
-        _error = null;
-      });
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
 
-      final orders = await _orderService.getAllOrders();
-      
+  Future<void> _loadOrders({bool refresh = false}) async {
+    try {
+      if (refresh) {
+        setState(() {
+          _isLoading = true;
+          _error = null;
+          _allOrders = [];
+          _hasMore = true;
+        });
+      } else {
+        setState(() {
+          _isLoading = _allOrders.isEmpty;
+          _error = null;
+        });
+      }
+      final orders = await _orderService.getAllOrdersPaginated(limit: _pageSize);
       if (mounted) {
         setState(() {
           _allOrders = orders;
           _isLoading = false;
+          _hasMore = orders.length == _pageSize;
         });
       }
     } catch (e) {
@@ -60,6 +79,39 @@ class _OrdersScreenState extends State<OrdersScreen> {
           _isLoading = false;
         });
       }
+    }
+  }
+
+  Future<void> _loadMoreOrders() async {
+    if (_isLoadingMore || !_hasMore || _isLoading) return;
+    setState(() {
+      _isLoadingMore = true;
+    });
+    try {
+      final lastOrder = _allOrders.isNotEmpty ? _allOrders.last : null;
+      final moreOrders = await _orderService.getAllOrdersPaginated(
+        limit: _pageSize,
+        lastOrder: lastOrder,
+      );
+      if (mounted) {
+        setState(() {
+          _allOrders.addAll(moreOrders);
+          _hasMore = moreOrders.length == _pageSize;
+          _isLoadingMore = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoadingMore = false;
+        });
+      }
+    }
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200 && !_isLoadingMore && _hasMore) {
+      _loadMoreOrders();
     }
   }
 
@@ -407,7 +459,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                               ),
                               const SizedBox(height: 8),
                               ElevatedButton(
-                                onPressed: _loadOrders,
+                                onPressed: () => _loadOrders(refresh: true),
                                 child: Text('إعادة المحاولة'),
                               ),
                             ],
@@ -435,12 +487,19 @@ class _OrdersScreenState extends State<OrdersScreen> {
                               ),
                             )
                           : RefreshIndicator(
-                              onRefresh: _loadOrders,
+                              onRefresh: () => _loadOrders(refresh: true),
               child: ListView.separated(
-                itemCount: filteredOrders.length,
+                controller: _scrollController,
+                itemCount: filteredOrders.length + (_isLoadingMore ? 1 : 0),
                 separatorBuilder: (context, index) =>
                     const SizedBox(height: 10),
                 itemBuilder: (context, index) {
+                  if (index == filteredOrders.length && _isLoadingMore) {
+                    return const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 16.0),
+                      child: Center(child: CircularProgressIndicator()),
+                    );
+                  }
                   final order = filteredOrders[index];
                                   final orderStatus = _getOrderStatus(order.status);
                   return Container(

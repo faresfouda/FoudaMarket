@@ -577,14 +577,64 @@ class _ProductsCategoriesScreenState
                                                       color: Colors.red,
                                                     ),
                                                     tooltip: 'حذف',
-                                                    onPressed: () {
-                                                      context
-                                                          .read<CategoryBloc>()
-                                                          .add(
-                                                            DeleteCategory(
-                                                              category.id,
+                                                    onPressed: () async {
+                                                      final confirm = await showDialog<bool>(
+                                                        context: context,
+                                                        barrierDismissible: false,
+                                                        builder: (context) {
+                                                          final controller = TextEditingController();
+                                                          return AlertDialog(
+                                                            title: const Text('تأكيد حذف الفئة'),
+                                                            content: Column(
+                                                              mainAxisSize: MainAxisSize.min,
+                                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                                              children: [
+                                                                Text('⚠️ حذف الفئة سيؤدي إلى حذف جميع المنتجات المرتبطة بها!'),
+                                                                const SizedBox(height: 12),
+                                                                Text('للتأكيد، اكتب اسم الفئة بالضبط:'),
+                                                                const SizedBox(height: 8),
+                                                                TextField(
+                                                                  controller: controller,
+                                                                  decoration: InputDecoration(
+                                                                    border: OutlineInputBorder(),
+                                                                    hintText: category.name,
+                                                                  ),
+                                                                ),
+                                                              ],
                                                             ),
+                                                            actions: [
+                                                              TextButton(
+                                                                child: const Text('إلغاء'),
+                                                                onPressed: () => Navigator.of(context).pop(false),
+                                                              ),
+                                                              ElevatedButton(
+                                                                style: ElevatedButton.styleFrom(
+                                                                  backgroundColor: Colors.red,
+                                                                  foregroundColor: Colors.white,
+                                                                ),
+                                                                child: const Text('تأكيد الحذف'),
+                                                                onPressed: () {
+                                                                  if (controller.text.trim() == category.name.trim()) {
+                                                                    Navigator.of(context).pop(true);
+                                                                  } else {
+                                                                    ScaffoldMessenger.of(context).showSnackBar(
+                                                                      const SnackBar(
+                                                                        content: Text('يجب كتابة اسم الفئة بشكل مطابق للتأكيد!'),
+                                                                        backgroundColor: Colors.red,
+                                                                      ),
+                                                                    );
+                                                                  }
+                                                                },
+                                                              ),
+                                                            ],
                                                           );
+                                                        },
+                                                      );
+                                                      if (confirm == true) {
+                                                        context.read<CategoryBloc>().add(
+                                                          DeleteCategory(category.id),
+                                                        );
+                                                      }
                                                     },
                                                   ),
                                                 ],

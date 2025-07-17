@@ -24,8 +24,11 @@ class CheckoutScreen extends StatefulWidget {
 class _CheckoutScreenState extends State<CheckoutScreen> {
   final TextEditingController _promoCodeController = TextEditingController();
   PromoCodeModel? _appliedPromoCode;
+  String? _appliedPromoCodeId;
   double _discountAmount = 0.0;
   bool _isApplyingPromoCode = false;
+  String? _promoCodeError;
+  bool _isPromoCodeValid = false;
 
   @override
   void initState() {
@@ -41,6 +44,44 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   void dispose() {
     _promoCodeController.dispose();
     super.dispose();
+  }
+
+  void _onPromoCodeChanged(String value, CartLoaded cartState) async {
+    final code = value.trim();
+    if (code.isEmpty) {
+      setState(() {
+        _promoCodeError = null;
+        _isPromoCodeValid = false;
+      });
+      return;
+    }
+    context.read<PromoCodeBloc>().add(ValidatePromoCode(code, cartState.total));
+    await Future.delayed(const Duration(milliseconds: 400));
+    final promoCodeState = context.read<PromoCodeBloc>().state;
+    if (promoCodeState is PromoCodeValidated) {
+      // إذا الكود غير مفعل اعتبره غير موجود للمستخدم
+      if (promoCodeState.isValid && promoCodeState.promoCode != null && promoCodeState.promoCode!.isActive) {
+        setState(() {
+          _promoCodeError = null;
+          _isPromoCodeValid = true;
+        });
+      } else if (promoCodeState.promoCode != null && !promoCodeState.promoCode!.isActive) {
+        setState(() {
+          _promoCodeError = 'كود الخصم غير موجود';
+          _isPromoCodeValid = false;
+        });
+      } else {
+        setState(() {
+          _promoCodeError = promoCodeState.message;
+          _isPromoCodeValid = false;
+        });
+      }
+    } else if (promoCodeState is PromoCodeError) {
+      setState(() {
+        _promoCodeError = promoCodeState.message;
+        _isPromoCodeValid = false;
+      });
+    }
   }
 
   @override
@@ -284,6 +325,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 Expanded(
                   child: TextField(
                     controller: _promoCodeController,
+                    onChanged: (val) => _onPromoCodeChanged(val, cartState),
                     decoration: InputDecoration(
                       hintText: 'أدخل كود الخصم',
                       border: OutlineInputBorder(
@@ -293,12 +335,18 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         horizontal: 12,
                         vertical: 12,
                       ),
+                      errorText: _promoCodeError,
+                      suffixIcon: _isPromoCodeValid
+                          ? const Icon(Icons.check_circle, color: Colors.green)
+                          : null,
                     ),
                   ),
                 ),
                 const SizedBox(width: 8),
                 ElevatedButton(
-                  onPressed: _isApplyingPromoCode ? null : () => _applyPromoCode(cartState),
+                  onPressed: _isApplyingPromoCode || !_isPromoCodeValid
+                      ? null
+                      : () => _applyPromoCode(cartState),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.orangeColor,
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -312,7 +360,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                             valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                           ),
                         )
-                      : const Text('تطبيق'),
+                      : const Text('تطبيق',style: TextStyle(color: Colors.white)),
                 ),
               ],
             ),
@@ -362,6 +410,25 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildPromoCodeSummary() {
+    if (_appliedPromoCode == null || !_isPromoCodeValid) return const SizedBox.shrink();
+    final isFixed = _appliedPromoCode!.fixedAmount != null && _appliedPromoCode!.fixedAmount! > 0;
+    return Row(
+      children: [
+        Icon(Icons.discount, color: Colors.green),
+        const SizedBox(width: 8),
+        Text(
+          isFixed
+            ? 'خصم ${_appliedPromoCode!.fixedAmount!.toStringAsFixed(2)} جنيه'
+            : 'خصم ${_appliedPromoCode!.discountPercentage.toStringAsFixed(2)}%',
+          style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
+        ),
+        const Spacer(),
+        Text('-${_discountAmount.toStringAsFixed(2)} جنيه', style: TextStyle(color: Colors.green)),
+      ],
     );
   }
 
@@ -466,39 +533,58 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   Future<void> _applyPromoCode(CartLoaded cartState) async {
     final code = _promoCodeController.text.trim();
     if (code.isEmpty) {
-      _showSnackBar('يرجى إدخال كود الخصم', isError: true);
+      setState(() {
+        _promoCodeError = 'يرجى إدخال كود الخصم';
+      });
       return;
     }
-
     setState(() {
       _isApplyingPromoCode = true;
     });
-
     try {
-      // إرسال حدث التحقق من كود الخصم
       context.read<PromoCodeBloc>().add(ValidatePromoCode(code, cartState.total));
-      
-      // انتظار النتيجة
       await Future.delayed(const Duration(milliseconds: 500));
-      
-      // التحقق من الحالة
       final promoCodeState = context.read<PromoCodeBloc>().state;
       if (promoCodeState is PromoCodeValidated) {
-        setState(() {
-          _appliedPromoCode = promoCodeState.promoCode;
-          _discountAmount = (cartState.total * _appliedPromoCode!.discountPercentage / 100);
-          _isApplyingPromoCode = false;
-        });
-        _showSnackBar('تم تطبيق كود الخصم بنجاح');
+        // إذا الكود غير مفعل اعتبره غير موجود للمستخدم
+        if (promoCodeState.isValid && promoCodeState.promoCode != null && promoCodeState.promoCode!.isActive) {
+          setState(() {
+            _appliedPromoCode = promoCodeState.promoCode;
+            _appliedPromoCodeId = promoCodeState.promoCode!.id;
+            _discountAmount = promoCodeState.discountAmount ?? 0.0;
+            _isApplyingPromoCode = false;
+            _promoCodeError = null;
+            _isPromoCodeValid = true;
+          });
+          _showSnackBar('تم تطبيق كود الخصم بنجاح');
+        } else if (promoCodeState.promoCode != null && !promoCodeState.promoCode!.isActive) {
+          setState(() {
+            _isApplyingPromoCode = false;
+            _promoCodeError = 'كود الخصم غير موجود';
+            _isPromoCodeValid = false;
+          });
+          _showSnackBar('كود الخصم غير موجود', isError: true);
+        } else {
+          setState(() {
+            _isApplyingPromoCode = false;
+            _promoCodeError = promoCodeState.message;
+            _isPromoCodeValid = false;
+          });
+          _showSnackBar(promoCodeState.message, isError: true);
+        }
       } else if (promoCodeState is PromoCodeError) {
         setState(() {
           _isApplyingPromoCode = false;
+          _promoCodeError = promoCodeState.message;
+          _isPromoCodeValid = false;
         });
         _showSnackBar(promoCodeState.message, isError: true);
       }
     } catch (e) {
       setState(() {
         _isApplyingPromoCode = false;
+        _promoCodeError = 'حدث خطأ أثناء تطبيق كود الخصم';
+        _isPromoCodeValid = false;
       });
       _showSnackBar('حدث خطأ أثناء تطبيق كود الخصم', isError: true);
     }
@@ -507,8 +593,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   void _removePromoCode() {
     setState(() {
       _appliedPromoCode = null;
+      _appliedPromoCodeId = null;
       _discountAmount = 0.0;
       _promoCodeController.clear();
+      _promoCodeError = null;
+      _isPromoCodeValid = false;
     });
     _showSnackBar('تم إزالة كود الخصم');
   }
@@ -519,14 +608,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       _showSnackBar('يرجى تسجيل الدخول', isError: true);
       return;
     }
-
     final cartState = context.read<CartBloc>().state;
     if (cartState is! CartLoaded) {
       _showSnackBar('خطأ في تحميل السلة', isError: true);
       return;
     }
-
-    // إظهار مؤشر التحميل
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -534,9 +620,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         child: CircularProgressIndicator(),
       ),
     );
-
     try {
-      // تحويل عناصر السلة إلى عناصر الطلب
       final orderItems = cartState.cartItems.map((item) => OrderItemModel(
         productId: item.productId,
         productName: item.productName,
@@ -545,16 +629,20 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         quantity: item.quantity,
         total: item.total,
       )).toList();
-
-      // حساب الخصم
       double discountAmount = 0.0;
-      if (_appliedPromoCode != null) {
+      String? promoCodeId;
+      String? promoCode;
+      double? promoCodeDiscountPercentage;
+      double? promoCodeMaxDiscount;
+      if (_appliedPromoCode != null && _appliedPromoCodeId != null) {
         discountAmount = _discountAmount;
+        promoCodeId = _appliedPromoCodeId;
+        promoCode = _appliedPromoCode!.code;
+        promoCodeDiscountPercentage = _appliedPromoCode!.discountPercentage;
+        promoCodeMaxDiscount = _appliedPromoCode!.maxDiscountAmount;
       }
-
-      // إنشاء الطلب مع معلومات كود الخصم
       final order = OrderModel(
-        id: '', // سيتم إنشاؤه تلقائياً
+        id: '',
         userId: currentUserId,
         items: orderItems,
         subtotal: cartState.total,
@@ -568,28 +656,20 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         estimatedDeliveryTime: DateTime.now().add(const Duration(hours: 2)),
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
-        promoCodeId: _appliedPromoCode?.id,
-        promoCode: _appliedPromoCode?.code,
-        promoCodeDiscountPercentage: _appliedPromoCode?.discountPercentage,
-        promoCodeMaxDiscount: _appliedPromoCode?.maxDiscountAmount,
+        promoCodeId: promoCodeId,
+        promoCode: promoCode,
+        promoCodeDiscountPercentage: promoCodeDiscountPercentage,
+        promoCodeMaxDiscount: promoCodeMaxDiscount,
       );
-
-      // حفظ الطلب
       final orderId = await OrderService().createOrder(order);
       print('[DEBUG] Order created with ID: $orderId');
-
-      // تفريغ السلة
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
         context.read<CartBloc>().add(ClearCart(user.uid));
       }
-
-      // إزالة مؤشر التحميل
       if (mounted) {
         Navigator.pop(context);
       }
-
-      // الانتقال إلى شاشة نجاح الطلب
       if (mounted) {
         Navigator.pushNamedAndRemoveUntil(
           context,
@@ -598,11 +678,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         );
       }
     } catch (e) {
-      // إزالة مؤشر التحميل
       if (mounted) {
         Navigator.pop(context);
       }
-      
       print('[ERROR] Failed to create order: $e');
       _showSnackBar('حدث خطأ أثناء إنشاء الطلب: $e', isError: true);
     }

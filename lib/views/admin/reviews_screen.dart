@@ -22,26 +22,45 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
   List<ReviewModel> _allReviews = [];
   bool _isLoading = true;
   String? _error;
+  final ScrollController _scrollController = ScrollController();
+  bool _isLoadingMore = false;
+  bool _hasMore = true;
+  ReviewModel? _lastReview;
+  static const int _pageSize = 10;
 
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_onScroll);
     _loadReviews();
   }
 
-  Future<void> _loadReviews() async {
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadReviews({bool refresh = false}) async {
+    if (refresh) {
+      setState(() {
+        _allReviews = [];
+        _hasMore = true;
+        _lastReview = null;
+      });
+    }
     try {
       setState(() {
         _isLoading = true;
         _error = null;
       });
-
-      final reviews = await _reviewService.getAllReviews();
-      
+      final reviews = await _reviewService.getAllReviewsPaginated(limit: _pageSize);
       if (mounted) {
         setState(() {
           _allReviews = reviews;
           _isLoading = false;
+          _hasMore = reviews.length == _pageSize;
+          _lastReview = reviews.isNotEmpty ? reviews.last : null;
         });
       }
     } catch (e) {
@@ -51,6 +70,41 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
           _isLoading = false;
         });
       }
+    }
+  }
+
+  Future<void> _loadMoreReviews() async {
+    if (_isLoadingMore || !_hasMore || _isLoading) return;
+    setState(() {
+      _isLoadingMore = true;
+    });
+    try {
+      final moreReviews = await _reviewService.getAllReviewsPaginated(
+        limit: _pageSize,
+        lastReview: _lastReview,
+      );
+      if (mounted) {
+        setState(() {
+          _allReviews.addAll(moreReviews);
+          _hasMore = moreReviews.length == _pageSize;
+          _isLoadingMore = false;
+          if (moreReviews.isNotEmpty) {
+            _lastReview = moreReviews.last;
+          }
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoadingMore = false;
+        });
+      }
+    }
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200 && !_isLoadingMore && _hasMore) {
+      _loadMoreReviews();
     }
   }
 
@@ -314,7 +368,7 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
                                 ),
                                 const SizedBox(height: 16),
                                 ElevatedButton(
-                                  onPressed: _loadReviews,
+                                  onPressed: () => _loadReviews(refresh: true),
                                   child: const Text('إعادة المحاولة'),
                                 ),
                               ],
@@ -342,13 +396,26 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
                                   ],
                                 ),
                               )
-                            : ListView.separated(
-                  itemCount: filteredReviews.length,
-                  separatorBuilder: (context, index) =>
-                      const SizedBox(height: 10),
-                  itemBuilder: (context, index) {
-                    final review = filteredReviews[index];
-                    return Container(
+                            : NotificationListener<ScrollNotification>(
+                                onNotification: (scrollInfo) {
+                                  if (scrollInfo.metrics.pixels >= scrollInfo.metrics.maxScrollExtent - 200 && !_isLoadingMore && _hasMore) {
+                                    _loadMoreReviews();
+                                  }
+                                  return false;
+                                },
+                                child: ListView.separated(
+                                  controller: _scrollController,
+                                  itemCount: filteredReviews.length + (_isLoadingMore ? 1 : 0),
+                                  separatorBuilder: (context, index) => const SizedBox(height: 10),
+                                  itemBuilder: (context, index) {
+                                    if (index == filteredReviews.length && _isLoadingMore) {
+                                      return const Padding(
+                                        padding: EdgeInsets.symmetric(vertical: 16),
+                                        child: Center(child: CircularProgressIndicator()),
+                                      );
+                                    }
+                                    final review = filteredReviews[index];
+                                    return Container(
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(14),
@@ -543,7 +610,7 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
                   },
                 ),
               ),
-            ],
+          )],
           ),
         ),
       ),

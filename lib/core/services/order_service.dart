@@ -33,10 +33,22 @@ class OrderService {
       
       // إضافة إشعار للأدمن عند إنشاء طلب جديد
       final adminsQuery = await _firestore.collection('users').where('role', whereIn: ['admin', 'data_entry']).get();
+      // بناء نص مفصل للإشعار
+      String userName = order.deliveryAddressName ?? order.userId;
+      try {
+        final userDoc = await _firestore.collection('users').doc(order.userId).get();
+        if (userDoc.exists && userDoc.data()?['name'] != null) {
+          userName = userDoc.data()!['name'];
+        }
+      } catch (_) {}
+      final itemsCount = order.items.length;
+      final total = order.total.toStringAsFixed(2);
+      final address = order.deliveryAddressName ?? order.deliveryAddress ?? '';
+      final adminBody = 'طلب جديد من: $userName\nعدد المنتجات: $itemsCount\nالإجمالي: $total جنيه\nالعنوان: $address';
       for (var adminDoc in adminsQuery.docs) {
         await _firestore.collection('users').doc(adminDoc.id).collection('notifications').add({
           'title': 'طلب جديد',
-          'body': 'تم استلام طلب جديد من المستخدم ${order.userId}',
+          'body': adminBody,
           'orderId': orderId,
           'timestamp': FieldValue.serverTimestamp(),
         });
@@ -177,23 +189,15 @@ class OrderService {
   /// تحديث عدد مرات استخدام كود الخصم
   Future<void> _updatePromoCodeUsage(String promoCodeId) async {
     try {
+      print('[DEBUG] محاولة تحديث عداد كود الخصم: $promoCodeId');
       final promoCodeRef = _firestore.collection('promo_codes').doc(promoCodeId);
-      
-      await _firestore.runTransaction((transaction) async {
-        final promoCodeDoc = await transaction.get(promoCodeRef);
-        if (promoCodeDoc.exists) {
-          final currentUsage = promoCodeDoc.data()?['current_usage_count'] ?? 0;
-          transaction.update(promoCodeRef, {
-            'current_usage_count': currentUsage + 1,
-            'updated_at': FieldValue.serverTimestamp(),
-          });
-        }
+      await promoCodeRef.update({
+        'current_usage_count': FieldValue.increment(1),
+        'updated_at': FieldValue.serverTimestamp(),
       });
-      
-      print('[DEBUG] Promo code usage updated: $promoCodeId');
+      print('[DEBUG] ✅ تم تحديث عداد كود الخصم: $promoCodeId (زيادة بمقدار 1)');
     } catch (e) {
-      print('[ERROR] Failed to update promo code usage: $e');
-      // لا نريد أن نفشل الطلب إذا فشل تحديث كود الخصم
+      print('[ERROR] فشل في تحديث عداد كود الخصم ($promoCodeId): $e');
     }
   }
 
@@ -239,6 +243,60 @@ class OrderService {
     } catch (e) {
       print('[ERROR] Failed to get all orders: $e');
       throw Exception('فشل في جلب جميع الطلبات: $e');
+    }
+  }
+
+  /// جلب جميع الطلبات (للمدير) مع pagination
+  Future<List<OrderModel>> getAllOrdersPaginated({int limit = 20, OrderModel? lastOrder}) async {
+    try {
+      var query = _firestore
+          .collection('orders')
+          .orderBy('created_at', descending: true)
+          .limit(limit);
+      if (lastOrder != null) {
+        // جلب آخر مستند من الصفحة السابقة من Firestore مباشرة
+        final lastDocSnapshot = await _firestore
+            .collection('orders')
+            .doc(lastOrder.id)
+            .get();
+        if (lastDocSnapshot.exists) {
+          query = query.startAfterDocument(lastDocSnapshot);
+        }
+      }
+      final querySnapshot = await query.get();
+      final orders = querySnapshot.docs.map((doc) {
+        final data = doc.data();
+        data['id'] = doc.id;
+        return OrderModel.fromJson(data);
+      }).toList();
+      return orders;
+    } catch (e) {
+      print('[ERROR] Failed to get all orders (paginated): $e');
+      throw Exception('فشل في جلب جميع الطلبات: $e');
+    }
+  }
+
+  /// جلب طلبات المستخدم مع pagination
+  Future<List<OrderModel>> getUserOrdersPaginated(String userId, {int limit = 20, OrderModel? lastOrder}) async {
+    try {
+      var query = _firestore
+          .collection('orders')
+          .where('userId', isEqualTo: userId)
+          .orderBy('created_at', descending: true)
+          .limit(limit);
+      if (lastOrder != null) {
+        query = query.startAfter([lastOrder.createdAt]);
+      }
+      final querySnapshot = await query.get();
+      final orders = querySnapshot.docs.map((doc) {
+        final data = doc.data();
+        data['id'] = doc.id;
+        return OrderModel.fromJson(data);
+      }).toList();
+      return orders;
+    } catch (e) {
+      print('[ERROR] Failed to get user orders (paginated): $e');
+      throw Exception('فشل في جلب طلبات المستخدم: $e');
     }
   }
 
@@ -398,7 +456,7 @@ class OrderService {
       // استخدم فقط fcmToken القادم من Firestore
       String tokenToUse = fcmToken;
 
-      print('[FCM] 🔍 فحص FCM Token:');
+      print('[FCM] �� فحص FCM Token:');
       print('[FCM] Token المستخدم:  [32m${tokenToUse.substring(0, 20)}... [0m');
 
       final notificationData = {

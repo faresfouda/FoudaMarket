@@ -21,6 +21,7 @@ class _AddEditPromoCodeScreenState extends State<AddEditPromoCodeScreen> {
   final _codeController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _discountPercentageController = TextEditingController();
+  final _fixedAmountController = TextEditingController();
   final _maxDiscountAmountController = TextEditingController();
   final _minOrderAmountController = TextEditingController();
   final _maxUsageCountController = TextEditingController();
@@ -31,6 +32,8 @@ class _AddEditPromoCodeScreenState extends State<AddEditPromoCodeScreen> {
   bool _hasMinOrderAmount = false;
   String? _expiryDateError;
   bool _isLoading = false;
+  int _discountType = 0; // 0: نسبة, 1: مبلغ ثابت
+  String? _error;
 
   @override
   void initState() {
@@ -47,15 +50,20 @@ class _AddEditPromoCodeScreenState extends State<AddEditPromoCodeScreen> {
     _codeController.text = promoCode.code;
     _descriptionController.text = promoCode.description;
     _discountPercentageController.text = promoCode.discountPercentage.toString();
+    _fixedAmountController.text = promoCode.fixedAmount?.toString() ?? '';
     _maxUsageCountController.text = promoCode.maxUsageCount.toString();
     _selectedExpiryDate = promoCode.expiryDate;
     _isActive = promoCode.isActive;
-    
+    // تحديد نوع الخصم بناءً على البيانات
+    if (promoCode.fixedAmount != null && promoCode.fixedAmount! > 0) {
+      _discountType = 1;
+    } else {
+      _discountType = 0;
+    }
     if (promoCode.maxDiscountAmount != null) {
       _hasMaxDiscount = true;
       _maxDiscountAmountController.text = promoCode.maxDiscountAmount!.toString();
     }
-    
     if (promoCode.minOrderAmount != null) {
       _hasMinOrderAmount = true;
       _minOrderAmountController.text = promoCode.minOrderAmount!.toString();
@@ -67,6 +75,7 @@ class _AddEditPromoCodeScreenState extends State<AddEditPromoCodeScreen> {
     _codeController.dispose();
     _descriptionController.dispose();
     _discountPercentageController.dispose();
+    _fixedAmountController.dispose();
     _maxDiscountAmountController.dispose();
     _minOrderAmountController.dispose();
     _maxUsageCountController.dispose();
@@ -139,59 +148,8 @@ class _AddEditPromoCodeScreenState extends State<AddEditPromoCodeScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // كود الخصم
-                      CustomTextField(
-                        controller: _codeController,
-                        title: 'كود الخصم',
-                        hinttext: 'مثال: FOUDA10',
-                        button: null,
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'يرجى إدخال كود الخصم';
-                          }
-                          if (value.trim().length < 3) {
-                            return 'كود الخصم يجب أن يكون 3 أحرف على الأقل';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-
-                      // وصف كود الخصم
-                      CustomTextField(
-                        controller: _descriptionController,
-                        title: 'وصف كود الخصم',
-                        hinttext: 'مثال: خصم 10% على جميع المنتجات',
-                        button: null,
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'يرجى إدخال وصف كود الخصم';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-
-                      // نسبة الخصم
-                      CustomTextField(
-                        controller: _discountPercentageController,
-                        title: 'نسبة الخصم (%)',
-                        hinttext: 'مثال: 10',
-                        button: null,
-                        keyboardType: TextInputType.number,
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'يرجى إدخال نسبة الخصم';
-                          }
-                          final percentage = double.tryParse(value);
-                          if (percentage == null || percentage <= 0 || percentage > 100) {
-                            return 'نسبة الخصم يجب أن تكون بين 1 و 100';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 24),
-
+                      _buildForm(),
+                      const Divider(height: 32, thickness: 1.2),
                       // خيارات متقدمة
                       const Text(
                         'خيارات متقدمة',
@@ -411,6 +369,183 @@ class _AddEditPromoCodeScreenState extends State<AddEditPromoCodeScreen> {
     );
   }
 
+  Widget _buildForm() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Card(
+          elevation: 2,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          margin: const EdgeInsets.only(bottom: 20),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.confirmation_number, color: AppColors.orangeColor, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: CustomTextField(
+                        controller: _codeController,
+                        title: 'كود الخصم',
+                        hinttext: 'مثال: FOUDA10',
+                        button: null,
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'يرجى إدخال كود الخصم';
+                          }
+                          if (value.trim().length < 3) {
+                            return 'كود الخصم يجب أن يكون 3 أحرف على الأقل';
+                          }
+                          return null;
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Icon(Icons.description, color: AppColors.orangeColor, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: CustomTextField(
+                        controller: _descriptionController,
+                        title: 'وصف كود الخصم',
+                        hinttext: 'مثال: خصم 10% على جميع المنتجات',
+                        button: null,
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'يرجى إدخال وصف كود الخصم';
+                          }
+                          return null;
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Text('نوع الخصم:', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.orangeColor)),
+                Row(
+                  children: [
+                    Expanded(
+                      child: RadioListTile<int>(
+                        value: 0,
+                        groupValue: _discountType,
+                        onChanged: (val) => setState(() => _discountType = val!),
+                        title: Row(
+                          children: [
+                            Icon(Icons.percent, color: AppColors.orangeColor, size: 18),
+                            const SizedBox(width: 4),
+                            Flexible(
+                              child: Text(
+                                'نسبة مئوية',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                        subtitle: const Text('مثال: 10% من قيمة الطلب', style: TextStyle(color: Colors.grey)),
+                      ),
+                    ),
+                    Expanded(
+                      child: RadioListTile<int>(
+                        value: 1,
+                        groupValue: _discountType,
+                        onChanged: (val) => setState(() => _discountType = val!),
+                        title: Row(
+                          children: [
+                            Icon(Icons.attach_money, color: AppColors.orangeColor, size: 18),
+                            const SizedBox(width: 4),
+                            Flexible(
+                              child: Text(
+                                'مبلغ ثابت',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                        subtitle: const Text('مثال: 50 جنيه خصم مباشر', style: TextStyle(color: Colors.grey)),
+                      ),
+                    ),
+                  ],
+                ),
+                if (_discountType == 0) ...[
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Icon(Icons.percent, color: AppColors.orangeColor, size: 18),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: CustomTextField(
+                          controller: _discountPercentageController,
+                          title: 'نسبة الخصم (%)',
+                          hinttext: 'مثال: 10',
+                          button: null,
+                          keyboardType: TextInputType.numberWithOptions(decimal: true),
+                          validator: (value) {
+                            if (value == null || value.trim().isEmpty) {
+                              return 'يرجى إدخال نسبة الخصم';
+                            }
+                            final percentage = double.tryParse(value);
+                            if (percentage == null || percentage <= 0 || percentage > 100) {
+                              return 'نسبة الخصم يجب أن تكون بين 1 و 100';
+                            }
+                            return null;
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                  const Padding(
+                    padding: EdgeInsets.only(top: 4, right: 32),
+                    child: Text('أدخل نسبة مئوية فقط إذا كان الخصم نسبي', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                  ),
+                ],
+                if (_discountType == 1) ...[
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Icon(Icons.attach_money, color: AppColors.orangeColor, size: 18),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: CustomTextField(
+                          controller: _fixedAmountController,
+                          title: 'مبلغ خصم ثابت (جنيه)',
+                          hinttext: 'مثال: 50',
+                          button: null,
+                          keyboardType: TextInputType.numberWithOptions(decimal: true),
+                          validator: (value) {
+                            if (value == null || value.trim().isEmpty) {
+                              return 'يرجى إدخال مبلغ الخصم الثابت';
+                            }
+                            final amount = double.tryParse(value);
+                            if (amount == null || amount <= 0) {
+                              return 'مبلغ الخصم الثابت يجب أن يكون رقم موجب';
+                            }
+                            return null;
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                  const Padding(
+                    padding: EdgeInsets.only(top: 4, right: 32),
+                    child: Text('أدخل مبلغًا فقط إذا كان الخصم ثابتًا', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   String _formatDate(DateTime date) {
     return '${date.day}/${date.month}/${date.year}';
   }
@@ -437,6 +572,7 @@ class _AddEditPromoCodeScreenState extends State<AddEditPromoCodeScreen> {
     setState(() {
       _isLoading = true;
       _expiryDateError = null;
+      _error = null;
     });
 
     try {
@@ -445,11 +581,27 @@ class _AddEditPromoCodeScreenState extends State<AddEditPromoCodeScreen> {
         throw Exception('يجب تسجيل الدخول أولاً');
       }
 
+      double? discountValue;
+      if (_discountType == 0) {
+        discountValue = double.tryParse(_discountPercentageController.text.trim());
+        if (discountValue == null || discountValue == 0) {
+          setState(() { _error = 'يرجى إدخال نسبة الخصم'; });
+          return;
+        }
+      } else {
+        discountValue = double.tryParse(_fixedAmountController.text.trim());
+        if (discountValue == null || discountValue == 0) {
+          setState(() { _error = 'يرجى إدخال مبلغ الخصم الثابت'; });
+          return;
+        }
+      }
+
       final promoCode = PromoCodeModel(
         id: widget.promoCode?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
         code: _codeController.text.trim().toUpperCase(),
         description: _descriptionController.text.trim(),
-        discountPercentage: double.parse(_discountPercentageController.text),
+        discountPercentage: _discountType == 0 ? discountValue! : 0.0,
+        fixedAmount: _discountType == 1 ? discountValue! : null,
         maxDiscountAmount: _hasMaxDiscount && _maxDiscountAmountController.text.isNotEmpty
             ? double.parse(_maxDiscountAmountController.text)
             : null,

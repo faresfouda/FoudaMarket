@@ -110,6 +110,51 @@ class ReviewService {
     }
   }
 
+  // جلب جميع المراجعات مع دعم التحميل التدريجي (pagination)
+  Future<List<ReviewModel>> getAllReviewsPaginated({int limit = 10, ReviewModel? lastReview}) async {
+    try {
+      var query = _firestore
+          .collection(_collection)
+          .orderBy('created_at', descending: true)
+          .limit(limit);
+      if (lastReview != null) {
+        final lastDoc = await _firestore.collection(_collection).doc(lastReview.id).get();
+        if (lastDoc.exists) {
+          query = query.startAfterDocument(lastDoc);
+        }
+      }
+      final querySnapshot = await query.get();
+      return querySnapshot.docs
+          .map((doc) => ReviewModel.fromJson({...doc.data(), 'id': doc.id}))
+          .toList();
+    } catch (e) {
+      throw Exception('فشل في جلب المراجعات (pagination): $e');
+    }
+  }
+
+  // جلب مراجعات مستخدم معين مع دعم التحميل التدريجي (pagination)
+  Future<List<ReviewModel>> getUserReviewsPaginated(String userId, {int limit = 10, ReviewModel? lastReview}) async {
+    try {
+      var query = _firestore
+          .collection(_collection)
+          .where('user_id', isEqualTo: userId)
+          .orderBy('created_at', descending: true)
+          .limit(limit);
+      if (lastReview != null) {
+        final lastDoc = await _firestore.collection(_collection).doc(lastReview.id).get();
+        if (lastDoc.exists) {
+          query = query.startAfterDocument(lastDoc);
+        }
+      }
+      final querySnapshot = await query.get();
+      return querySnapshot.docs
+          .map((doc) => ReviewModel.fromJson({...doc.data(), 'id': doc.id}))
+          .toList();
+    } catch (e) {
+      throw Exception('فشل في جلب مراجعات المستخدم (pagination): $e');
+    }
+  }
+
   // تحديث حالة المراجعة
   Future<void> updateReviewStatus(String reviewId, ReviewStatus status, {String? adminNotes}) async {
     try {

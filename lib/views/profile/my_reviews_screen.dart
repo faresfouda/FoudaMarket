@@ -18,28 +18,50 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
   List<ReviewModel> _reviews = [];
   bool _isLoading = true;
   String? _error;
+  final ScrollController _scrollController = ScrollController();
+  bool _isLoadingMore = false;
+  bool _hasMore = true;
+  ReviewModel? _lastReview;
+  static const int _pageSize = 10;
 
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_onScroll);
     _loadUserReviews();
   }
 
-  Future<void> _loadUserReviews() async {
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadUserReviews({bool refresh = false}) async {
+    if (refresh) {
+      setState(() {
+        _reviews = [];
+        _hasMore = true;
+        _lastReview = null;
+      });
+    }
     try {
       setState(() {
         _isLoading = true;
         _error = null;
       });
-
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
-        final reviews = await _reviewService.getUserReviews(user.uid);
-        
+        final reviews = await _reviewService.getUserReviewsPaginated(
+          user.uid,
+          limit: _pageSize,
+        );
         if (mounted) {
           setState(() {
             _reviews = reviews;
             _isLoading = false;
+            _hasMore = reviews.length == _pageSize;
+            _lastReview = reviews.isNotEmpty ? reviews.last : null;
           });
         }
       } else {
@@ -57,6 +79,44 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
           _isLoading = false;
         });
       }
+    }
+  }
+
+  Future<void> _loadMoreReviews() async {
+    if (_isLoadingMore || !_hasMore || _isLoading) return;
+    setState(() {
+      _isLoadingMore = true;
+    });
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+      final moreReviews = await _reviewService.getUserReviewsPaginated(
+        user.uid,
+        limit: _pageSize,
+        lastReview: _lastReview,
+      );
+      if (mounted) {
+        setState(() {
+          _reviews.addAll(moreReviews);
+          _hasMore = moreReviews.length == _pageSize;
+          _isLoadingMore = false;
+          if (moreReviews.isNotEmpty) {
+            _lastReview = moreReviews.last;
+          }
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoadingMore = false;
+        });
+      }
+    }
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200 && !_isLoadingMore && _hasMore) {
+      _loadMoreReviews();
     }
   }
 
@@ -175,14 +235,29 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
 
   Widget _buildReviewsList() {
     return RefreshIndicator(
-      onRefresh: _loadUserReviews,
-      child: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: _reviews.length,
-        itemBuilder: (context, index) {
-          final review = _reviews[index];
-          return _buildReviewCard(review);
+      onRefresh: () => _loadUserReviews(refresh: true),
+      child: NotificationListener<ScrollNotification>(
+        onNotification: (scrollInfo) {
+          if (scrollInfo.metrics.pixels >= scrollInfo.metrics.maxScrollExtent - 200 && !_isLoadingMore && _hasMore) {
+            _loadMoreReviews();
+          }
+          return false;
         },
+        child: ListView.builder(
+          controller: _scrollController,
+          padding: const EdgeInsets.all(16),
+          itemCount: _reviews.length + (_isLoadingMore ? 1 : 0),
+          itemBuilder: (context, index) {
+            if (index == _reviews.length && _isLoadingMore) {
+              return const Padding(
+                padding: EdgeInsets.symmetric(vertical: 16),
+                child: Center(child: CircularProgressIndicator()),
+              );
+            }
+            final review = _reviews[index];
+            return _buildReviewCard(review);
+          },
+        ),
       ),
     );
   }

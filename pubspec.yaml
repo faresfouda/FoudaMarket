@@ -88,6 +88,8 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.13.1
+  flutter_native_splash: ^2.4.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -109,6 +111,9 @@ flutter:
     - assets/home/logo.jpg
     - assets/bottomnavigationbar/
     - assets/home/
+    - assets/appicon/
+    - assets/appicon/Assets.xcassets/
+    - assets/appicon/android/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
@@ -143,13 +148,10 @@ flutter:
 flutter_icons:
   android: true
   ios: true
-  image_path: "assets/home/logo.jpg"
-  adaptive_icon_background: "#ffffff"
-  adaptive_icon_foreground: "assets/home/logo.jpg"
+  image_path: "assets/home/appicon.png"
 
 flutter_native_splash:
-  color: "#ffffff"
-  image: assets/home/logo.jpg
+  color: "#000000"
+  image: assets/home/appicon.png
   android: true
   ios: true
-  web: false

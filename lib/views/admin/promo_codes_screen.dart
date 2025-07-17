@@ -294,13 +294,28 @@ class _PromoCodesScreenState extends State<PromoCodesScreen> {
                       color: promoCode.isValid ? Colors.green : Colors.red,
                     ),
                   ),
-                  child: Text(
-                    promoCode.code,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: promoCode.isValid ? Colors.green : Colors.red,
-                    ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        promoCode.code,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: promoCode.isValid ? Colors.green : Colors.red,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        promoCode.fixedAmount != null && promoCode.fixedAmount! > 0
+                          ? '(${promoCode.fixedAmount!.toStringAsFixed(2)} جنيه خصم ثابت)'
+                          : '(${promoCode.discountPercentage.toStringAsFixed(2)}% خصم)',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[700],
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -532,10 +547,19 @@ class _PromoCodesScreenState extends State<PromoCodesScreen> {
             child: const Text('إلغاء'),
           ),
           TextButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(context);
-              context.read<PromoCodeBloc>().add(DeletePromoCode(promoCode.id));
-              context.read<PromoCodeStatsBloc>().add(LoadPromoCodeStats());
+              try {
+                context.read<PromoCodeBloc>().add(DeletePromoCode(promoCode.id));
+                context.read<PromoCodeStatsBloc>().add(LoadPromoCodeStats());
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('فشل في حذف كود الخصم: ${e.toString()}'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),
             child: const Text('حذف'),

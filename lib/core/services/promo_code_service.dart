@@ -255,10 +255,14 @@ class PromoCodeService {
       }
 
       // حساب قيمة الخصم
-      double discountAmount = (orderAmount * promoCode.discountPercentage) / 100;
-      
-      if (promoCode.maxDiscountAmount != null && discountAmount > promoCode.maxDiscountAmount!) {
-        discountAmount = promoCode.maxDiscountAmount!;
+      double discountAmount = 0.0;
+      if (promoCode.fixedAmount != null && promoCode.fixedAmount! > 0) {
+        discountAmount = promoCode.fixedAmount!;
+      } else {
+        discountAmount = (orderAmount * promoCode.discountPercentage) / 100;
+        if (promoCode.maxDiscountAmount != null && discountAmount > promoCode.maxDiscountAmount!) {
+          discountAmount = promoCode.maxDiscountAmount!;
+        }
       }
 
       return {

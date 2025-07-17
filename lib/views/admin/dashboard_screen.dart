@@ -145,7 +145,7 @@ class _AdminDashboardSectionState extends State<AdminDashboardSection> {
   bool _isLoading = true;
   Map<String, dynamic> _stats = {};
   List<Map<String, dynamic>> _recentActivity = [];
-  bool _includeLastWeek = false; // للتبديل بين اليوم وآخر أسبوع
+  // تم حذف: bool _includeLastWeek = false;
 
   @override
   void initState() {
@@ -161,7 +161,7 @@ class _AdminDashboardSectionState extends State<AdminDashboardSection> {
 
       // جلب الإحصائيات والنشاط الأخير في نفس الوقت
       final results = await Future.wait([
-        _dashboardService.getDashboardStats(includeLastWeek: _includeLastWeek),
+        _dashboardService.getDashboardStats(), // تم حذف includeLastWeek
         _dashboardService.getRecentActivity(limit: 10),
       ]);
 
@@ -224,38 +224,38 @@ class _AdminDashboardSectionState extends State<AdminDashboardSection> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // زر التبديل بين اليوم وآخر أسبوع
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'الإحصائيات',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-              ),
-              Row(
-                children: [
-                  Text(
-                    _includeLastWeek ? 'آخر 7 أيام' : 'اليوم',
-                    style: TextStyle(
-                      color: Colors.orange,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  SizedBox(width: 8),
-                  Switch(
-                    value: _includeLastWeek,
-                    onChanged: (value) {
-                      setState(() {
-                        _includeLastWeek = value;
-                      });
-                      _loadDashboardData();
-                    },
-                    activeColor: Colors.orange,
-                  ),
-                ],
-              ),
-            ],
-          ),
+          // زر التبديل بين اليوم وآخر أسبوع (تم حذفه)
+          // Row(
+          //   mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          //   children: [
+          //     Text(
+          //       'الإحصائيات',
+          //       style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+          //     ),
+          //     Row(
+          //       children: [
+          //         Text(
+          //           _includeLastWeek ? 'آخر 7 أيام' : 'اليوم',
+          //           style: TextStyle(
+          //             color: Colors.orange,
+          //             fontWeight: FontWeight.bold,
+          //           ),
+          //         ),
+          //         SizedBox(width: 8),
+          //         Switch(
+          //           value: _includeLastWeek,
+          //           onChanged: (value) {
+          //             setState(() {
+          //               _includeLastWeek = value;
+          //             });
+          //             _loadDashboardData();
+          //           },
+          //           activeColor: Colors.orange,
+          //         ),
+          //       ],
+          //     ),
+          //   ],
+          // ),
           SizedBox(height: 16),
           // Metrics Grid (Wrap)
           Wrap(
@@ -785,10 +785,39 @@ class _AllActivityScreenState extends State<AllActivityScreen> {
       );
 
       if (mounted) {
+        // فلترة النشاطات الجديدة حسب الشهر الأخير
+        final now = DateTime.now();
+        final monthAgo = now.subtract(const Duration(days: 30));
+        final newActivities = (result['activities'] as List<Map<String, dynamic>>)
+            .where((a) {
+              final timestamp = a['timestamp'];
+              DateTime? activityDate;
+              if (timestamp is Timestamp) {
+                activityDate = timestamp.toDate();
+              } else if (timestamp is String) {
+                try {
+                  activityDate = DateTime.parse(timestamp);
+                } catch (e) {
+                  return false;
+                }
+              } else {
+                return false;
+              }
+              if (activityDate == null) return false;
+              return activityDate.isAfter(monthAgo) && activityDate.isBefore(now.add(const Duration(days: 1)));
+            })
+            // منع التكرار
+            .where((a) => !allActivities.any((b) => b['id'] == a['id']))
+            .toList();
+
         setState(() {
-          final newActivities = result['activities'] as List<Map<String, dynamic>>;
           allActivities.addAll(newActivities);
-          _hasMore = result['hasMore'] as bool;
+          // إذا لم نجد نشاطات حديثة في الصفحة الجديدة، أوقف التحميل
+          if (newActivities.isEmpty) {
+            _hasMore = false;
+          } else {
+            _hasMore = result['hasMore'] as bool;
+          }
           _lastTimestamp = result['lastTimestamp'];
           _lastDocumentId = result['lastDocumentId'] as String?;
           _lastType = result['lastType'] as String?;
@@ -811,13 +840,14 @@ class _AllActivityScreenState extends State<AllActivityScreen> {
   }
 
   List<Map<String, dynamic>> get filteredActivities {
+    final now = DateTime.now();
+    final monthAgo = now.subtract(const Duration(days: 30));
     if (selectedDate != null) {
       return allActivities
           .where(
             (a) {
               final timestamp = a['timestamp'];
               DateTime? activityDate;
-              
               if (timestamp is Timestamp) {
                 activityDate = timestamp.toDate();
               } else if (timestamp is String) {
@@ -829,9 +859,7 @@ class _AllActivityScreenState extends State<AllActivityScreen> {
               } else {
                 return false;
               }
-              
               if (activityDate == null) return false;
-              
               return activityDate.day == selectedDate!.day &&
                      activityDate.month == selectedDate!.month &&
                      activityDate.year == selectedDate!.year;
@@ -839,7 +867,24 @@ class _AllActivityScreenState extends State<AllActivityScreen> {
           )
           .toList();
     }
-    return allActivities;
+    // فلترة الشهر الأخير افتراضياً
+    return allActivities.where((a) {
+      final timestamp = a['timestamp'];
+      DateTime? activityDate;
+      if (timestamp is Timestamp) {
+        activityDate = timestamp.toDate();
+      } else if (timestamp is String) {
+        try {
+          activityDate = DateTime.parse(timestamp);
+        } catch (e) {
+          return false;
+        }
+      } else {
+        return false;
+      }
+      if (activityDate == null) return false;
+      return activityDate.isAfter(monthAgo) && activityDate.isBefore(now.add(const Duration(days: 1)));
+    }).toList();
   }
 
   String get dateLabel {

@@ -133,25 +133,14 @@ class DashboardService {
   /// جلب إحصائيات لوحة التحكم
   Future<Map<String, dynamic>> getDashboardStats({bool includeLastWeek = false}) async {
     try {
-      // جلب الطلبات الجديدة (اليوم أو آخر أسبوع)
+      // جلب الطلبات الجديدة (الشهر الحالي)
       final today = DateTime.now();
-      final startOfDay = DateTime(today.year, today.month, today.day);
-      final endOfDay = startOfDay.add(const Duration(days: 1));
+      final startOfMonth = DateTime(today.year, today.month, today.day).subtract(const Duration(days: 30));
+      final endOfDay = DateTime(today.year, today.month, today.day).add(const Duration(days: 1));
       
-      DateTime startDate, endDate;
-      String periodLabel;
-      
-      if (includeLastWeek) {
-        // جلب الطلبات من آخر 7 أيام
-        startDate = today.subtract(const Duration(days: 7));
-        endDate = today;
-        periodLabel = 'آخر 7 أيام';
-      } else {
-        // جلب طلبات اليوم فقط
-        startDate = startOfDay;
-        endDate = endOfDay;
-        periodLabel = 'اليوم';
-      }
+      DateTime startDate = startOfMonth;
+      DateTime endDate = endOfDay;
+      String periodLabel = 'آخر 30 يوم';
 
       print('📅 [DASHBOARD] الفترة: $periodLabel');
       print('📅 [DASHBOARD] من: ${startDate.toIso8601String()}');
@@ -160,138 +149,75 @@ class DashboardService {
       // جلب الطلبات
       final allOrdersQuery = await _searchOrdersByDate(startDate, endDate);
       
-      // تصفية الطلبات حسب التاريخ
+      // تصفية الطلبات حسب التاريخ وتشمل فقط المكتملة
       final filteredOrders = <QueryDocumentSnapshot>[];
       for (var doc in allOrdersQuery.docs) {
         final data = doc.data() as Map<String, dynamic>?;
         final timestamp = data?['created_at'];
         final orderDate = _parseTimestamp(timestamp);
-        
-        if (orderDate.isAfter(startDate) && orderDate.isBefore(endDate)) {
+        final status = data?['status'] ?? '';
+        if ((status == 'delivered' || status == 'completed') && orderDate.isAfter(startDate) && orderDate.isBefore(endDate)) {
           filteredOrders.add(doc);
         }
       }
       
       final newOrders = filteredOrders.length;
-      print('📊 [DASHBOARD] إجمالي الطلبات الجديدة: $newOrders');
+      print('📊 [DASHBOARD] إجمالي الطلبات الجديدة (المكتملة فقط): $newOrders');
 
-      // جلب إجمالي المبيعات (اليوم) - تشمل جميع الطلبات بغض النظر عن الحالة
+      // جلب إجمالي المبيعات (الشهر) - تشمل فقط الطلبات المكتملة
       double todaySales = 0;
       for (var doc in filteredOrders) {
         final orderData = _analyzeOrderData(doc);
-        print('📝 [DASHBOARD] طلب: ${orderData['id']} - الحالة: ${orderData['status']} - الإجمالي: ${orderData['total']}');
-        
-        // إضافة جميع الطلبات للمبيعات (ليس فقط المكتملة)
+        print('📝 [DASHBOARD] طلب:  [1m${orderData['id']} [0m - الحالة: ${orderData['status']} - الإجمالي: ${orderData['total']}');
         todaySales += orderData['total'];
         print('💰 [DASHBOARD] إضافة للبيع: ${orderData['total']}');
       }
-      print('💰 [DASHBOARD] إجمالي المبيعات اليوم: $todaySales');
+      print('💰 [DASHBOARD] إجمالي المبيعات الشهر (المكتملة فقط): $todaySales');
 
-      // جلب إجمالي العملاء
+      // جلب إجمالي العملاء خلال الشهر (فلترة في الكود)
       final usersQuery = await _firestore
           .collection('users')
           .where('role', isEqualTo: 'user')
           .get();
+      final totalCustomers = usersQuery.docs.where((doc) {
+        final data = doc.data();
+        final createdAtRaw = data['createdAt'];
+        DateTime? createdAt;
+        if (createdAtRaw is String) {
+          createdAt = DateTime.tryParse(createdAtRaw);
+        } else if (createdAtRaw is Timestamp) {
+          createdAt = createdAtRaw.toDate();
+        }
+        return createdAt != null && createdAt.isAfter(startDate) && createdAt.isBefore(endDate);
+      }).length;
+      print('👥 [DASHBOARD] إجمالي العملاء (آخر شهر): $totalCustomers');
 
-      final totalCustomers = usersQuery.docs.length;
-      print('👥 [DASHBOARD] إجمالي العملاء: $totalCustomers');
-
-      // جلب المراجعات بانتظار الموافقة
+      // جلب المراجعات بانتظار الموافقة خلال الشهر (فلترة في الكود)
       final pendingReviewsQuery = await _firestore
           .collection('reviews')
           .where('status', isEqualTo: 'pending')
           .get();
-
-      final pendingReviews = pendingReviewsQuery.docs.length;
-      print('⭐ [DASHBOARD] المراجعات المعلقة: $pendingReviews');
-
-      // حساب النسبة المئوية للتغيير (مقارنة بالأمس)
-      final yesterday = startOfDay.subtract(const Duration(days: 1));
-      final yesterdayAllOrdersQuery = await _searchOrdersByDate(yesterday, startOfDay);
-      
-      // تصفية طلبات الأمس
-      final yesterdayFilteredOrders = <QueryDocumentSnapshot>[];
-      for (var doc in yesterdayAllOrdersQuery.docs) {
-        final data = doc.data() as Map<String, dynamic>?;
-        final timestamp = data?['created_at'];
-        final orderDate = _parseTimestamp(timestamp);
-        
-        if (orderDate.isAfter(yesterday) && orderDate.isBefore(startOfDay)) {
-          yesterdayFilteredOrders.add(doc);
+      final pendingReviews = pendingReviewsQuery.docs.where((doc) {
+        final data = doc.data();
+        final createdAtRaw = data['created_at'];
+        DateTime? createdAt;
+        if (createdAtRaw is String) {
+          createdAt = DateTime.tryParse(createdAtRaw);
+        } else if (createdAtRaw is Timestamp) {
+          createdAt = createdAtRaw.toDate();
         }
-      }
+        return createdAt != null && createdAt.isAfter(startDate) && createdAt.isBefore(endDate);
+      }).length;
+      print('⭐ [DASHBOARD] المراجعات المعلقة (آخر شهر): $pendingReviews');
 
-      final yesterdayOrders = yesterdayFilteredOrders.length;
-      final ordersChangePercent = yesterdayOrders > 0 
-          ? ((newOrders - yesterdayOrders) / yesterdayOrders * 100).round()
-          : newOrders > 0 ? 100 : 0;
-
-      print('📈 [DASHBOARD] تغيير الطلبات: $ordersChangePercent% (أمس: $yesterdayOrders)');
-
-      // حساب تغيير المبيعات
-      double yesterdaySales = 0;
-      for (var doc in yesterdayFilteredOrders) {
-        final orderData = _analyzeOrderData(doc);
-        // إضافة جميع الطلبات للمبيعات (ليس فقط المكتملة)
-        yesterdaySales += orderData['total'];
-      }
-
-      final salesChangePercent = yesterdaySales > 0 
-          ? ((todaySales - yesterdaySales) / yesterdaySales * 100).round()
-          : todaySales > 0 ? 100 : 0;
-
-      print('💰 [DASHBOARD] تغيير المبيعات: $salesChangePercent% (أمس: $yesterdaySales)');
-
-      // حساب تغيير العملاء (مقارنة بالأسبوع الماضي)
-      final weekAgo = today.subtract(const Duration(days: 7));
-      final twoWeeksAgo = weekAgo.subtract(const Duration(days: 7));
-
-      QuerySnapshot newCustomersThisWeekQuery;
-      QuerySnapshot newCustomersLastWeekQuery;
-
-      try {
-        newCustomersThisWeekQuery = await _firestore
-            .collection('users')
-            .where('role', isEqualTo: 'user')
-            .where('createdAt', isGreaterThanOrEqualTo: Timestamp.fromDate(weekAgo))
-            .get();
-
-        newCustomersLastWeekQuery = await _firestore
-            .collection('users')
-            .where('role', isEqualTo: 'user')
-            .where('createdAt', isGreaterThanOrEqualTo: Timestamp.fromDate(twoWeeksAgo))
-            .where('createdAt', isLessThan: Timestamp.fromDate(weekAgo))
-            .get();
-      } catch (e) {
-        newCustomersThisWeekQuery = await _firestore
-            .collection('users')
-            .where('role', isEqualTo: 'user')
-            .where('createdAt', isGreaterThanOrEqualTo: weekAgo.toIso8601String())
-            .get();
-
-        newCustomersLastWeekQuery = await _firestore
-            .collection('users')
-            .where('role', isEqualTo: 'user')
-            .where('createdAt', isGreaterThanOrEqualTo: twoWeeksAgo.toIso8601String())
-            .where('createdAt', isLessThan: weekAgo.toIso8601String())
-            .get();
-      }
-
-      final newCustomersThisWeek = newCustomersThisWeekQuery.docs.length;
-      final newCustomersLastWeek = newCustomersLastWeekQuery.docs.length;
-      final customersChangePercent = newCustomersLastWeek > 0 
-          ? ((newCustomersThisWeek - newCustomersLastWeek) / newCustomersLastWeek * 100).round()
-          : newCustomersThisWeek > 0 ? 100 : 0;
-
-      print('👥 [DASHBOARD] تغيير العملاء: $customersChangePercent%');
-
+      // باقي الحسابات (النسب المئوية) يمكن تجاهلها أو تعديلها لاحقاً لتناسب الشهر
       final result = {
         'newOrders': newOrders,
-        'ordersChangePercent': ordersChangePercent,
+        'ordersChangePercent': 0, // غير منطقي للشهر
         'todaySales': todaySales,
-        'salesChangePercent': salesChangePercent,
+        'salesChangePercent': 0, // غير منطقي للشهر
         'totalCustomers': totalCustomers,
-        'customersChangePercent': customersChangePercent,
+        'customersChangePercent': 0, // غير منطقي للشهر
         'pendingReviews': pendingReviews,
       };
 
