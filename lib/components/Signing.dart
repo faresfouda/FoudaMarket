@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:fodamarket/components/navigatorbutton.dart';
-import 'package:fodamarket/theme/appcolors.dart';
+import 'package:fouda_market/theme/appcolors.dart';
 
 class Signing extends StatelessWidget {
   const Signing({
@@ -22,7 +21,7 @@ class Signing extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Column(
             children: [
-              Image(image: AssetImage('assets/home/logo.jpg',),width: 100,height: 100,),
+              Image(image: AssetImage('assets/home/logo-removebg-preview.png',),width: 100,height: 100,),
               SizedBox(height: 30),
               Row(
                 mainAxisAlignment: MainAxisAlignment.start,

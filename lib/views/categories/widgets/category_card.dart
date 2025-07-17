@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 
 import '../../category/category_screen.dart';
+import '../../../components/cached_image.dart';
 
 Widget CategoryCardGrid({
   required BuildContext context,
   required Color backgroundColor,
   required String imagePath,
   required String categoryName,
+  required String categoryId,
 }) {
   final Color borderColor = darken(backgroundColor, 0.2); // darken by 20%
 
@@ -15,7 +17,10 @@ Widget CategoryCardGrid({
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => CategoryScreen(categoryName: categoryName,),
+          builder: (context) => CategoryScreen(
+          categoryName: categoryName,
+          categoryId: categoryId,
+        ),
         ),
       );
     },
@@ -33,9 +38,11 @@ Widget CategoryCardGrid({
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Image.network(
-            imagePath,
-            fit: BoxFit.contain,
+          CachedImage(
+            imageUrl: imagePath,
+            width: 60,
+            height: 60,
+            fit: BoxFit.cover,
           ),
           const SizedBox(height: 20),
           Padding(

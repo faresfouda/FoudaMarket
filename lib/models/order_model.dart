@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class OrderModel {
   final String id;
   final String userId;
@@ -7,11 +9,16 @@ class OrderModel {
   final double total;
   final String status; // 'pending', 'accepted', 'preparing', 'delivering', 'delivered', 'cancelled', 'failed'
   final String? deliveryAddress;
+  final String? deliveryAddressName;
+  final String? deliveryPhone;
   final String? deliveryNotes;
   final DateTime? estimatedDeliveryTime;
   final DateTime createdAt;
   final DateTime updatedAt;
   final String? promoCodeId;
+  final String? promoCode; // كود الخصم المستخدم
+  final double? promoCodeDiscountPercentage; // نسبة الخصم من كود الخصم
+  final double? promoCodeMaxDiscount; // الحد الأقصى للخصم من كود الخصم
 
   OrderModel({
     required this.id,
@@ -22,52 +29,83 @@ class OrderModel {
     required this.total,
     required this.status,
     this.deliveryAddress,
+    this.deliveryAddressName,
+    this.deliveryPhone,
     this.deliveryNotes,
     this.estimatedDeliveryTime,
     required this.createdAt,
     required this.updatedAt,
     this.promoCodeId,
+    this.promoCode,
+    this.promoCodeDiscountPercentage,
+    this.promoCodeMaxDiscount,
   });
 
   factory OrderModel.fromJson(Map<String, dynamic> json) {
     return OrderModel(
-      id: json['id'],
-      userId: json['user_id'],
-      items: (json['items'] as List<dynamic>)
-          .map((item) => OrderItemModel.fromJson(item))
-          .toList(),
-      subtotal: (json['subtotal'] as num).toDouble(),
+      id: json['id'] ?? '',
+      userId: json['userId'] ?? '',
+      items: (json['items'] as List<dynamic>?)
+          ?.map((item) => OrderItemModel.fromJson(item))
+          .toList() ?? [],
+      subtotal: (json['subtotal'] as num?)?.toDouble() ?? 0.0,
       discountAmount: json['discount_amount'] != null 
           ? (json['discount_amount'] as num).toDouble() 
           : null,
-      total: (json['total'] as num).toDouble(),
-      status: json['status'],
+      total: (json['total'] as num?)?.toDouble() ?? 0.0,
+      status: json['status'] ?? 'pending',
       deliveryAddress: json['delivery_address'],
+      deliveryAddressName: json['delivery_address_name'],
+      deliveryPhone: json['delivery_phone'],
       deliveryNotes: json['delivery_notes'],
       estimatedDeliveryTime: json['estimated_delivery_time'] != null 
-          ? DateTime.parse(json['estimated_delivery_time']) 
+          ? _parseTimestamp(json['estimated_delivery_time'])
           : null,
-      createdAt: DateTime.parse(json['created_at']),
-      updatedAt: DateTime.parse(json['updated_at']),
+      createdAt: _parseTimestamp(json['created_at']) ?? DateTime.now(),
+      updatedAt: _parseTimestamp(json['updated_at']) ?? DateTime.now(),
       promoCodeId: json['promo_code_id'],
+      promoCode: json['promo_code'],
+      promoCodeDiscountPercentage: json['promo_code_discount_percentage'] != null 
+          ? (json['promo_code_discount_percentage'] as num).toDouble() 
+          : null,
+      promoCodeMaxDiscount: json['promo_code_max_discount'] != null 
+          ? (json['promo_code_max_discount'] as num).toDouble() 
+          : null,
     );
+  }
+
+  static DateTime? _parseTimestamp(dynamic timestamp) {
+    if (timestamp == null) return null;
+    if (timestamp is Timestamp) {
+      return timestamp.toDate();
+    } else if (timestamp is String) {
+      return DateTime.parse(timestamp);
+    } else if (timestamp is DateTime) {
+      return timestamp;
+    }
+    return null;
   }
 
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'user_id': userId,
+      'userId': userId,
       'items': items.map((item) => item.toJson()).toList(),
       'subtotal': subtotal,
       'discount_amount': discountAmount,
       'total': total,
       'status': status,
       'delivery_address': deliveryAddress,
+      'delivery_address_name': deliveryAddressName,
+      'delivery_phone': deliveryPhone,
       'delivery_notes': deliveryNotes,
       'estimated_delivery_time': estimatedDeliveryTime?.toIso8601String(),
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
       'promo_code_id': promoCodeId,
+      'promo_code': promoCode,
+      'promo_code_discount_percentage': promoCodeDiscountPercentage,
+      'promo_code_max_discount': promoCodeMaxDiscount,
     };
   }
 
@@ -80,11 +118,16 @@ class OrderModel {
     double? total,
     String? status,
     String? deliveryAddress,
+    String? deliveryAddressName,
+    String? deliveryPhone,
     String? deliveryNotes,
     DateTime? estimatedDeliveryTime,
     DateTime? createdAt,
     DateTime? updatedAt,
     String? promoCodeId,
+    String? promoCode,
+    double? promoCodeDiscountPercentage,
+    double? promoCodeMaxDiscount,
   }) {
     return OrderModel(
       id: id ?? this.id,
@@ -95,11 +138,16 @@ class OrderModel {
       total: total ?? this.total,
       status: status ?? this.status,
       deliveryAddress: deliveryAddress ?? this.deliveryAddress,
+      deliveryAddressName: deliveryAddressName ?? this.deliveryAddressName,
+      deliveryPhone: deliveryPhone ?? this.deliveryPhone,
       deliveryNotes: deliveryNotes ?? this.deliveryNotes,
       estimatedDeliveryTime: estimatedDeliveryTime ?? this.estimatedDeliveryTime,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       promoCodeId: promoCodeId ?? this.promoCodeId,
+      promoCode: promoCode ?? this.promoCode,
+      promoCodeDiscountPercentage: promoCodeDiscountPercentage ?? this.promoCodeDiscountPercentage,
+      promoCodeMaxDiscount: promoCodeMaxDiscount ?? this.promoCodeMaxDiscount,
     );
   }
 }
@@ -123,12 +171,12 @@ class OrderItemModel {
 
   factory OrderItemModel.fromJson(Map<String, dynamic> json) {
     return OrderItemModel(
-      productId: json['product_id'],
-      productName: json['product_name'],
+      productId: json['product_id'] ?? '',
+      productName: json['product_name'] ?? '',
       productImage: json['product_image'],
-      price: (json['price'] as num).toDouble(),
-      quantity: json['quantity'],
-      total: (json['total'] as num).toDouble(),
+      price: (json['price'] as num?)?.toDouble() ?? 0.0,
+      quantity: json['quantity'] ?? 0,
+      total: (json['total'] as num?)?.toDouble() ?? 0.0,
     );
   }
 

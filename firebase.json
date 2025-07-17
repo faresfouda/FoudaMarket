@@ -1,1 +1,32 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"fouda-market","appId":"1:964251925023:android:d3844ee262f35a1ad1332a","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"fouda-market","configurations":{"android":"1:964251925023:android:d3844ee262f35a1ad1332a","ios":"1:964251925023:ios:8eb0d6319162e071d1332a","web":"1:964251925023:web:4733815ca260ec1dd1332a"}}}}}}
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "fouda-market",
+          "appId": "1:964251925023:android:d3844ee262f35a1ad1332a",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "fouda-market",
+          "configurations": {
+            "android": "1:964251925023:android:d3844ee262f35a1ad1332a",
+            "ios": "1:964251925023:ios:8eb0d6319162e071d1332a",
+            "web": "1:964251925023:web:4733815ca260ec1dd1332a"
+          }
+        }
+      }
+    }
+  },
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "functions": [
+    {
+      "source": "functions"
+    }
+  ]
+}

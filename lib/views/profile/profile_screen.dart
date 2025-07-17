@@ -1,16 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:fodamarket/views/profile/orders_screen.dart';
-import 'package:fodamarket/views/profile/my_details_screen.dart';
-import 'package:fodamarket/views/profile/delivery_address_screen.dart';
-import 'package:fodamarket/views/profile/promo_code_screen.dart';
-import 'package:fodamarket/views/profile/notifications_screen.dart';
-import 'package:fodamarket/views/profile/help_screen.dart';
-import 'package:fodamarket/views/profile/about_screen.dart';
-import 'package:fodamarket/blocs/auth/index.dart';
-import 'package:fodamarket/views/SignIn/SignIn.dart';
-import 'package:fodamarket/theme/appcolors.dart';
+import 'package:fouda_market/views/profile/orders_screen.dart';
+import 'package:fouda_market/views/profile/my_details_screen.dart';
+import 'package:fouda_market/views/profile/delivery_address_screen.dart';
+import 'package:fouda_market/views/profile/promo_code_screen.dart';
+import 'package:fouda_market/views/profile/notifications_screen.dart';
+import 'package:fouda_market/views/profile/help_screen.dart';
+import 'package:fouda_market/views/profile/about_screen.dart';
+import 'package:fouda_market/views/profile/my_reviews_screen.dart';
+import 'package:fouda_market/blocs/auth/index.dart';
+import 'package:fouda_market/views/auth/auth_selection_screen.dart';
+import 'package:fouda_market/theme/appcolors.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/services.dart';
+import 'package:fouda_market/services/notification_service.dart';
+import '../../routes.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -20,10 +25,7 @@ class ProfileScreen extends StatelessWidget {
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
         if (state is Unauthenticated) {
-          Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (context) => SignIn()),
-            (route) => false,
-          );
+          Navigator.of(context).pushNamedAndRemoveUntil(AppRoutes.authSelection, (route) => false);
         }
       },
       child: BlocBuilder<AuthBloc, AuthState>(
@@ -67,9 +69,9 @@ class ProfileScreen extends StatelessWidget {
                       children: [
                         CircleAvatar(
                           radius: 36,
-                          backgroundImage: AssetImage(
-                            'assets/home/logo.jpg',
-                          ),
+                          backgroundImage: (state.userProfile!.avatarUrl != null && state.userProfile!.avatarUrl!.isNotEmpty)
+                              ? NetworkImage(state.userProfile!.avatarUrl!)
+                              : const AssetImage('assets/home/logo.jpg') as ImageProvider,
                         ),
                         const SizedBox(width: 20),
                         Expanded(
@@ -130,10 +132,7 @@ class ProfileScreen extends StatelessWidget {
                             title: 'الطلبات',
                             iconPath: 'assets/home/Orders icon.svg',
                             onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (context) => const OrdersScreen()),
-                              );
+                              Navigator.pushNamed(context, AppRoutes.orders);
                             },
                           ),
                         ],
@@ -153,60 +152,51 @@ class ProfileScreen extends StatelessWidget {
                           title: 'بياناتي',
                           iconPath: 'assets/home/My Details icon.svg',
                           onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (context) => const MyDetailsScreen()),
-                            );
+                            Navigator.push(context, MaterialPageRoute(builder: (_) => const MyDetailsScreen()));
                           },
                         ),
                         _ProfileListTile(
                           title: 'عنوان التوصيل',
                           iconPath: 'assets/home/Delicery address.svg',
                           onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (context) => const DeliveryAddressScreen()),
-                            );
+                            Navigator.push(context, MaterialPageRoute(builder: (_) => const DeliveryAddressScreen()));
                           },
                         ),
                         _ProfileListTile(
                           title: 'كود الخصم',
                           iconPath: 'assets/home/Promo Cord icon.svg',
                           onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (context) => const PromoCodeScreen()),
-                            );
+                            Navigator.push(context, MaterialPageRoute(builder: (_) => const PromoCodeScreen()));
                           },
                         ),
                         _ProfileListTile(
                           title: 'الإشعارات',
                           iconPath: 'assets/home/Bell icon.svg',
                           onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (context) => const NotificationsScreen()),
-                            );
+                            Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsScreen()));
                           },
                         ),
+                        if (state is! Guest) ...[
+                          _ProfileListTile(
+                            title: 'مراجعاتي',
+                            iconPath: 'assets/home/help icon.svg', // يمكن تغيير الأيقونة لاحقاً
+                            onTap: () {
+                              Navigator.push(context, MaterialPageRoute(builder: (_) => const MyReviewsScreen()));
+                            },
+                          ),
+                        ],
                         _ProfileListTile(
                           title: 'مساعدة',
                           iconPath: 'assets/home/help icon.svg',
                           onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (context) => const HelpScreen()),
-                            );
+                            Navigator.push(context, MaterialPageRoute(builder: (_) => const HelpScreen()));
                           },
                         ),
                         _ProfileListTile(
                           title: 'حول',
                           iconPath: 'assets/home/about icon.svg',
                           onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (context) => const AboutScreen()),
-                            );
+                            Navigator.push(context, MaterialPageRoute(builder: (_) => const AboutScreen()));
                           },
                         ),
                       ],
@@ -344,10 +334,7 @@ class ProfileScreen extends StatelessWidget {
                             padding: EdgeInsets.symmetric(horizontal: 40),
                             child: ElevatedButton(
                               onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(builder: (context) => SignIn()),
-                                );
+                                Navigator.pushNamed(context, AppRoutes.authSelection);
                               },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppColors.orangeColor,
@@ -394,10 +381,7 @@ class ProfileScreen extends StatelessWidget {
             SizedBox(height: 32),
             ElevatedButton(
               onPressed: () {
-                Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (context) => SignIn()),
-                  (route) => false,
-                );
+                Navigator.of(context).pushNamedAndRemoveUntil(AppRoutes.authSelection, (route) => false);
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.orangeColor,

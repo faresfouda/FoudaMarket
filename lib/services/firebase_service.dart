@@ -1,19 +1,35 @@
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/product_model.dart';
 import '../models/category_model.dart';
 import '../models/order_model.dart';
+import '../core/services/auth_service.dart';
+import '../core/services/product_service.dart';
+import '../core/services/category_service.dart';
+import '../core/services/search_service.dart';
+import '../core/services/favorites_service.dart';
+import '../core/services/cart_service.dart';
+import '../core/services/order_service.dart';
+import '../models/cart_item_model.dart';
+import 'dart:io';
+import '../../core/services/cloudinary_service.dart';
 
+/// Legacy FirebaseService class that acts as a wrapper for the new separate services
+/// This maintains backward compatibility while using the new modular architecture
 class FirebaseService {
   static final FirebaseService _instance = FirebaseService._internal();
   factory FirebaseService() => _instance;
   FirebaseService._internal();
 
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  // final FirebaseStorage _storage = FirebaseStorage.instance;
+  // Initialize separate services
+  final AuthService _authService = AuthService();
+  final ProductService _productService = ProductService();
+  final CategoryService _categoryService = CategoryService();
+  final SearchService _searchService = SearchService();
+  final FavoritesService _favoritesService = FavoritesService();
+  final CartService _cartService = CartService();
+  final OrderService _orderService = OrderService();
 
-  // Authentication methods
+  // Authentication methods - delegate to AuthService
   Future<UserCredential> signUp({
     required String email,
     required String password,
@@ -21,321 +37,247 @@ class FirebaseService {
     required String phone,
     required String role,
   }) async {
-    try {
-      final credential = await _auth.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-
-      if (credential.user != null) {
-        try {
-          await _firestore.collection('users').doc(credential.user!.uid).set({
-            'id': credential.user!.uid,
-            'email': email,
-            'name': name,
-            'phone': phone,
-            'role': role, // Use the provided role
-            'createdAt': FieldValue.serverTimestamp(),
-            'updatedAt': FieldValue.serverTimestamp(),
-          });
-
-          await credential.user!.updateDisplayName(name);
-        } catch (firestoreError) {
-          // If Firestore fails, still return the credential but log the error
-          print('Firestore error during signup: $firestoreError');
-          // You might want to delete the user if Firestore fails
-          // await credential.user!.delete();
-        }
-      }
-
-      return credential;
-    } catch (e) {
-      print('Signup error: $e');
-      rethrow;
-    }
+    return await _authService.signUp(
+      email: email,
+      password: password,
+      name: name,
+      phone: phone,
+      role: role,
+    );
   }
 
   Future<UserCredential> signIn({
     required String email,
     required String password,
   }) async {
-    return await _auth.signInWithEmailAndPassword(
-      email: email,
-      password: password,
-    );
+    return await _authService.signIn(email: email, password: password);
   }
 
   Future<void> signOut() async {
-    await _auth.signOut();
+    await _authService.signOut();
   }
 
   Future<void> resetPassword(String email) async {
-    await _auth.sendPasswordResetEmail(email: email);
+    await _authService.resetPassword(email);
   }
 
-  // User profile methods
   Future<Map<String, dynamic>?> getUserProfile(String userId) async {
-    try {
-      final doc = await _firestore.collection('users').doc(userId).get();
-      return doc.exists ? doc.data() : null;
-    } catch (e) {
-      print('Error getting user profile: $e');
-      return null;
-    }
+    return await _authService.getUserProfile(userId);
   }
 
   Future<void> updateUserProfile(String userId, Map<String, dynamic> data) async {
-    await _firestore.collection('users').doc(userId).update({
-      ...data,
-      'updatedAt': FieldValue.serverTimestamp(),
-    });
+    await _authService.updateUserProfile(userId, data);
   }
 
-  // Product methods
+  // Product methods - delegate to ProductService
   Future<List<ProductModel>> getProducts() async {
-    final querySnapshot = await _firestore.collection('products').get();
-    return querySnapshot.docs
-        .map((doc) {
-          final data = doc.data();
-          data['id'] = doc.id; // إضافة ID الوثيقة
-          return ProductModel.fromJson(data);
-        })
-        .toList();
+    return await _productService.getProducts();
   }
 
   Future<ProductModel?> getProduct(String productId) async {
-    final doc = await _firestore.collection('products').doc(productId).get();
-    if (doc.exists) {
-      final data = doc.data()!;
-      data['id'] = doc.id; // إضافة ID الوثيقة
-      return ProductModel.fromJson(data);
-    }
-    return null;
+    return await _productService.getProduct(productId);
   }
 
   Future<void> addProduct(ProductModel product) async {
-    await _firestore.collection('products').doc(product.id).set(product.toJson());
+    await _productService.addProduct(product);
   }
 
   Future<void> updateProduct(String productId, Map<String, dynamic> data) async {
-    await _firestore.collection('products').doc(productId).update({
-      ...data,
-      'updatedAt': FieldValue.serverTimestamp(),
-    });
+    await _productService.updateProduct(productId, data);
   }
 
   Future<void> deleteProduct(String productId) async {
-    await _firestore.collection('products').doc(productId).delete();
-  }
-
-  // Category methods
-  Future<List<CategoryModel>> getCategories() async {
-    final querySnapshot = await _firestore.collection('categories').get();
-    return querySnapshot.docs
-        .map((doc) => CategoryModel.fromJson(doc.data()))
-        .toList();
-  }
-
-  Future<void> addCategory(CategoryModel category) async {
-    await _firestore.collection('categories').doc(category.id).set(category.toJson());
-  }
-
-  Future<List<CategoryModel>> getCategoriesPaginated({int limit = 20, CategoryModel? lastCategory}) async {
-    var query = _firestore.collection('categories').orderBy('created_at').limit(limit);
-    if (lastCategory != null) {
-      query = query.startAfter([lastCategory.createdAt.toIso8601String()]);
-    }
-    final querySnapshot = await query.get();
-    return querySnapshot.docs.map((doc) => CategoryModel.fromJson(doc.data())).toList();
-  }
-
-  Future<void> updateCategory(String categoryId, Map<String, dynamic> data) async {
-    await _firestore.collection('categories').doc(categoryId).update({
-      ...data,
-      'updatedAt': FieldValue.serverTimestamp(),
-    });
-  }
-
-  Future<void> deleteCategory(String categoryId) async {
-    await _firestore.collection('categories').doc(categoryId).delete();
-  }
-
-  // Cart methods
-  Future<List<Map<String, dynamic>>> getCartItems(String userId) async {
-    final querySnapshot = await _firestore
-        .collection('cart_items')
-        .where('userId', isEqualTo: userId)
-        .get();
-    return querySnapshot.docs.map((doc) => doc.data()).toList();
-  }
-
-  Future<void> addToCart(Map<String, dynamic> cartItem) async {
-    await _firestore.collection('cart_items').add(cartItem);
-  }
-
-  Future<void> updateCartItem(String cartItemId, Map<String, dynamic> data) async {
-    await _firestore.collection('cart_items').doc(cartItemId).update(data);
-  }
-
-  Future<void> removeFromCart(String cartItemId) async {
-    await _firestore.collection('cart_items').doc(cartItemId).delete();
-  }
-
-  Future<void> clearCart(String userId) async {
-    final querySnapshot = await _firestore
-        .collection('cart_items')
-        .where('userId', isEqualTo: userId)
-        .get();
-    
-    final batch = _firestore.batch();
-    for (var doc in querySnapshot.docs) {
-      batch.delete(doc.reference);
-    }
-    await batch.commit();
-  }
-
-  // Order methods
-  Future<void> createOrder(OrderModel order) async {
-    await _firestore.collection('orders').add(order.toJson());
-  }
-
-  Future<List<OrderModel>> getUserOrders(String userId) async {
-    final querySnapshot = await _firestore
-        .collection('orders')
-        .where('userId', isEqualTo: userId)
-        .orderBy('createdAt', descending: true)
-        .get();
-    
-    return querySnapshot.docs
-        .map((doc) => OrderModel.fromJson(doc.data()))
-        .toList();
-  }
-
-  Future<List<OrderModel>> getAllOrders() async {
-    final querySnapshot = await _firestore
-        .collection('orders')
-        .orderBy('createdAt', descending: true)
-        .get();
-    
-    return querySnapshot.docs
-        .map((doc) => OrderModel.fromJson(doc.data()))
-        .toList();
-  }
-
-  Future<void> updateOrderStatus(String orderId, String status) async {
-    await _firestore.collection('orders').doc(orderId).update({
-      'status': status,
-      'updatedAt': FieldValue.serverTimestamp(),
-    });
-  }
-
-  // Favorites methods
-  Future<List<String>> getUserFavorites(String userId) async {
-    final doc = await _firestore.collection('favorites').doc(userId).get();
-    if (doc.exists && doc.data()!.containsKey('productIds')) {
-      return List<String>.from(doc.data()!['productIds']);
-    }
-    return [];
-  }
-
-  Future<void> addToFavorites(String userId, String productId) async {
-    await _firestore.collection('favorites').doc(userId).set({
-      'productIds': FieldValue.arrayUnion([productId]),
-      'updatedAt': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
-  }
-
-  Future<void> removeFromFavorites(String userId, String productId) async {
-    await _firestore.collection('favorites').doc(userId).update({
-      'productIds': FieldValue.arrayRemove([productId]),
-      'updatedAt': FieldValue.serverTimestamp(),
-    });
-  }
-
-  // // Storage methods
-  // Future<String> uploadImage(File imageFile, String path) async {
-  //   // final ref = _storage.ref().child(path);
-  //   // final uploadTask = ref.putFile(imageFile);
-  //   final snapshot = await uploadTask;
-  //   return await snapshot.ref.getDownloadURL();
-  // }
-  //
-  // Future<void> deleteImage(String imageUrl) async {
-  //   // final ref = _storage.refFromURL(imageUrl);
-  //   // await ref.delete();
-  // }
-
-  // Search methods
-  Future<List<ProductModel>> searchProducts(String query) async {
-    final querySnapshot = await _firestore
-        .collection('products')
-        .where('name', isGreaterThanOrEqualTo: query)
-        .where('name', isLessThan: query + '\uf8ff')
-        .get();
-    
-    return querySnapshot.docs
-        .map((doc) {
-          final data = doc.data();
-          data['id'] = doc.id; // إضافة ID الوثيقة
-          return ProductModel.fromJson(data);
-        })
-        .toList();
-  }
-
-  Future<List<ProductModel>> getProductsPaginated({int limit = 20, ProductModel? lastProduct}) async {
-    var query = _firestore.collection('products').orderBy('created_at').limit(limit);
-    if (lastProduct != null) {
-      query = query.startAfter([lastProduct.createdAt.toIso8601String()]);
-    }
-    final querySnapshot = await query.get();
-    return querySnapshot.docs.map((doc) {
-      final data = doc.data();
-      data['id'] = doc.id; // إضافة ID الوثيقة
-      return ProductModel.fromJson(data);
-    }).toList();
-  }
-
-  Future<int> getProductCountForCategory(String categoryId) async {
-    final querySnapshot = await _firestore
-        .collection('products')
-        .where('category_id', isEqualTo: categoryId)
-        .get();
-    return querySnapshot.size;
+    await _productService.deleteProduct(productId);
   }
 
   Future<List<ProductModel>> getProductsForCategory(String categoryId) async {
-    final querySnapshot = await _firestore
-        .collection('products')
-        .where('category_id', isEqualTo: categoryId)
-        .get();
-    return querySnapshot.docs.map((doc) {
-      final data = doc.data();
-      data['id'] = doc.id; // إضافة ID الوثيقة
-      return ProductModel.fromJson(data);
-    }).toList();
+    return await _productService.getProductsForCategory(categoryId);
   }
 
-  // Analytics and reporting
+  Future<List<ProductModel>> getAllProductsForCategory(String categoryId) async {
+    return await _productService.getAllProductsForCategory(categoryId);
+  }
+
+  Future<List<ProductModel>> getProductsForCategoryPaginated({
+    required String categoryId,
+    int limit = 20,
+    ProductModel? lastProduct,
+  }) async {
+    return await _productService.getProductsForCategoryPaginated(
+      categoryId: categoryId,
+      limit: limit,
+      lastProduct: lastProduct,
+    );
+  }
+
+  Future<List<ProductModel>> getAllProductsForCategoryPaginated({
+    required String categoryId,
+    int limit = 20,
+    ProductModel? lastProduct,
+  }) async {
+    return await _productService.getAllProductsForCategoryPaginated(
+      categoryId: categoryId,
+      limit: limit,
+      lastProduct: lastProduct,
+    );
+  }
+
+  Future<int> getProductCountForCategory(String categoryId) async {
+    return await _productService.getProductCountForCategory(categoryId);
+  }
+
+  Future<int> getAllProductCountForCategory(String categoryId) async {
+    return await _productService.getAllProductCountForCategory(categoryId);
+  }
+
+  Future<List<ProductModel>> getProductsPaginated({int limit = 20, ProductModel? lastProduct}) async {
+    return await _productService.getProductsPaginated(limit: limit, lastProduct: lastProduct);
+  }
+
+  Future<List<ProductModel>> getBestSellers({int limit = 10}) async {
+    return await _productService.getBestSellers(limit: limit);
+  }
+
+  Future<List<ProductModel>> getSpecialOffers({int limit = 10}) async {
+    return await _productService.getSpecialOffers(limit: limit);
+  }
+
+  Future<List<ProductModel>> getRecommendedProducts({int limit = 10}) async {
+    return await _productService.getRecommendedProducts(limit: limit);
+  }
+
+  // Category methods - delegate to CategoryService
+  Future<List<CategoryModel>> getCategories() async {
+    return await _categoryService.getCategories();
+  }
+
+  Future<void> addCategory(CategoryModel category) async {
+    await _categoryService.addCategory(category);
+  }
+
+  Future<List<CategoryModel>> getCategoriesPaginated({int limit = 20, CategoryModel? lastCategory}) async {
+    return await _categoryService.getCategoriesPaginated(limit: limit, lastCategory: lastCategory);
+  }
+
+  Future<void> updateCategory(String categoryId, Map<String, dynamic> data) async {
+    await _categoryService.updateCategory(categoryId, data);
+  }
+
+  Future<void> deleteCategory(String categoryId) async {
+    await _categoryService.deleteCategory(categoryId);
+  }
+
+  Future<List<CategoryModel>> getHomeCategories({int limit = 8}) async {
+    return await _categoryService.getHomeCategories(limit: limit);
+  }
+
+  Future<String?> uploadCategoryImage(File imageFile) async {
+    // يمكنك هنا استخدام نفس منطق رفع صورة المنتج أو CloudinaryService
+    // مثال بسيط (تأكد من وجود CloudinaryService):
+    return await CloudinaryService().uploadImage(imageFile.path);
+  }
+
+  // Search methods - delegate to SearchService
+  Future<List<ProductModel>> searchProducts(String query) async {
+    return await _searchService.searchProducts(query);
+  }
+
+  Future<List<ProductModel>> searchVisibleProducts(String query, {List<String>? categories, double? minPrice, double? maxPrice}) async {
+    return await _searchService.searchVisibleProducts(query, categories: categories, minPrice: minPrice, maxPrice: maxPrice);
+  }
+
+  Future<List<ProductModel>> searchProductsInCategory(String categoryId, String query) async {
+    return await _searchService.searchProductsInCategory(categoryId, query);
+  }
+
+  Future<List<ProductModel>> searchVisibleProductsInCategory(String categoryId, String query) async {
+    return await _searchService.searchVisibleProductsInCategory(categoryId, query);
+  }
+
+  Future<List<CategoryModel>> searchCategories(String query) async {
+    return await _categoryService.searchCategories(query);
+  }
+
+  Future<List<CategoryModel>> searchCategoriesPaginated({
+    required String query,
+    int limit = 10,
+    CategoryModel? lastCategory,
+  }) async {
+    return await _categoryService.searchCategoriesPaginated(
+      query: query,
+      limit: limit,
+      lastCategory: lastCategory,
+    );
+  }
+
+  // Favorite methods - delegate to FavoritesService
+  Future<List<String>> getUserFavorites(String userId) async {
+    return await _favoritesService.getUserFavorites(userId);
+  }
+
+  Future<void> addToFavorites(String userId, String productId) async {
+    await _favoritesService.addToFavorites(userId, productId);
+  }
+
+  Future<void> removeFromFavorites(String userId, String productId) async {
+    await _favoritesService.removeFromFavorites(userId, productId);
+  }
+
+  Future<List<ProductModel>> getFavoriteProducts(String userId) async {
+    return await _favoritesService.getFavoriteProducts(userId);
+  }
+
+  Future<bool> isProductFavorite(String userId, String productId) async {
+    return await _favoritesService.isProductFavorite(userId, productId);
+  }
+
+  // Cart methods - delegate to CartService
+  Future<List<CartItemModel>> getCartItems(String userId) async {
+    return await _cartService.getCartItems(userId);
+  }
+
+  Future<void> addToCart(CartItemModel cartItem) async {
+    await _cartService.addToCart(cartItem);
+  }
+
+  Future<void> updateCartItem(String cartItemId, Map<String, dynamic> data) async {
+    await _cartService.updateCartItem(cartItemId, data);
+  }
+
+  Future<void> removeFromCart(String cartItemId) async {
+    await _cartService.removeFromCart(cartItemId);
+  }
+
+  Future<void> clearCart(String userId) async {
+    await _cartService.clearCart(userId);
+  }
+
+  Future<int> getCartItemsCount(String userId) async {
+    return await _cartService.getCartItemsCount(userId);
+  }
+
+  Future<double> getCartTotal(String userId) async {
+    return await _cartService.getCartTotal(userId);
+  }
+
+  // Order methods - delegate to OrderService
+  Future<void> createOrder(OrderModel order) async {
+    await _orderService.createOrder(order);
+  }
+
+  Future<List<OrderModel>> getUserOrders(String userId) async {
+    return await _orderService.getUserOrders(userId);
+  }
+
+  Future<List<OrderModel>> getAllOrders() async {
+    return await _orderService.getAllOrders();
+  }
+
+  Future<void> updateOrderStatus(String orderId, String status) async {
+    await _orderService.updateOrderStatus(orderId, status);
+  }
+
   Future<Map<String, dynamic>> getSalesReport(DateTime startDate, DateTime endDate) async {
-    final querySnapshot = await _firestore
-        .collection('orders')
-        .where('createdAt', isGreaterThanOrEqualTo: startDate)
-        .where('createdAt', isLessThanOrEqualTo: endDate)
-        .where('status', isEqualTo: 'completed')
-        .get();
-
-    double totalSales = 0;
-    int totalOrders = querySnapshot.docs.length;
-
-    for (var doc in querySnapshot.docs) {
-      final orderData = doc.data();
-      totalSales += (orderData['totalAmount'] ?? 0).toDouble();
-    }
-
-    return {
-      'totalSales': totalSales,
-      'totalOrders': totalOrders,
-      'averageOrderValue': totalOrders > 0 ? totalSales / totalOrders : 0,
-    };
+    return await _orderService.getSalesReport(startDate, endDate);
   }
 } 

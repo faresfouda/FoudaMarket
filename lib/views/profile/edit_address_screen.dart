@@ -1,12 +1,26 @@
 import 'package:flutter/material.dart';
-import 'package:fodamarket/theme/appcolors.dart';
-import 'package:fodamarket/components/Button.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fouda_market/theme/appcolors.dart';
+import 'package:fouda_market/components/Button.dart';
+import '../../blocs/address/address_bloc.dart';
+import '../../blocs/address/address_event.dart';
+import '../../models/address_model.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class EditAddressScreen extends StatefulWidget {
   final String? initialName;
   final String? initialAddress;
   final String? initialPhone;
-  const EditAddressScreen({super.key, this.initialName, this.initialAddress, this.initialPhone});
+  final String? addressId;
+  final bool? initialIsDefault;
+  const EditAddressScreen({
+    super.key, 
+    this.initialName, 
+    this.initialAddress, 
+    this.initialPhone, 
+    this.addressId,
+    this.initialIsDefault,
+  });
 
   @override
   State<EditAddressScreen> createState() => _EditAddressScreenState();
@@ -16,6 +30,7 @@ class _EditAddressScreenState extends State<EditAddressScreen> {
   late TextEditingController nameController;
   late TextEditingController addressController;
   late TextEditingController phoneController;
+  bool isDefault = false;
 
   @override
   void initState() {
@@ -23,10 +38,12 @@ class _EditAddressScreenState extends State<EditAddressScreen> {
     nameController = TextEditingController(text: widget.initialName ?? 'المنزل');
     addressController = TextEditingController(text: widget.initialAddress ?? 'القاهرة الكبرى، الجيزة، الهرم، شارع الملك فيصل، عمارة 12');
     phoneController = TextEditingController(text: widget.initialPhone ?? '01020304050');
+    isDefault = widget.initialIsDefault ?? false;
   }
 
   @override
   Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
     return Scaffold(
       backgroundColor: const Color(0xFFF6F6F6),
       body: Stack(
@@ -84,23 +101,92 @@ class _EditAddressScreenState extends State<EditAddressScreen> {
                             controller: phoneController,
                             icon: Icons.phone,
                           ),
+                          const SizedBox(height: 28),
+                          // خيار العنوان الافتراضي
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.98),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: Colors.grey[300]!),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(Icons.star, color: isDefault ? Colors.orange : Colors.grey[400], size: 24),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'اجعل هذا العنوان افتراضيًا',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w500,
+                                          color: isDefault ? Colors.orange : Colors.black,
+                                        ),
+                                      ),
+                                      Text(
+                                        'سيتم استخدام هذا العنوان تلقائيًا في الطلبات',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.grey[600],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Switch(
+                                  value: isDefault,
+                                  onChanged: (value) {
+                                    setState(() {
+                                      isDefault = value;
+                                    });
+                                  },
+                                  activeColor: AppColors.orangeColor,
+                                ),
+                              ],
+                            ),
+                          ),
                           const SizedBox(height: 40),
-                          SizedBox(
-                            width: double.infinity,
-                            height: 60,
-                            child: Button(
-                              onPressed: () {
-                                // Save action
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('تم حفظ العنوان')),
-                                );
-                                Navigator.of(context).pop();
-                              },
-                              buttonContent: const Text(
-                                'حفظ العنوان',
-                                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+                          Builder(
+                            builder: (context) => SizedBox(
+                              width: double.infinity,
+                              height: 60,
+                              child: Button(
+                                onPressed: () async {
+                                  final user = FirebaseAuth.instance.currentUser;
+                                  if (user == null) return;
+                                  final address = AddressModel(
+                                    id: widget.addressId ?? '',
+                                    userId: user.uid,
+                                    name: nameController.text,
+                                    address: addressController.text,
+                                    phone: phoneController.text,
+                                    isDefault: isDefault,
+                                    createdAt: DateTime.now(),
+                                    updatedAt: DateTime.now(),
+                                  );
+                                  
+                                  if (widget.addressId == null) {
+                                    context.read<AddressBloc>().add(AddAddress(address));
+                                  } else {
+                                    context.read<AddressBloc>().add(UpdateAddress(address));
+                                  }
+                                  
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text(widget.addressId == null ? 'تم إضافة العنوان' : 'تم تحديث العنوان')),
+                                  );
+                                  
+                                  // إرجاع true لإعلام الشاشة الأم أن هناك تغييراً
+                                  Navigator.of(context).pop(true);
+                                },
+                                buttonContent: const Text(
+                                  'حفظ العنوان',
+                                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+                                ),
+                                buttonColor: AppColors.orangeColor,
                               ),
-                              buttonColor: AppColors.orangeColor,
                             ),
                           ),
                         ],

@@ -38,7 +38,10 @@ class SendNotificationScreen extends StatelessWidget {
             ),
             const SizedBox(height: 24),
             Button(
-              buttonContent: const Text('إرسال', style: TextStyle(color: Colors.white)),
+              buttonContent: const Text(
+                'إرسال',
+                style: TextStyle(color: Colors.white),
+              ),
               buttonColor: AppColors.orangeColor,
               onPressed: () {
                 // Implement send logic here
@@ -52,4 +55,4 @@ class SendNotificationScreen extends StatelessWidget {
       ),
     );
   }
-} 
+}

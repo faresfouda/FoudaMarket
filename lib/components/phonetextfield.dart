@@ -1,13 +1,13 @@
 import 'package:country_flags/country_flags.dart';
 import 'package:flutter/material.dart';
-import 'package:fodamarket/theme/appcolors.dart';
+import 'package:fouda_market/theme/appcolors.dart';
 
 class PhoneTextField extends StatelessWidget {
   const PhoneTextField({
     super.key,
     required this.controller,
     required this.autofocus,
-    required this.onTap,
+    required this.onTap, 
   });
 
   final TextEditingController controller;
@@ -23,7 +23,7 @@ class PhoneTextField extends StatelessWidget {
         onTap: onTap,
         autofocus: autofocus,
         decoration: InputDecoration(
-          hintText: '+20',
+          hintText: 'أدخل رقم الهاتف بدون صفر في البداية',
           hintStyle: TextStyle(
             fontFamily: 'Gilroy',
             fontSize: 18,

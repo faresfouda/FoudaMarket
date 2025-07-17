@@ -32,7 +32,8 @@ class _SalesReportsScreenState extends State<SalesReportsScreen> {
 
   String get dateRangeLabel {
     if (fromDate == null && toDate == null) return 'كل الوقت';
-    String format(DateTime d) => '${d.year}/${d.month.toString().padLeft(2, '0')}/${d.day.toString().padLeft(2, '0')}';
+    String format(DateTime d) =>
+        '${d.year}/${d.month.toString().padLeft(2, '0')}/${d.day.toString().padLeft(2, '0')}';
     if (fromDate != null && toDate != null) {
       return '${format(fromDate!)} - ${format(toDate!)}';
     } else if (fromDate != null) {
@@ -63,10 +64,7 @@ class _SalesReportsScreenState extends State<SalesReportsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('تقارير المبيعات'),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: const Text('تقارير المبيعات'), centerTitle: true),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -79,10 +77,16 @@ class _SalesReportsScreenState extends State<SalesReportsScreen> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.orange,
                       foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                     ),
                     icon: const Icon(Icons.date_range),
-                    label: Text(fromDate == null ? 'من' : '${fromDate!.year}/${fromDate!.month.toString().padLeft(2, '0')}/${fromDate!.day.toString().padLeft(2, '0')}'),
+                    label: Text(
+                      fromDate == null
+                          ? 'من'
+                          : '${fromDate!.year}/${fromDate!.month.toString().padLeft(2, '0')}/${fromDate!.day.toString().padLeft(2, '0')}',
+                    ),
                     onPressed: () => pickDate(isFrom: true),
                   ),
                 ),
@@ -92,23 +96,34 @@ class _SalesReportsScreenState extends State<SalesReportsScreen> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.orange,
                       foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                     ),
                     icon: const Icon(Icons.date_range),
-                    label: Text(toDate == null ? 'إلى' : '${toDate!.year}/${toDate!.month.toString().padLeft(2, '0')}/${toDate!.day.toString().padLeft(2, '0')}'),
+                    label: Text(
+                      toDate == null
+                          ? 'إلى'
+                          : '${toDate!.year}/${toDate!.month.toString().padLeft(2, '0')}/${toDate!.day.toString().padLeft(2, '0')}',
+                    ),
                     onPressed: () => pickDate(isFrom: false),
                   ),
                 ),
                 if (fromDate != null || toDate != null)
                   IconButton(
                     icon: const Icon(Icons.clear, color: Colors.red),
-                    onPressed: () => setState(() { fromDate = null; toDate = null; }),
+                    onPressed: () => setState(() {
+                      fromDate = null;
+                      toDate = null;
+                    }),
                   ),
               ],
             ),
             const SizedBox(height: 20),
             Card(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
               elevation: 2,
               child: Padding(
                 padding: const EdgeInsets.all(20),
@@ -117,16 +132,36 @@ class _SalesReportsScreenState extends State<SalesReportsScreen> {
                   children: [
                     Column(
                       children: [
-                        const Text('إجمالي المبيعات', style: TextStyle(fontWeight: FontWeight.bold)),
+                        const Text(
+                          'إجمالي المبيعات',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
                         const SizedBox(height: 8),
-                        Text('ج.م $totalSales', style: const TextStyle(fontSize: 20, color: Colors.green, fontWeight: FontWeight.bold)),
+                        Text(
+                          'ج.م $totalSales',
+                          style: const TextStyle(
+                            fontSize: 20,
+                            color: Colors.green,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ],
                     ),
                     Column(
                       children: [
-                        const Text('عدد الطلبات', style: TextStyle(fontWeight: FontWeight.bold)),
+                        const Text(
+                          'عدد الطلبات',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
                         const SizedBox(height: 8),
-                        Text('$totalOrders', style: const TextStyle(fontSize: 20, color: Colors.blue, fontWeight: FontWeight.bold)),
+                        Text(
+                          '$totalOrders',
+                          style: const TextStyle(
+                            fontSize: 20,
+                            color: Colors.blue,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ],
                     ),
                   ],
@@ -134,7 +169,10 @@ class _SalesReportsScreenState extends State<SalesReportsScreen> {
               ),
             ),
             const SizedBox(height: 24),
-            Text('المنتجات الأكثر مبيعاً', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+            Text(
+              'المنتجات الأكثر مبيعاً',
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            ),
             const SizedBox(height: 12),
             ListView.separated(
               shrinkWrap: true,
@@ -144,21 +182,41 @@ class _SalesReportsScreenState extends State<SalesReportsScreen> {
               itemBuilder: (context, index) {
                 final p = topProducts[index];
                 return Card(
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   child: ListTile(
                     leading: CircleAvatar(
                       backgroundColor: Colors.orange[50],
-                      child: Text('${index + 1}', style: const TextStyle(color: Colors.orange, fontWeight: FontWeight.bold)),
+                      child: Text(
+                        '${index + 1}',
+                        style: const TextStyle(
+                          color: Colors.orange,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
-                    title: Text(p['name'], style: const TextStyle(fontWeight: FontWeight.bold)),
+                    title: Text(
+                      p['name'],
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
                     subtitle: Text('عدد المبيعات: ${p['sales']}'),
-                    trailing: Text('ج.م ${p['amount']}', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+                    trailing: Text(
+                      'ج.م ${p['amount']}',
+                      style: const TextStyle(
+                        color: Colors.green,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                 );
               },
             ),
             const SizedBox(height: 24),
-            Text('أهم العملاء', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+            Text(
+              'أهم العملاء',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            ),
             const SizedBox(height: 12),
             ListView.separated(
               shrinkWrap: true,
@@ -168,15 +226,32 @@ class _SalesReportsScreenState extends State<SalesReportsScreen> {
               itemBuilder: (context, index) {
                 final u = topUsers[index];
                 return Card(
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   child: ListTile(
                     leading: CircleAvatar(
                       backgroundColor: Colors.blue[50],
-                      child: Text('${index + 1}', style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.bold)),
+                      child: Text(
+                        '${index + 1}',
+                        style: const TextStyle(
+                          color: Colors.blue,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
-                    title: Text(u['name'], style: const TextStyle(fontWeight: FontWeight.bold)),
+                    title: Text(
+                      u['name'],
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
                     subtitle: Text('عدد الطلبات: ${u['orders']}'),
-                    trailing: Text('ج.م ${u['spent']}', style: const TextStyle(color: Colors.deepOrange, fontWeight: FontWeight.bold)),
+                    trailing: Text(
+                      'ج.م ${u['spent']}',
+                      style: const TextStyle(
+                        color: Colors.deepOrange,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                 );
               },
@@ -186,4 +261,4 @@ class _SalesReportsScreenState extends State<SalesReportsScreen> {
       ),
     );
   }
-} 
+}

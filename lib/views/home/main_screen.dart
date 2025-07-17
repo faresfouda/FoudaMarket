@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../blocs/auth/auth_bloc.dart';
-import '../../blocs/auth/auth_event.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../../blocs/cart/index.dart';
+import '../../services/notification_service.dart';
 
 import '../cart/cart_screen.dart';
 import '../categories/categories_screen.dart';
@@ -30,24 +31,41 @@ class _MainScreenState extends State<MainScreen> {
   @override
   void initState() {
     super.initState();
-    // أرسل حدث إعادة تحميل بيانات المستخدم عند الدخول
-    BlocProvider.of<AuthBloc>(context).add(AuthCheckRequested());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadCart();
+      // تعيين context لخدمة الإشعارات
+      NotificationService().setContext(context);
+    });
+  }
+
+  void _loadCart() {
+    final user = FirebaseAuth.instance.currentUser;
+    print('🔍 [MAIN_SCREEN] Current user: $user');
+    if (user != null) {
+      print('🔍 [MAIN_SCREEN] User ID: ${user.uid}');
+      print('🔍 [MAIN_SCREEN] Loading cart for user: ${user.uid}');
+      context.read<CartBloc>().add(LoadCart(user.uid));
+    } else {
+      print('❌ [MAIN_SCREEN] No user logged in');
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-
-    return Scaffold(
-      body: _screens[_selectedIndex],
-      bottomNavigationBar: SizedBox(
-        height: 100,
-        child: CustomBottomNavBar(
-          selectedIndex: _selectedIndex,
-          onItemTapped: (index) {
-            setState(() {
-              _selectedIndex = index;
-            });
-          },
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        body: _screens[_selectedIndex],
+        bottomNavigationBar: SizedBox(
+          height: 100,
+          child: CustomBottomNavBar(
+            selectedIndex: _selectedIndex,
+            onItemTapped: (index) {
+              setState(() {
+                _selectedIndex = index;
+              });
+            },
+          ),
         ),
       ),
     );

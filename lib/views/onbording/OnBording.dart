@@ -1,7 +1,7 @@
-import 'package:fodamarket/components/Button.dart';
+import 'package:fouda_market/components/Button.dart';
 import 'package:flutter/material.dart';
-import 'package:fodamarket/theme/appcolors.dart';
-import 'package:fodamarket/views/SignIn/SignIn.dart';
+import 'package:fouda_market/theme/appcolors.dart';
+import 'package:fouda_market/views/auth/auth_selection_screen.dart';
 
 class OnBording extends StatelessWidget {
   final VoidCallback? onFinish;
@@ -60,7 +60,7 @@ class OnBording extends StatelessWidget {
                   if (onFinish != null) {
                     onFinish!();
                   } else {
-                    Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => SignIn()));
+                    Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => AuthSelectionScreen()));
                   }
                 },
                 buttonContent: Text(

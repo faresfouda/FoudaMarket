@@ -7,7 +7,7 @@ class Button extends StatelessWidget {
     required this.buttonContent,
     required this.buttonColor,
   });
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
   final Widget buttonContent;
   final Color buttonColor;
 

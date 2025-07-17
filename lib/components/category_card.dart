@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fouda_market/components/cached_image.dart';
 
 class CategoryCard extends StatelessWidget {
   final String imageUrl; // URL for the category image
@@ -32,15 +33,21 @@ class CategoryCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Center(
-                child: Image.network(
-                  imageUrl,
-                  width: 28,
-                  height: 28,
-                  fit: BoxFit.contain,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Icon(Icons.category, color: Colors.grey, size: 28);
-                  },
-                ),
+                child: imageUrl.isNotEmpty
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: CachedImage(
+                          imageUrl: imageUrl,
+                          width: 40,
+                          height: 40,
+                          fit: BoxFit.cover,
+                        ),
+                      )
+                    : Icon(
+                        Icons.category,
+                        size: 30,
+                        color: Colors.grey[600],
+                      ),
               ),
             ),
             const SizedBox(height: 10),

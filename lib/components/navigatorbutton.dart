@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:fodamarket/theme/appcolors.dart';
+import 'package:fouda_market/theme/appcolors.dart';
 
 class Navigatorbutton extends StatelessWidget {
   const Navigatorbutton({super.key});

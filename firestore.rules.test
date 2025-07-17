@@ -1,0 +1,104 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Users collection - users can read/write their own profile, admins can read all
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read: if request.auth != null && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Orders collection - users can read their own orders, admins can read all
+    match /orders/{orderId} {
+      // إنشاء الطلب: المستخدم المسجل فقط ويجب أن يكون userId مطابقًا
+      allow create: if request.auth != null &&
+                    request.resource.data.userId == request.auth.uid;
+
+      // قراءة: مسموح للمستخدم صاحب الطلب أو الأدمن
+      allow read: if request.auth != null &&
+        (
+          resource.data.userId == request.auth.uid ||
+          (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
+        );
+
+      // تحديث، حذف: مسموح للمستخدم صاحب الطلب أو الأدمن
+      allow update, delete: if request.auth != null &&
+        (
+          resource.data.userId == request.auth.uid ||
+          (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
+        );
+    }
+
+    // Favorites collection - users can read/write their own favorites
+    match /favorites/{favId} {
+      allow read, update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+    }
+
+    // Categories collection - anyone can read, only admins can write
+    match /categories/{categoriesId} {
+      allow read: if true;
+      allow write: if request.auth != null &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Carts collection
+    match /carts/{cartId} {
+      // السماح بقراءة كل العناصر التي تخص المستخدم الحالي
+      allow read: if request.auth != null &&
+                  resource.data.user_id == request.auth.uid;
+
+      // السماح بالإنشاء فقط إذا كانت البيانات التي يتم إنشاؤها تحتوي على user_id الصحيح
+      allow create: if request.auth != null &&
+                    request.resource.data.user_id == request.auth.uid;
+
+      // السماح بالتحديث والحذف فقط إذا كان المستخدم هو صاحب العنصر
+      allow update, delete: if request.auth != null &&
+                            resource.data.user_id == request.auth.uid;
+    }
+
+    // Addresses collection
+    match /addresses/{addressesId} {
+      // السماح بقراءة كل العناصر التي تخص المستخدم الحالي
+      allow read: if request.auth != null &&
+                  resource.data.user_id == request.auth.uid;
+
+      // السماح بالإنشاء فقط إذا كانت البيانات التي يتم إنشاؤها تحتوي على user_id الصحيح
+      allow create: if request.auth != null &&
+                    request.resource.data.user_id == request.auth.uid;
+
+      // السماح بالتحديث والحذف فقط إذا كان المستخدم هو صاحب العنصر
+      allow update, delete: if request.auth != null &&
+                            resource.data.user_id == request.auth.uid;
+    }
+
+    // Products collection - anyone can read, only admins can write
+    match /products/{productId} {
+      allow read: if true;
+      allow write: if request.auth != null &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Promo codes collection - authenticated users can read, only admins can write
+    match /promo_codes/{promoCodeId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Reviews collection - TEMPORARY RULES FOR TESTING
+    // ⚠️ WARNING: These rules allow all authenticated users to read/write reviews
+    // ⚠️ DO NOT USE IN PRODUCTION
+    match /reviews/{reviewId} {
+      // السماح بكل شيء للمستخدمين المسجلين (للاختبار فقط)
+      allow read, write: if request.auth != null;
+    }
+  }
+} 

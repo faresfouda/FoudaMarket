@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class HelpScreen extends StatefulWidget {
   const HelpScreen({super.key});
@@ -9,50 +10,78 @@ class HelpScreen extends StatefulWidget {
 
 class _HelpScreenState extends State<HelpScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  final List<String> helpTopics = [
-    'كيفية الطلب من التطبيق',
-    'طرق الدفع المتاحة',
-    'سياسة الاسترجاع',
-    'مواعيد التوصيل',
-    'التواصل مع الدعم',
+  
+  final List<Map<String, dynamic>> faqItems = [
+    {
+      'question': 'كيف يمكنني إنشاء حساب جديد؟',
+      'answer': 'اضغط على "تسجيل الدخول" ثم "إنشاء حساب جديد" واملأ البيانات المطلوبة (الاسم، البريد الإلكتروني، كلمة المرور، رقم الهاتف).'
+    },
+    {
+      'question': 'كيف يمكنني إضافة منتجات إلى سلة التسوق؟',
+      'answer': 'تصفح المنتجات في الصفحة الرئيسية أو من خلال التصنيفات، ثم اضغط على أيقونة السلة بجانب المنتج المطلوب.'
+    },
+    {
+      'question': 'ما هي طرق الدفع المتاحة؟',
+      'answer': 'نوفر عدة طرق دفع: الدفع عند الاستلام، البطاقات الائتمانية، المحافظ الإلكترونية، والتحويل البنكي.'
+    },
+    {
+      'question': 'كم تستغرق مدة التوصيل؟',
+      'answer': 'مدة التوصيل تتراوح من ساعة إلى 3 ساعات حسب موقعك. يمكنك متابعة طلبك في الوقت الفعلي.'
+    },
+    {
+      'question': 'كيف يمكنني تتبع طلبي؟',
+      'answer': 'اذهب إلى "الطلبات" في الملف الشخصي وستجد جميع طلباتك مع حالة كل طلب وتفاصيل التوصيل.'
+    },
+    {
+      'question': 'ما هي سياسة الاسترجاع؟',
+      'answer': 'يمكنك إرجاع المنتج خلال 24 ساعة من الاستلام إذا كان هناك عيب في المنتج أو خطأ في الطلب.'
+    },
+    {
+      'question': 'كيف يمكنني تغيير عنوان التوصيل؟',
+      'answer': 'اذهب إلى "عنوان التوصيل" في الملف الشخصي ويمكنك إضافة أو تعديل العناوين المحفوظة.'
+    },
+    {
+      'question': 'كيف يمكنني استخدام كود الخصم؟',
+      'answer': 'اذهب إلى "كود الخصم" في الملف الشخصي وأدخل الكود في صفحة الدفع للحصول على الخصم.'
+    },
   ];
-  final List<Map<String, String>> chatMessages = [
-    {'from': 'support', 'msg': 'مرحباً! كيف يمكنني مساعدتك؟'},
-    {'from': 'user', 'msg': 'كيف أتابع طلبي؟'},
-    {'from': 'support', 'msg': 'يمكنك متابعة الطلب من صفحة "طلباتي".'},
+
+  final List<Map<String, String>> contactInfo = [
+    {'title': 'الهاتف', 'value': '+966 50 123 4567', 'icon': 'phone'},
+    {'title': 'البريد الإلكتروني', 'value': 'support@foudamarket.com', 'icon': 'email'},
+    {'title': 'الواتساب', 'value': '+966 50 123 4567', 'icon': 'whatsapp'},
+    {'title': 'ساعات العمل', 'value': '24/7', 'icon': 'schedule'},
   ];
-  final TextEditingController _chatController = TextEditingController();
-  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
   }
 
   @override
   void dispose() {
     _tabController.dispose();
-    _chatController.dispose();
-    _scrollController.dispose();
     super.dispose();
   }
 
-  // void _sendMessage() {
-  //   if (_chatController.text.trim().isNotEmpty) {
-  //     setState(() {
-  //       chatMessages.add({'from': 'user', 'msg': _chatController.text.trim()});
-  //       _chatController.clear();
-  //     });
-  //     WidgetsBinding.instance.addPostFrameCallback((_) {
-  //       _scrollController.animateTo(
-  //         _scrollController.position.maxScrollExtent,
-  //         duration: const Duration(milliseconds: 300),
-  //         curve: Curves.easeOut,
-  //       );
-  //     });
-  //   }
-  // }
+  Future<void> _launchUrl(String url) async {
+    if (await canLaunchUrl(Uri.parse(url))) {
+      await launchUrl(Uri.parse(url));
+    }
+  }
+
+  void _contactViaPhone() {
+    _launchUrl('tel:+966501234567');
+  }
+
+  void _contactViaEmail() {
+    _launchUrl('mailto:support@foudamarket.com');
+  }
+
+  void _contactViaWhatsApp() {
+    _launchUrl('https://wa.me/966501234567');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -79,7 +108,7 @@ class _HelpScreenState extends State<HelpScreen> with SingleTickerProviderStateM
                       ),
                       const Expanded(
                         child: Text(
-                          'مساعدة',
+                          'المساعدة والدعم',
                           style: TextStyle(
                             color: Colors.black,
                             fontSize: 22,
@@ -98,8 +127,9 @@ class _HelpScreenState extends State<HelpScreen> with SingleTickerProviderStateM
                     labelColor: Colors.orange,
                     unselectedLabelColor: Colors.black54,
                     tabs: const [
-                      Tab(text: 'الدليل'),
-                      Tab(text: 'الدردشة'),
+                      Tab(text: 'الأسئلة الشائعة'),
+                      Tab(text: 'الدليل السريع'),
+                      Tab(text: 'تواصل معنا'),
                     ],
                   ),
                   const SizedBox(height: 8),
@@ -107,100 +137,104 @@ class _HelpScreenState extends State<HelpScreen> with SingleTickerProviderStateM
                     child: TabBarView(
                       controller: _tabController,
                       children: [
-                        // Guide Tab
-                        ListView.separated(
-                          padding: const EdgeInsets.all(20),
-                          itemCount: helpTopics.length,
-                          separatorBuilder: (_, __) => const Divider(),
-                          itemBuilder: (context, i) => ListTile(
-                            leading: const Icon(Icons.help_outline, color: Colors.orange),
-                            title: Text(helpTopics[i], style: const TextStyle(fontSize: 18)),
-                          ),
+                        // FAQ Tab
+                        ListView.builder(
+                          padding: const EdgeInsets.all(16),
+                          itemCount: faqItems.length,
+                          itemBuilder: (context, index) {
+                            return _buildFAQItem(faqItems[index]);
+                          },
                         ),
-                        // Chat Tab
-                        Column(
+                        // Quick Guide Tab
+                        ListView(
+                          padding: const EdgeInsets.all(16),
                           children: [
-                            Expanded(
-                              child: ListView.builder(
-                                controller: _scrollController,
+                            _buildGuideSection(
+                              'كيفية الطلب',
+                              [
+                                'تصفح المنتجات في الصفحة الرئيسية',
+                                'اختر المنتجات المطلوبة واضغط على أيقونة السلة',
+                                'اذهب إلى سلة التسوق وراجع طلبك',
+                                'أدخل عنوان التوصيل وطريقة الدفع',
+                                'اضغط على "إتمام الطلب"',
+                              ],
+                              Icons.shopping_cart,
+                            ),
+                            const SizedBox(height: 20),
+                            _buildGuideSection(
+                              'طرق الدفع',
+                              [
+                                'الدفع عند الاستلام',
+                                'البطاقات الائتمانية',
+                                'المحافظ الإلكترونية',
+                                'التحويل البنكي',
+                              ],
+                              Icons.payment,
+                            ),
+                            const SizedBox(height: 20),
+                            _buildGuideSection(
+                              'سياسة الاسترجاع',
+                              [
+                                'يمكن إرجاع المنتج خلال 24 ساعة',
+                                'يجب أن يكون المنتج في حالة جيدة',
+                                'سيتم إرجاع المبلغ خلال 3-5 أيام عمل',
+                                'للاستفسار اتصل بنا على الرقم المذكور',
+                              ],
+                              Icons.assignment_return,
+                            ),
+                          ],
+                        ),
+                        // Contact Tab
+                        ListView(
+                          padding: const EdgeInsets.all(16),
+                          children: [
+                            Card(
+                              elevation: 4,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                              child: Padding(
                                 padding: const EdgeInsets.all(20),
-                                itemCount: chatMessages.length,
-                                itemBuilder: (context, i) {
-                                  final msg = chatMessages[i];
-                                  final isUser = msg['from'] == 'user';
-                                  return Row(
-                                    mainAxisAlignment: isUser ? MainAxisAlignment.start : MainAxisAlignment.end,
-                                    crossAxisAlignment: CrossAxisAlignment.end,
-                                    children: [
-                                      if (!isUser)
-                                        const CircleAvatar(
-                                          radius: 18,
-                                          backgroundColor: Colors.orange,
-                                          child: Icon(Icons.support_agent, color: Colors.white, size: 20),
-                                        ),
-                                      if (!isUser) const SizedBox(width: 8),
-                                      Flexible(
-                                        child: Container(
-                                          margin: const EdgeInsets.symmetric(vertical: 6),
-                                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                          decoration: BoxDecoration(
-                                            color: isUser ? Colors.orange[50] : Colors.grey[200],
-                                            borderRadius: BorderRadius.only(
-                                              topLeft: const Radius.circular(16),
-                                              topRight: const Radius.circular(16),
-                                              bottomLeft: Radius.circular(isUser ? 16 : 4),
-                                              bottomRight: Radius.circular(isUser ? 4 : 16),
-                                            ),
-                                            boxShadow: [
-                                              BoxShadow(
-                                                color: Colors.black,
-                                                blurRadius: 4,
-                                                offset: const Offset(0, 2),
-                                              ),
-                                            ],
-                                          ),
-                                          child: Text(msg['msg']!, style: const TextStyle(fontSize: 16)),
-                                        ),
-                                      ),
-                                      if (isUser) const SizedBox(width: 8),
-                                      if (isUser)
-                                        const CircleAvatar(
-                                          radius: 18,
-                                          backgroundColor: Colors.grey,
-                                          child: Icon(Icons.person, color: Colors.white, size: 20),
-                                        ),
-                                    ],
-                                  );
-                                },
+                                child: Column(
+                                  children: [
+                                    const Icon(Icons.support_agent, size: 60, color: Colors.orange),
+                                    const SizedBox(height: 16),
+                                    const Text(
+                                      'فريق الدعم متاح 24/7',
+                                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    const Text(
+                                      'نحن هنا لمساعدتك في أي وقت',
+                                      style: TextStyle(fontSize: 16, color: Colors.grey),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
-                            Padding(
-                              padding: const EdgeInsets.all(12.0),
-                              child: Row(
-                                children: [
-                                  Expanded(
-                                    child: TextField(
-                                      controller: _chatController,
-                                      decoration: const InputDecoration(
-                                        hintText: 'اكتب رسالتك...',
-                                        border: OutlineInputBorder(),
-                                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                      ),
+                            const SizedBox(height: 20),
+                            ...contactInfo.map((contact) => _buildContactItem(contact)),
+                            const SizedBox(height: 20),
+                            Card(
+                              elevation: 4,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                              child: Padding(
+                                padding: const EdgeInsets.all(20),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'معلومات إضافية',
+                                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                                     ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  IconButton(
-                                    icon: const Icon(Icons.send, color: Colors.orange),
-                                    onPressed: () {
-                                      if (_chatController.text.trim().isNotEmpty) {
-                                        setState(() {
-                                          chatMessages.add({'from': 'user', 'msg': _chatController.text.trim()});
-                                          _chatController.clear();
-                                        });
-                                      }
-                                    },
-                                  ),
-                                ],
+                                    const SizedBox(height: 12),
+                                    const Text(
+                                      '• خدمة العملاء متاحة على مدار الساعة\n'
+                                      '• وقت الاستجابة: خلال 5 دقائق\n'
+                                      '• يمكنك التواصل معنا عبر الهاتف أو البريد الإلكتروني\n'
+                                      '• نقدم دعم فني مجاني لجميع العملاء',
+                                      style: TextStyle(fontSize: 14, height: 1.5),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ],
@@ -213,6 +247,118 @@ class _HelpScreenState extends State<HelpScreen> with SingleTickerProviderStateM
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildFAQItem(Map<String, dynamic> item) {
+    return ExpansionTile(
+      title: Text(
+        item['question'],
+        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+      ),
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          child: Text(
+            item['answer'],
+            style: const TextStyle(fontSize: 14, height: 1.5),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildGuideSection(String title, List<String> steps, IconData icon) {
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, color: Colors.orange, size: 24),
+                const SizedBox(width: 12),
+                Text(
+                  title,
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            ...steps.asMap().entries.map((entry) {
+              int index = entry.key;
+              String step = entry.value;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 24,
+                      height: 24,
+                      decoration: BoxDecoration(
+                        color: Colors.orange,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Center(
+                        child: Text(
+                          '${index + 1}',
+                          style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        step,
+                        style: const TextStyle(fontSize: 14, height: 1.4),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildContactItem(Map<String, String> contact) {
+    IconData icon;
+    VoidCallback? onTap;
+    
+    switch (contact['icon']) {
+      case 'phone':
+        icon = Icons.phone;
+        onTap = _contactViaPhone;
+        break;
+      case 'email':
+        icon = Icons.email;
+        onTap = _contactViaEmail;
+        break;
+      case 'whatsapp':
+        icon = Icons.chat;
+        onTap = _contactViaWhatsApp;
+        break;
+      default:
+        icon = Icons.schedule;
+        onTap = null;
+    }
+
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: ListTile(
+        leading: Icon(icon, color: Colors.orange, size: 24),
+        title: Text(contact['title']!, style: const TextStyle(fontWeight: FontWeight.w600)),
+        subtitle: Text(contact['value']!),
+        trailing: onTap != null ? const Icon(Icons.arrow_forward_ios, size: 16) : null,
+        onTap: onTap,
       ),
     );
   }

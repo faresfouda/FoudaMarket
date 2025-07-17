@@ -17,10 +17,7 @@ class Authenticated extends AuthState {
   final User user;
   final UserModel? userProfile;
 
-  const Authenticated({
-    required this.user,
-    this.userProfile,
-  });
+  const Authenticated({required this.user, this.userProfile});
 
   @override
   List<Object?> get props => [user, userProfile];
@@ -62,4 +59,12 @@ class SignUpSuccess extends AuthState {
 class Guest extends AuthState {
   @override
   List<Object?> get props => [];
-} 
+}
+
+class EmailVerificationRequired extends AuthState {
+  final String email;
+  const EmailVerificationRequired(this.email);
+
+  @override
+  List<Object?> get props => [email];
+}

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:fodamarket/theme/appcolors.dart';
-import 'package:fodamarket/views/home/search_screen.dart';
+import 'package:fouda_market/theme/appcolors.dart';
+import 'package:fouda_market/views/home/search_screen.dart';
 
 class SearchButton extends StatelessWidget {
   const SearchButton({super.key});

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../theme/appcolors.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import '../../../components/cached_image.dart';
 
 class ProductQuantityControl extends StatefulWidget {
   final String imageUrl;
@@ -58,18 +60,12 @@ class _ProductQuantityControlState extends State<ProductQuantityControl> {
                   color: Colors.grey[200],
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: widget.imageUrl.isNotEmpty
-                    ? ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: Image.network(
-                          widget.imageUrl,
-                          width: 64,
-                          height: 64,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) => Center(child: Text('IMG\n64×64', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey, fontSize: 12))),
-                        ),
-                      )
-                    : Center(child: Text('IMG\n64×64', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey, fontSize: 12))),
+                child: CachedImage(
+                  imageUrl: widget.imageUrl,
+                  width: 64,
+                  height: 64,
+                  fit: BoxFit.cover,
+                ),
               ),
               const SizedBox(width: 12),
               // Product info and price

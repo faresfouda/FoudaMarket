@@ -1,20 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../../../theme/appcolors.dart';
 import '../../../../views/product/product_screen.dart';
+import '../../../blocs/product/product_bloc.dart';
+import '../../../blocs/product/product_event.dart';
+import '../../../blocs/product/product_state.dart';
+import '../../../models/product_model.dart';
 
 class FavoriteItemCard extends StatefulWidget {
-  final String imageUrl;
-  final String productName;
-  final String quantityInfo;
-  final String price;
+  final ProductModel product;
   final VoidCallback? onRemove;
 
   const FavoriteItemCard({
     super.key,
-    required this.imageUrl,
-    required this.productName,
-    required this.quantityInfo,
-    required this.price,
+    required this.product,
     this.onRemove,
   });
 
@@ -23,7 +23,27 @@ class FavoriteItemCard extends StatefulWidget {
 }
 
 class _FavoriteItemCardState extends State<FavoriteItemCard> {
-  bool isFav = true;
+  String? currentUserId;
+
+  @override
+  void initState() {
+    super.initState();
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      currentUserId = user.uid;
+    }
+  }
+
+  void _toggleFavorite() {
+    if (currentUserId != null) {
+      context.read<ProductBloc>().add(
+        RemoveFromFavorites(currentUserId!, widget.product.id),
+      );
+      if (widget.onRemove != null) {
+        widget.onRemove!();
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -33,12 +53,7 @@ class _FavoriteItemCardState extends State<FavoriteItemCard> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => ProductDetailScreen(
-              imageUrl: widget.imageUrl,
-              productName: widget.productName,
-              quantityInfo: widget.quantityInfo,
-              price: widget.price,
-            ),
+            builder: (context) => ProductDetailScreen(product: widget.product),
           ),
         );
       },
@@ -52,17 +67,29 @@ class _FavoriteItemCardState extends State<FavoriteItemCard> {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   // Product Image
-                  Image.network(
-                    widget.imageUrl,
-                    height: 80.0,
-                    width: 80.0,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => Container(
-                      height: 60.0,
-                      width: 60.0,
-                      color: Colors.grey[300],
-                      child: const Icon(Icons.image_not_supported, color: Colors.grey, size: 40),
-                    ),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: widget.product.images.isNotEmpty
+                        ? Image.network(
+                            widget.product.images.first,
+                            width: 80,
+                            height: 80,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Container(
+                                width: 80,
+                                height: 80,
+                                color: Colors.grey[300],
+                                child: const Icon(Icons.image, color: Colors.grey),
+                              );
+                            },
+                          )
+                        : Container(
+                            width: 80,
+                            height: 80,
+                            color: Colors.grey[300],
+                            child: const Icon(Icons.image, color: Colors.grey),
+                          ),
                   ),
                   const SizedBox(width: 30),
 
@@ -72,7 +99,7 @@ class _FavoriteItemCardState extends State<FavoriteItemCard> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          widget.productName,
+                          widget.product.name,
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -81,7 +108,7 @@ class _FavoriteItemCardState extends State<FavoriteItemCard> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          widget.quantityInfo,
+                          widget.product.unit ?? 'وحدة',
                           style: TextStyle(
                             fontSize: 14,
                             color: AppColors.lightGrayColor2,
@@ -89,11 +116,11 @@ class _FavoriteItemCardState extends State<FavoriteItemCard> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          widget.price,
-                          style: const TextStyle(
+                          '${widget.product.price.toStringAsFixed(2)} ج.م',
+                          style:  TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
-                            color: Colors.black,
+                            color: AppColors.orangeColor,
                           ),
                         ),
                       ],
@@ -108,15 +135,11 @@ class _FavoriteItemCardState extends State<FavoriteItemCard> {
               top: 8,
               left: 8,
               child: IconButton(
-                icon: Icon(
-                  isFav ? Icons.favorite : Icons.favorite_border,
-                  color: isFav ? Colors.red : Colors.grey,
+                icon: const Icon(
+                  Icons.favorite,
+                  color: Colors.red,
                 ),
-                onPressed: () {
-                  setState(() {
-                    isFav = !isFav;
-                  });
-                },
+                onPressed: _toggleFavorite,
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
               ),

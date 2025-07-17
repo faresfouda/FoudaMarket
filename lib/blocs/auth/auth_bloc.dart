@@ -6,11 +6,13 @@ import '../../services/google_auth_service.dart';
 import '../../models/user_model.dart';
 import 'auth_event.dart';
 import 'auth_state.dart';
+import '../../core/services/auth_service.dart';
 
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final FirebaseService _firebaseService = FirebaseService();
   final GoogleAuthService _googleAuthService = GoogleAuthService();
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final AuthService _authService = AuthService();
 
   AuthBloc() : super(AuthInitial()) {
     on<AuthCheckRequested>(_onAuthCheckRequested);
@@ -29,37 +31,74 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     Emitter<AuthState> emit,
   ) async {
     emit(AuthLoading());
-    print('AuthBloc: AuthLoading emitted (AuthCheckRequested)');
-    print('AuthBloc: FirebaseAuth.currentUser at AuthCheckRequested: ' + _auth.currentUser.toString());
     try {
       final user = _auth.currentUser;
       if (user != null) {
         // Get user profile from Firestore
         final userProfile = await _firebaseService.getUserProfile(user.uid);
+        print('userProfile from Firestore: $userProfile');
         UserModel? userModel;
-        if (userProfile != null) {
-          userModel = UserModel(
-            id: userProfile['id'],
-            name: userProfile['name'],
-            email: userProfile['email'],
-            phone: userProfile['phone'],
-            role: userProfile['role'],
-            createdAt: userProfile['createdAt'] != null
-                ? (userProfile['createdAt'] as Timestamp).toDate()
-                : DateTime.now(),
-            updatedAt: userProfile['updatedAt'] != null
-                ? (userProfile['updatedAt'] as Timestamp).toDate()
-                : DateTime.now(),
-          );
+        if (userProfile != null && userProfile is Map<String, dynamic>) {
+          try {
+            userModel = UserModel(
+              id: userProfile['id'] ?? user.uid,
+              name: userProfile['name'] ?? user.displayName ?? 'User',
+              email: userProfile['email'] ?? user.email ?? '',
+              phone: userProfile['phone'] ?? user.phoneNumber ?? '',
+              role: userProfile['role'] ?? 'user',
+              avatarUrl: userProfile['avatar_url'],
+              createdAt: userProfile['createdAt'] != null
+                  ? (userProfile['createdAt'] as Timestamp).toDate()
+                  : DateTime.now(),
+              updatedAt: userProfile['updatedAt'] != null
+                  ? (userProfile['updatedAt'] as Timestamp).toDate()
+                  : DateTime.now(),
+            );
+          } catch (e) {
+            print('❌ Error creating UserModel: $e');
+            print('❌ userProfile data: $userProfile');
+            emit(AuthError(message: 'خطأ في قراءة بيانات المستخدم!'));
+            return;
+          }
+        } else {
+          print('❌ Firestore userProfile is not a Map: $userProfile');
+          print('❌ userProfile type: ${userProfile.runtimeType}');
+          // محاولة إصلاح بيانات المستخدم
+          try {
+            await _authService.repairUserProfile(user.uid, user);
+            // إعادة محاولة قراءة البيانات بعد الإصلاح
+            final repairedProfile = await _firebaseService.getUserProfile(user.uid);
+            if (repairedProfile != null && repairedProfile is Map<String, dynamic>) {
+              userModel = UserModel(
+                id: repairedProfile['id'] ?? user.uid,
+                name: repairedProfile['name'] ?? user.displayName ?? 'User',
+                email: repairedProfile['email'] ?? user.email ?? '',
+                phone: repairedProfile['phone'] ?? user.phoneNumber ?? '',
+                role: repairedProfile['role'] ?? 'user',
+                avatarUrl: repairedProfile['avatar_url'],
+                createdAt: repairedProfile['createdAt'] != null
+                    ? (repairedProfile['createdAt'] as Timestamp).toDate()
+                    : DateTime.now(),
+                updatedAt: repairedProfile['updatedAt'] != null
+                    ? (repairedProfile['updatedAt'] as Timestamp).toDate()
+                    : DateTime.now(),
+              );
+              print('✅ User profile repaired successfully');
+            } else {
+              emit(AuthError(message: 'فشل في إصلاح بيانات المستخدم!'));
+              return;
+            }
+          } catch (e) {
+            print('❌ Failed to repair user profile: $e');
+            emit(AuthError(message: 'بيانات المستخدم غير صالحة!'));
+            return;
+          }
         }
-        print('AuthBloc: Authenticated emitted (AuthCheckRequested)');
         emit(Authenticated(user: user, userProfile: userModel));
       } else {
-        print('AuthBloc: Unauthenticated emitted (AuthCheckRequested)');
         emit(Unauthenticated());
       }
     } catch (e) {
-      print('AuthBloc: AuthError emitted (AuthCheckRequested): ' + e.toString());
       emit(AuthError(message: e.toString()));
     }
   }
@@ -69,40 +108,52 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     Emitter<AuthState> emit,
   ) async {
     emit(AuthLoading());
-    print('AuthBloc: AuthLoading emitted (SignInRequested)');
     try {
       final credential = await _firebaseService.signIn(
         email: event.email,
         password: event.password,
       );
-      
+
       if (credential.user != null) {
         // Get user profile from Firestore
-        final userProfile = await _firebaseService.getUserProfile(credential.user!.uid);
+        final userProfile = await _firebaseService.getUserProfile(
+          credential.user!.uid,
+        );
+        print('userProfile from Firestore: $userProfile');
         UserModel? userModel;
-        if (userProfile != null) {
-          userModel = UserModel(
-            id: userProfile['id'],
-            name: userProfile['name'],
-            email: userProfile['email'],
-            phone: userProfile['phone'],
-            role: userProfile['role'],
-            createdAt: userProfile['createdAt'] != null
-                ? (userProfile['createdAt'] as Timestamp).toDate()
-                : DateTime.now(),
-            updatedAt: userProfile['updatedAt'] != null
-                ? (userProfile['updatedAt'] as Timestamp).toDate()
-                : DateTime.now(),
-          );
+        if (userProfile != null && userProfile is Map<String, dynamic>) {
+          try {
+            userModel = UserModel(
+              id: userProfile['id'] ?? credential.user!.uid,
+              name: userProfile['name'] ?? credential.user!.displayName ?? 'User',
+              email: userProfile['email'] ?? credential.user!.email ?? '',
+              phone: userProfile['phone'] ?? credential.user!.phoneNumber ?? '',
+              role: userProfile['role'] ?? 'user',
+              avatarUrl: userProfile['avatar_url'],
+              createdAt: userProfile['createdAt'] != null
+                  ? (userProfile['createdAt'] as Timestamp).toDate()
+                  : DateTime.now(),
+              updatedAt: userProfile['updatedAt'] != null
+                  ? (userProfile['updatedAt'] as Timestamp).toDate()
+                  : DateTime.now(),
+            );
+          } catch (e) {
+            print('❌ Error creating UserModel: $e');
+            print('❌ userProfile data: $userProfile');
+            emit(AuthError(message: 'خطأ في قراءة بيانات المستخدم!'));
+            return;
+          }
+        } else {
+          print('❌ Firestore userProfile is not a Map: $userProfile');
+          print('❌ userProfile type: ${userProfile.runtimeType}');
+          emit(AuthError(message: 'بيانات المستخدم غير صالحة!'));
+          return;
         }
-        print('AuthBloc: Authenticated emitted (SignInRequested)');
         emit(Authenticated(user: credential.user!, userProfile: userModel));
       } else {
-        print('AuthBloc: AuthError emitted (SignInRequested): Sign in failed');
         emit(AuthError(message: 'Sign in failed'));
       }
     } catch (e) {
-      print('AuthBloc: AuthError emitted (SignInRequested): ' + e.toString());
       emit(AuthError(message: _getErrorMessage(e)));
     }
   }
@@ -112,10 +163,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     Emitter<AuthState> emit,
   ) async {
     emit(AuthLoading());
-    print('AuthBloc: AuthLoading emitted (SignUpRequested)');
     try {
-      print('Starting signup process for: ${event.email}');
-      
       final credential = await _firebaseService.signUp(
         email: event.email,
         password: event.password,
@@ -123,23 +171,23 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         phone: event.phone,
         role: event.role,
       );
-      
-      print('Signup successful, user ID: ${credential.user?.uid}');
-      
+
       if (credential.user != null) {
+        // Send email verification if not verified
+        if (!credential.user!.emailVerified) {
+          await credential.user!.sendEmailVerification();
+          emit(EmailVerificationRequired(credential.user!.email!));
+          // لا تسجل دخوله مباشرة
+          return;
+        }
         // Sign out the user immediately after successful signup
         await _firebaseService.signOut();
-        print('User signed out after signup');
-        print('AuthBloc: SignUpSuccess emitted (SignUpRequested)');
         // Emit success state instead of authenticated
         emit(SignUpSuccess(email: event.email));
       } else {
-        print('AuthBloc: AuthError emitted (SignUpRequested): Sign up failed');
         emit(AuthError(message: 'Sign up failed'));
       }
     } catch (e) {
-      print('Signup error in BLoC: $e');
-      print('AuthBloc: AuthError emitted (SignUpRequested): ' + e.toString());
       emit(AuthError(message: _getErrorMessage(e)));
     }
   }
@@ -149,26 +197,24 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     Emitter<AuthState> emit,
   ) async {
     emit(AuthLoading());
-    print('AuthBloc: AuthLoading emitted (GoogleSignInRequested)');
     try {
       final userCredential = await _googleAuthService.signInWithGoogle();
-      
+
       if (userCredential?.user != null) {
         // Get user profile from Firestore
-        final userProfile = await _googleAuthService.getUserProfile(userCredential!.user!.uid);
+        final userProfile = await _googleAuthService.getUserProfile(
+          userCredential!.user!.uid,
+        );
         UserModel? userModel;
         if (userProfile != null) {
           userModel = userProfile;
         }
-        print('AuthBloc: Authenticated emitted (GoogleSignInRequested)');
         emit(Authenticated(user: userCredential.user!, userProfile: userModel));
       } else {
-        print('AuthBloc: AuthError emitted (GoogleSignInRequested): Google sign in cancelled or failed');
-        emit(AuthError(message: 'تم إلغاء تسجيل الدخول بجوجل'));
+        emit(AuthError(message: 'تم إلغاء تسجيل الدخول بجوجل من قبل المستخدم.'));
       }
     } catch (e) {
-      print('AuthBloc: AuthError emitted (GoogleSignInRequested): ' + e.toString());
-      emit(AuthError(message: _getErrorMessage(e)));
+      emit(AuthError(message: _getGoogleSignInErrorMessage(e)));
     }
   }
 
@@ -177,13 +223,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     Emitter<AuthState> emit,
   ) async {
     emit(AuthLoading());
-    print('AuthBloc: AuthLoading emitted (SignOutRequested)');
     try {
       await _firebaseService.signOut();
-      print('AuthBloc: Unauthenticated emitted (SignOutRequested)');
       emit(Unauthenticated());
     } catch (e) {
-      print('AuthBloc: AuthError emitted (SignOutRequested): ' + e.toString());
       emit(AuthError(message: e.toString()));
     }
   }
@@ -193,13 +236,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     Emitter<AuthState> emit,
   ) async {
     emit(AuthLoading());
-    print('AuthBloc: AuthLoading emitted (PasswordResetRequested)');
     try {
       await _firebaseService.resetPassword(event.email);
-      print('AuthBloc: PasswordResetSent emitted (PasswordResetRequested)');
       emit(PasswordResetSent(email: event.email));
     } catch (e) {
-      print('AuthBloc: AuthError emitted (PasswordResetRequested): ' + e.toString());
       emit(AuthError(message: _getErrorMessage(e)));
     }
   }
@@ -228,11 +268,28 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       }
     }
 
-    if (error.toString().contains('network') || error.toString().contains('connection')) {
+    if (error.toString().contains('network') ||
+        error.toString().contains('connection')) {
       return 'فشل في الاتصال بالشبكة. تحقق من الإنترنت.';
     }
 
     return 'حدث خطأ غير متوقع: ${error.toString()}';
   }
 
-} 
+  String _getGoogleSignInErrorMessage(dynamic error) {
+    final errorStr = error.toString();
+    if (errorStr.contains('access_denied')) {
+      return 'تم رفض الوصول من جوجل. يرجى السماح للتطبيق بالوصول.';
+    }
+    if (errorStr.contains('sign_in_canceled') || errorStr.contains('popup_closed_by_user')) {
+      return 'تم إلغاء العملية من قبل المستخدم.';
+    }
+    if (errorStr.contains('network') || errorStr.contains('connection')) {
+      return 'فشل في الاتصال بالإنترنت. تحقق من اتصالك.';
+    }
+    if (errorStr.contains('account-exists-with-different-credential')) {
+      return 'البريد مرتبط بطريقة تسجيل مختلفة.';
+    }
+    return 'حدث خطأ أثناء تسجيل الدخول بجوجل: $errorStr';
+  }
+}

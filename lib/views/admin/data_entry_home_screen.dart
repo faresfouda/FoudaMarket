@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:fodamarket/views/admin/admin_products_categories_screen.dart';
-import 'package:fodamarket/views/admin/admin_orders_screen.dart';
-import 'package:fodamarket/views/admin/admin_reviews_screen.dart';
-import 'package:fodamarket/views/admin/admin_profile_screen.dart';
+import 'package:fouda_market/views/admin/products_categories_screen.dart';
+import 'package:fouda_market/views/admin/orders_screen.dart';
+import 'package:fouda_market/views/admin/reviews_screen.dart';
+import 'package:fouda_market/views/admin/profile_screen.dart';
+import 'package:fouda_market/views/admin/promo_codes_screen.dart';
+import 'package:fouda_market/views/profile/notifications_screen.dart';
 
 class DataEntryHomeScreen extends StatefulWidget {
-  const DataEntryHomeScreen({Key? key}) : super(key: key);
+  const DataEntryHomeScreen({super.key});
 
   @override
   State<DataEntryHomeScreen> createState() => _DataEntryHomeScreenState();
@@ -14,15 +16,17 @@ class DataEntryHomeScreen extends StatefulWidget {
 class _DataEntryHomeScreenState extends State<DataEntryHomeScreen> {
   int _selectedIndex = 0;
   final List<Widget> _screens = const [
-    AdminProductsCategoriesScreen(),
-    AdminOrdersScreen(),
-    AdminReviewsScreen(),
-    AdminProfileScreen(),
-  ];
+      ProductsCategoriesScreen(),
+      OrdersScreen(),
+      PromoCodesScreen(),
+      ReviewsScreen(),
+      ProfileScreen(),
+    ];
 
   static const List<String> _titles = [
     'المنتجات',
     'الطلبات',
+    'أكواد الخصم',
     'المراجعة',
     'الحساب',
   ];
@@ -46,7 +50,12 @@ class _DataEntryHomeScreenState extends State<DataEntryHomeScreen> {
           actions: [
             IconButton(
               icon: const Icon(Icons.notifications, color: Colors.orange),
-              onPressed: () {},
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const NotificationsScreen()),
+                );
+              },
             ),
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 8.0),
@@ -70,9 +79,22 @@ class _DataEntryHomeScreenState extends State<DataEntryHomeScreen> {
             });
           },
           items: const [
-            BottomNavigationBarItem(icon: Icon(Icons.inventory), label: 'المنتجات'),
-            BottomNavigationBarItem(icon: Icon(Icons.shopping_cart), label: 'الطلبات'),
-            BottomNavigationBarItem(icon: Icon(Icons.rate_review), label: 'المراجعة'),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.inventory),
+              label: 'المنتجات',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.shopping_cart),
+              label: 'الطلبات',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.discount),
+              label: 'أكواد الخصم',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.rate_review),
+              label: 'المراجعة',
+            ),
             BottomNavigationBarItem(icon: Icon(Icons.person), label: 'الحساب'),
           ],
         ),
@@ -80,4 +102,3 @@ class _DataEntryHomeScreenState extends State<DataEntryHomeScreen> {
     );
   }
 }
-

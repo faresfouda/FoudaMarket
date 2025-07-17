@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:fodamarket/theme/appcolors.dart';
+import 'package:fouda_market/theme/appcolors.dart';
+import 'package:fouda_market/blocs/cart/index.dart';
 
 class CustomBottomNavBar extends StatelessWidget {
   final int selectedIndex;
@@ -47,11 +49,48 @@ class CustomBottomNavBar extends StatelessWidget {
             label: 'الاقسام',
           ),
           BottomNavigationBarItem(
-            icon: SvgPicture.asset(
-              'assets/bottomnavigationbar/cart.svg',
-              color: selectedIndex == 2
-                  ? AppColors.orangeColor
-                  : AppColors.mediumGrayColor,
+            icon: BlocBuilder<CartBloc, CartState>(
+              builder: (context, state) {
+                int cartCount = 0;
+                if (state is CartLoaded) {
+                  cartCount = state.itemsCount;
+                }
+                return Stack(
+                  children: [
+                    SvgPicture.asset(
+                      'assets/bottomnavigationbar/cart.svg',
+                      color: selectedIndex == 2
+                          ? AppColors.orangeColor
+                          : AppColors.mediumGrayColor,
+                    ),
+                    if (cartCount > 0)
+                      Positioned(
+                        right: 0,
+                        top: 0,
+                        child: Container(
+                          padding: const EdgeInsets.all(2),
+                          decoration: BoxDecoration(
+                            color: Colors.red,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          constraints: const BoxConstraints(
+                            minWidth: 16,
+                            minHeight: 16,
+                          ),
+                          child: Text(
+                            cartCount.toString(),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ),
+                  ],
+                );
+              },
             ),
             label: 'العربة',
           ),
