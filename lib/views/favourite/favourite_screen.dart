@@ -12,6 +12,8 @@ import '../../components/item_container.dart';
 import '../../views/product/product_screen.dart';
 import 'widgets/product_favourite.dart';
 import '../../services/firebase_service.dart';
+import 'package:fouda_market/components/loading_indicator.dart';
+import 'package:fouda_market/components/error_view.dart';
 
 class FavouriteScreen extends StatefulWidget {
   const FavouriteScreen({super.key});

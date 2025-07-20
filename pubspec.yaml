@@ -56,7 +56,7 @@ dependencies:
   firebase_messaging: ^14.7.10
   firebase_analytics: ^10.8.4
   firebase_crashlytics: ^3.5.4
-  firebase_performance: ^0.9.3+4
+  # firebase_performance: ^0.9.4+7  # Temporarily disabled due to GoogleUtilities conflict
   firebase_remote_config: ^4.3.4
   firebase_dynamic_links: ^5.5.7
   google_sign_in: ^6.2.1
@@ -77,6 +77,7 @@ dependencies:
   share_plus: ^10.0.0
   url_launcher: ^6.2.4
   package_info_plus: ^8.0.2
+  icons_launcher: ^3.0.1
 
 dev_dependencies:
   flutter_test:
@@ -111,9 +112,6 @@ flutter:
     - assets/home/logo.jpg
     - assets/bottomnavigationbar/
     - assets/home/
-    - assets/appicon/
-    - assets/appicon/Assets.xcassets/
-    - assets/appicon/android/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
@@ -145,13 +143,28 @@ flutter:
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
 
-flutter_icons:
-  android: true
-  ios: true
-  image_path: "assets/home/appicon.png"
+icons_launcher:
+  image_path: "assets/home/app_icon.png"
+  platforms:
+    android:
+      enable: true
+    ios:
+      enable: true
+
 
 flutter_native_splash:
   color: "#000000"
-  image: assets/home/appicon.png
+  image: "assets/home/app_icon.png"
   android: true
   ios: true
+  web: false
+  fullscreen: true
+  android_gravity: center
+  ios_content_mode: scaleAspectFill
+  android_12:
+    image: "assets/home/app_icon.png"
+    color: "#000000"
+    icon_background_color: "#000000"
+    image_dark: "assets/home/app_icon.png"
+    color_dark: "#000000"
+    icon_background_color_dark: "#000000"

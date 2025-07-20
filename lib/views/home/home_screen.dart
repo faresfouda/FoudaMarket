@@ -2,33 +2,26 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:fouda_market/components/category_card.dart';
-import 'package:fouda_market/components/item_container.dart';
-import 'package:fouda_market/views/category/category_screen.dart';
-import 'package:fouda_market/views/product/product_screen.dart';
-import 'package:fouda_market/views/profile/notifications_screen.dart';
-import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 import 'package:fouda_market/theme/appcolors.dart';
 import 'package:fouda_market/blocs/category/category_bloc.dart';
-import 'package:fouda_market/blocs/category/category_event.dart';
-import 'package:fouda_market/blocs/category/category_state.dart';
 import 'package:fouda_market/blocs/product/product_bloc.dart';
-import 'package:fouda_market/blocs/product/product_event.dart';
-import 'package:fouda_market/blocs/product/product_state.dart';
-import 'package:fouda_market/models/category_model.dart';
-import 'package:fouda_market/models/product_model.dart';
-import 'widgets/my_searchbutton.dart';
-import 'search_screen.dart';
 import 'package:fouda_market/blocs/address/address_bloc.dart';
-import 'package:fouda_market/blocs/address/address_event.dart';
-import 'package:fouda_market/blocs/address/address_state.dart';
-import 'widgets/horizontal_product_list.dart';
+import 'package:fouda_market/views/category/category_screen.dart';
 import 'widgets/header.dart';
 import 'widgets/search_bar.dart' as custom_widgets;
 import 'widgets/banner_carousel.dart';
 import 'widgets/section_header.dart';
 import 'widgets/category_list.dart';
-
+import 'package:fouda_market/components/loading_indicator.dart';
+import 'package:fouda_market/components/error_view.dart';
+import 'package:fouda_market/blocs/category/category_event.dart';
+import 'package:fouda_market/blocs/product/product_event.dart';
+import 'package:fouda_market/blocs/category/category_state.dart';
+import 'package:fouda_market/blocs/product/product_state.dart';
+import 'package:fouda_market/models/product_model.dart';
+import 'package:fouda_market/blocs/address/address_state.dart';
+import 'package:fouda_market/blocs/address/address_event.dart';
+import 'widgets/horizontal_product_list.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -411,23 +404,14 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
   Widget _buildLoadingIndicator(double height) {
     return SizedBox(
       height: height,
-      child: Center(child: CircularProgressIndicator(color: AppColors.orangeColor)),
+      child: const LoadingIndicator(),
     );
   }
 
   Widget _buildErrorView(String message) {
     return SizedBox(
       height: 90,
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.error_outline, color: Colors.grey[400], size: 32),
-            const SizedBox(height: 8),
-            Text(message, style: TextStyle(color: Colors.grey[600], fontSize: 14)),
-          ],
-        ),
-      ),
+      child: ErrorView(message: message),
     );
   }
 

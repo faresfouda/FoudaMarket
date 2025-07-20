@@ -12,6 +12,8 @@ import 'package:fouda_market/models/order_model.dart';
 import 'package:fouda_market/core/services/order_service.dart';
 import 'package:fouda_market/views/cart/order_accepted_screen.dart';
 import '../../routes.dart';
+import 'package:fouda_market/components/loading_indicator.dart';
+import 'package:fouda_market/components/error_view.dart';
 
 
 class CartScreen extends StatefulWidget {
@@ -105,7 +107,7 @@ class _CartScreenState extends State<CartScreen> with RouteAware {
         },
         builder: (context, state) {
           if (state is CartLoading) {
-            return const Center(child: CircularProgressIndicator());
+            return const LoadingIndicator();
           } else if (state is CartEmpty) {
             return const Center(
               child: Column(
@@ -156,7 +158,7 @@ class _CartScreenState extends State<CartScreen> with RouteAware {
               ],
             );
           }
-          return const Center(child: Text('جاري التحميل...'));
+          return const LoadingIndicator();
         },
       ),
     );
@@ -320,7 +322,7 @@ class _CartScreenState extends State<CartScreen> with RouteAware {
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (context) => const Center(child: CircularProgressIndicator()),
+        builder: (context) => const LoadingIndicator(),
       );
 
       // جلب بيانات السلة

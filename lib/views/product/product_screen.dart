@@ -17,6 +17,8 @@ import 'package:share_plus/share_plus.dart';
 import '../../core/services/favorites_service.dart';
 import 'package:fouda_market/blocs/product/product_bloc.dart';
 import 'package:fouda_market/blocs/product/product_event.dart';
+import 'package:fouda_market/components/loading_indicator.dart';
+import 'package:fouda_market/components/error_view.dart';
 
 
 class ProductDetailScreen extends StatefulWidget {
@@ -716,37 +718,16 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                               const Center(
                                 child: Padding(
                                   padding: EdgeInsets.all(16.0),
-                                  child: CircularProgressIndicator(),
+                                  child: LoadingIndicator(),
                                 ),
                               )
                             else if (_reviews.isEmpty)
                               Center(
                                 child: Padding(
                                   padding: const EdgeInsets.all(16.0),
-                                  child: Column(
-                                    children: [
-                                      Icon(
-                                        Icons.rate_review_outlined,
-                                        size: 48,
-                                        color: Colors.grey[400],
-                                      ),
-                                      const SizedBox(height: 8),
-                                      Text(
-                                        'لا توجد مراجعات بعد',
-                                        style: TextStyle(
-                                          color: Colors.grey[600],
-                                          fontSize: 16,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 8),
-                                      Text(
-                                        'كن أول من يراجع هذا المنتج!',
-                                        style: TextStyle(
-                                          color: Colors.grey[500],
-                                          fontSize: 14,
-                                        ),
-                                      ),
-                                    ],
+                                  child: ErrorView(
+                                    message: 'لا توجد مراجعات بعد',
+                                    onRetry: _loadReviews,
                                   ),
                                 ),
                               )
@@ -1065,14 +1046,14 @@ class _SimilarProductsSectionState extends State<SimilarProductsSection> with Au
             future: _future,
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
+                return const Center(child: LoadingIndicator());
               }
               if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                return const Center(child: Text('لا توجد منتجات مشابهة'));
+                return const Center(child: ErrorView(message: 'لا توجد منتجات مشابهة'));
               }
               final similarProducts = snapshot.data!.where((p) => p.id != widget.currentProductId).toList();
               if (similarProducts.isEmpty) {
-                return const Center(child: Text('لا توجد منتجات مشابهة'));
+                return const Center(child: ErrorView(message: 'لا توجد منتجات مشابهة'));
               }
               return ListView.builder(
                 scrollDirection: Axis.horizontal,

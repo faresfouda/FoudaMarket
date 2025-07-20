@@ -7,6 +7,8 @@ import '../../blocs/category/category_state.dart';
 import '../../theme/appcolors.dart';
 import '../../views/category/category_screen.dart';
 import 'dart:async';
+import 'package:fouda_market/components/loading_indicator.dart';
+import 'package:fouda_market/components/error_view.dart';
 
 class CategoriesScreen extends StatefulWidget {
   const CategoriesScreen({super.key});
@@ -149,7 +151,7 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          CircularProgressIndicator(),
+                          LoadingIndicator(),
                           SizedBox(height: 16),
                           Text('جاري التحميل...'),
                         ],
@@ -290,41 +292,23 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                                     ),
                                   ],
                                 ),
-                                child: const SizedBox(
-                                  width: 28,
-                                  height: 28,
-                                  child: CircularProgressIndicator(strokeWidth: 2),
-                                ),
+                                child: SizedBox(width: 28, height: 28, child: LoadingIndicator(size: 28)),
                               ),
                             ),
                           ),
                       ],
                     );
                   } else if (state is CategoriesError) {
-                    return Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.error_outline, size: 64, color: Colors.red),
-                          const SizedBox(height: 16),
-                          Text(
-                            'حدث خطأ في تحميل الفئات',
-                            style: TextStyle(fontSize: 16, color: Colors.grey[600]),
-                          ),
-                          const SizedBox(height: 16),
-                          ElevatedButton(
-                            onPressed: () {
-                              context.read<CategoryBloc>().add(const FetchCategories(limit: CategoryBloc.defaultLimit));
-                            },
-                            child: const Text('إعادة المحاولة'),
-                          ),
-                        ],
-                      ),
+                    return ErrorView(
+                      message: 'حدث خطأ في تحميل الفئات',
+                      onRetry: () {
+                        context.read<CategoryBloc>().add(const FetchCategories(limit: CategoryBloc.defaultLimit));
+                      },
                     );
                   }
                   
                   return const Center(
-                    child: CircularProgressIndicator(),
+                    child: LoadingIndicator(),
                   );
                 },
               ),
