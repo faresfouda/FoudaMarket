@@ -96,4 +96,4 @@ Route<dynamic>? onGenerateRoute(RouteSettings settings) {
       }
       return null;
   }
-} 
+}
