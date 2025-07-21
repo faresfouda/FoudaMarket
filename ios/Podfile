@@ -29,6 +29,16 @@ target 'Runner' do
   use_modular_headers!
 
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
+  
+  # Force GoogleUtilities to use version 7.12 to resolve conflicts
+  pod 'GoogleUtilities', '~> 7.12'
+  pod 'GoogleUtilities/Environment', '~> 7.12'
+  pod 'GoogleUtilities/Logger', '~> 7.12'
+  pod 'GoogleUtilities/MethodSwizzler', '~> 7.12'
+  pod 'GoogleUtilities/ISASwizzler', '~> 7.12'
+  
+  # Force AppCheckCore to use compatible version
+  pod 'AppCheckCore', '~> 11.0'
 end
 
 post_install do |installer|
