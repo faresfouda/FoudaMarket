@@ -24,7 +24,7 @@ if [ -f Podfile.lock ]; then
 fi
 
 # Install pods with repo update (better for CI than separate pod repo update)
-echo "Installing CocoaPods dependencies..."
+echo "Installing CocoaPods dependencies with iOS 14.0 deployment target..."
 pod install --repo-update
 
 # If the above fails, try with more aggressive cleanup
@@ -41,7 +41,7 @@ fi
 if [ -f Podfile.lock ]; then
     echo "Checking for GoogleUtilities version conflicts..."
     if grep -q "GoogleUtilities/Environment.*~> 8" Podfile.lock; then
-        echo "WARNING: GoogleUtilities/Environment version 8.x found - this may cause conflicts"
+        echo "INFO: GoogleUtilities/Environment version 8.x found - this should work with iOS 14.0"
         grep "GoogleUtilities/Environment" Podfile.lock
     else
         echo "SUCCESS: No GoogleUtilities version 8.x conflicts found"
@@ -52,6 +52,14 @@ if [ -f Podfile.lock ]; then
         cat Podfile.lock | grep -i firebase
     else
         echo "SUCCESS: No FirebasePerformance references found"
+    fi
+    
+    # Check deployment target in Podfile.lock
+    echo "Checking deployment target compatibility..."
+    if grep -q "IPHONEOS_DEPLOYMENT_TARGET.*14" Podfile.lock; then
+        echo "SUCCESS: iOS 14.0 deployment target found"
+    else
+        echo "INFO: Deployment target not explicitly set in Podfile.lock"
     fi
 else
     echo "ERROR: Podfile.lock not found after pod install"

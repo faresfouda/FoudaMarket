@@ -1,4 +1,4 @@
-platform :ios, '13.0'
+platform :ios, '14.0'
 
 # CocoaPods analytics sends network stats synchronously affecting flutter build latency.
 ENV['COCOAPODS_DISABLE_STATS'] = 'true'
@@ -29,13 +29,6 @@ target 'Runner' do
   use_modular_headers!
 
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
-  
-  # Force GoogleUtilities to use version 7.12 to resolve conflicts
-  pod 'GoogleUtilities', '~> 7.12'
-  pod 'GoogleUtilities/Environment', '~> 7.12'
-  pod 'GoogleUtilities/Logger', '~> 7.12'
-  pod 'GoogleUtilities/MethodSwizzler', '~> 7.12'
-  pod 'GoogleUtilities/ISASwizzler', '~> 7.12'
 end
 
 post_install do |installer|
@@ -44,7 +37,7 @@ post_install do |installer|
     
     # Ensure all targets use the same deployment target
     target.build_configurations.each do |config|
-      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '13.0'
+      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '14.0'
       
       # Fix for Xcode 15 compatibility
       config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= [
