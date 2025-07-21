@@ -21,6 +21,8 @@ cd ios
 
 # Patch all plugin podspecs to require iOS 14.0
 find .symlinks/plugins -name "*.podspec" -exec sed -i 's/s.ios.deployment_target = .*/s.ios.deployment_target = "14.0"/' {} +
+# Patch all podspecs in the iOS directory tree to require iOS 14.0
+find . -name "*.podspec" -exec sed -i 's/s.ios.deployment_target = .*/s.ios.deployment_target = "14.0"/' {} +
 
 echo "🧹 Performing BEST PRACTICE CocoaPods cleanup..."
 
