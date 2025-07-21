@@ -35,9 +35,7 @@ target 'Runner' do
   pod 'GoogleUtilities/Environment', '~> 8.0'
   pod 'GoogleUtilities/Logger', '~> 8.0'
   pod 'GoogleUtilities/MethodSwizzler', '~> 8.0'
-  
-  # Force Firebase Performance to use compatible versions
-  pod 'FirebasePerformance', '~> 10.25.0'
+  pod 'GoogleUtilities/ISASwizzler', '~> 8.0'
   
   # Ensure AppCheckCore uses compatible version
   pod 'AppCheckCore', '~> 11.0'
