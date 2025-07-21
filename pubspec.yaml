@@ -53,11 +53,10 @@ dependencies:
   firebase_core: ^2.25.4
   firebase_auth: ^4.17.4
   cloud_firestore: ^4.15.4
-  firebase_messaging: 14.6.8
+  firebase_messaging: ^14.9.4
   firebase_analytics: ^10.8.4
   firebase_crashlytics: ^3.5.4
   firebase_remote_config: ^4.3.4
-  firebase_dynamic_links: ^5.5.7
   
   # Additional utilities
   flutter_secure_storage: ^9.0.0
