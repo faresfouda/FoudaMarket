@@ -56,7 +56,6 @@ dependencies:
   firebase_messaging: ^14.7.10
   firebase_analytics: ^10.8.4
   firebase_crashlytics: ^3.5.4
-  # firebase_performance: ^0.9.4+7  # Temporarily disabled due to GoogleUtilities conflict
   firebase_remote_config: ^4.3.4
   firebase_dynamic_links: ^5.5.7
   google_sign_in: ^6.2.1

@@ -29,16 +29,6 @@ target 'Runner' do
   use_modular_headers!
 
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
-  
-  # Force GoogleUtilities to use version 8.0 to resolve conflicts
-  pod 'GoogleUtilities', '~> 8.0'
-  pod 'GoogleUtilities/Environment', '~> 8.0'
-  pod 'GoogleUtilities/Logger', '~> 8.0'
-  pod 'GoogleUtilities/MethodSwizzler', '~> 8.0'
-  pod 'GoogleUtilities/ISASwizzler', '~> 8.0'
-  
-  # Ensure AppCheckCore uses compatible version
-  pod 'AppCheckCore', '~> 11.0'
 end
 
 post_install do |installer|
