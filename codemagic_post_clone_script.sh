@@ -8,6 +8,10 @@ echo "🚀 Starting ULTIMATE Codemagic build process..."
 echo "📦 Getting Flutter dependencies..."
 flutter pub get
 
+# Clean Flutter build cache
+echo "🧹 Cleaning Flutter build cache..."
+flutter clean
+
 # Build iOS for simulator to generate xcconfig (no signing needed)
 echo "🔨 Building iOS simulator to generate xcconfig..."
 flutter build ios --simulator
@@ -18,30 +22,27 @@ cd ios
 echo "🧹 Performing ULTIMATE CocoaPods cleanup..."
 
 # ULTIMATE cleanup - remove everything that could cause issues
+echo "🗑️  Removing all CocoaPods artifacts..."
 rm -rf Pods
 rm -rf Podfile.lock
+rm -rf .symlinks
+rm -rf Flutter/ephemeral
 rm -rf ~/Library/Caches/CocoaPods
 rm -rf ~/.cocoapods
 rm -rf ~/Library/Developer/Xcode/DerivedData
 pod cache clean --all
 
-# Clean any Firebase Performance references from Podfile.lock if it exists
-if [ -f Podfile.lock ]; then
-    echo "🧽 Cleaning Firebase Performance references..."
-    sed -i '' '/FirebasePerformance/d' Podfile.lock
-    sed -i '' '/firebase_performance/d' Podfile.lock
-fi
-
 echo "📱 Installing CocoaPods dependencies with ULTIMATE strategy..."
 
-# Strategy 1: Try with repo update
-echo "🔄 Attempt 1: pod install --repo-update"
-pod install --repo-update
+# Strategy 1: Update specs repo first, then install
+echo "🔄 Attempt 1: pod repo update + pod install"
+pod repo update
+pod install
 
 # If the above fails, try Strategy 2
 if [ $? -ne 0 ]; then
     echo "⚠️  Attempt 1 failed, trying Strategy 2..."
-    echo "🔄 Attempt 2: pod install with aggressive cleanup"
+    echo "🔄 Attempt 2: pod install --repo-update with aggressive cleanup"
     rm -rf ~/Library/Caches/CocoaPods
     rm -rf ~/.cocoapods
     pod cache clean --all
