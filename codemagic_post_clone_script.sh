@@ -2,7 +2,7 @@
 set -e
 set -x
 
-echo "🚀 Starting ULTIMATE Codemagic build process..."
+echo "🚀 Starting BEST PRACTICE Codemagic build process..."
 
 # Get dependencies
 echo "📦 Getting Flutter dependencies..."
@@ -19,9 +19,9 @@ flutter build ios --simulator
 # Fix CocoaPods issues for CI
 cd ios
 
-echo "🧹 Performing ULTIMATE CocoaPods cleanup..."
+echo "🧹 Performing BEST PRACTICE CocoaPods cleanup..."
 
-# ULTIMATE cleanup - remove everything that could cause issues
+# BEST PRACTICE: Complete cleanup of all CocoaPods artifacts
 echo "🗑️  Removing all CocoaPods artifacts..."
 rm -rf Pods
 rm -rf Podfile.lock
@@ -30,42 +30,50 @@ rm -rf Flutter/ephemeral
 rm -rf ~/Library/Caches/CocoaPods
 rm -rf ~/.cocoapods
 rm -rf ~/Library/Developer/Xcode/DerivedData
+
+# Clean CocoaPods cache
+echo "🧽 Cleaning CocoaPods cache..."
 pod cache clean --all
 
-echo "📱 Installing CocoaPods dependencies with ULTIMATE strategy..."
-
-# Strategy 1: Update specs repo first, then install
-echo "🔄 Attempt 1: pod repo update + pod install"
+# BEST PRACTICE: Update specs repository first
+echo "📱 Updating CocoaPods specs repository..."
 pod repo update
-pod install
 
-# If the above fails, try Strategy 2
+echo "📱 Installing CocoaPods dependencies with BEST PRACTICE strategy..."
+
+# Strategy 1: Install with repo update (BEST PRACTICE)
+echo "🔄 Attempt 1: pod install --repo-update (BEST PRACTICE)"
+pod install --repo-update
+
+# If the above fails, try Strategy 2: More aggressive cleanup
 if [ $? -ne 0 ]; then
     echo "⚠️  Attempt 1 failed, trying Strategy 2..."
-    echo "🔄 Attempt 2: pod install --repo-update with aggressive cleanup"
+    echo "🔄 Attempt 2: Aggressive cleanup + pod install"
     rm -rf ~/Library/Caches/CocoaPods
     rm -rf ~/.cocoapods
     pod cache clean --all
+    pod repo update
     pod install --repo-update
 fi
 
-# If still fails, try Strategy 3
+# If still fails, try Strategy 3: Verbose debugging
 if [ $? -ne 0 ]; then
     echo "⚠️  Attempt 2 failed, trying Strategy 3..."
-    echo "🔄 Attempt 3: pod install with verbose output"
+    echo "🔄 Attempt 3: Verbose pod install for debugging"
     pod install --repo-update --verbose
 fi
 
-# If still fails, try Strategy 4 - remove GoogleUtilities overrides temporarily
+# If still fails, try Strategy 4: Remove all overrides temporarily
 if [ $? -ne 0 ]; then
     echo "⚠️  Attempt 3 failed, trying Strategy 4..."
-    echo "🔄 Attempt 4: pod install without GoogleUtilities overrides"
+    echo "🔄 Attempt 4: pod install without any overrides"
     
     # Backup current Podfile
     cp Podfile Podfile.backup
     
-    # Create a minimal Podfile without overrides
+    # Create a minimal Podfile without any overrides
     cat > Podfile.minimal << 'EOF'
+source 'https://cdn.cocoapods.org/'
 platform :ios, '14.0'
 ENV['COCOAPODS_DISABLE_STATS'] = 'true'
 
@@ -143,11 +151,11 @@ if [ -f Podfile.lock ]; then
         echo "ℹ️  INFO: Deployment target not explicitly set in Podfile.lock"
     fi
     
-    echo "🎉 ULTIMATE CocoaPods installation completed successfully!"
+    echo "🎉 BEST PRACTICE CocoaPods installation completed successfully!"
 else
     echo "❌ ERROR: Podfile.lock not found after all attempts"
     echo "📊 Build status: FAILED"
     exit 1
 fi
 
-echo "🚀 ULTIMATE build process completed!" 
+echo "🚀 BEST PRACTICE build process completed!" 
