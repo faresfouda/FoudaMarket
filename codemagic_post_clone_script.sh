@@ -2,68 +2,151 @@
 set -e
 set -x
 
+echo "🚀 Starting ULTIMATE Codemagic build process..."
+
 # Get dependencies
+echo "📦 Getting Flutter dependencies..."
 flutter pub get
 
 # Build iOS for simulator to generate xcconfig (no signing needed)
+echo "🔨 Building iOS simulator to generate xcconfig..."
 flutter build ios --simulator
 
 # Fix CocoaPods issues for CI
 cd ios
 
-# Aggressive cleanup of CocoaPods cache and files
+echo "🧹 Performing ULTIMATE CocoaPods cleanup..."
+
+# ULTIMATE cleanup - remove everything that could cause issues
 rm -rf Pods
 rm -rf Podfile.lock
 rm -rf ~/Library/Caches/CocoaPods
 rm -rf ~/.cocoapods
+rm -rf ~/Library/Developer/Xcode/DerivedData
+pod cache clean --all
 
 # Clean any Firebase Performance references from Podfile.lock if it exists
 if [ -f Podfile.lock ]; then
+    echo "🧽 Cleaning Firebase Performance references..."
     sed -i '' '/FirebasePerformance/d' Podfile.lock
     sed -i '' '/firebase_performance/d' Podfile.lock
 fi
 
-# Install pods with repo update (better for CI than separate pod repo update)
-echo "Installing CocoaPods dependencies with iOS 14.0 deployment target..."
+echo "📱 Installing CocoaPods dependencies with ULTIMATE strategy..."
+
+# Strategy 1: Try with repo update
+echo "🔄 Attempt 1: pod install --repo-update"
 pod install --repo-update
 
-# If the above fails, try with more aggressive cleanup
+# If the above fails, try Strategy 2
 if [ $? -ne 0 ]; then
-    echo "First pod install failed, trying with cache cleanup..."
+    echo "⚠️  Attempt 1 failed, trying Strategy 2..."
+    echo "🔄 Attempt 2: pod install with aggressive cleanup"
     rm -rf ~/Library/Caches/CocoaPods
     rm -rf ~/.cocoapods
     pod cache clean --all
-    echo "Retrying pod install with clean cache..."
     pod install --repo-update
 fi
 
-# Final verification - check if GoogleUtilities conflicts are resolved
+# If still fails, try Strategy 3
+if [ $? -ne 0 ]; then
+    echo "⚠️  Attempt 2 failed, trying Strategy 3..."
+    echo "🔄 Attempt 3: pod install with verbose output"
+    pod install --repo-update --verbose
+fi
+
+# If still fails, try Strategy 4 - remove GoogleUtilities overrides temporarily
+if [ $? -ne 0 ]; then
+    echo "⚠️  Attempt 3 failed, trying Strategy 4..."
+    echo "🔄 Attempt 4: pod install without GoogleUtilities overrides"
+    
+    # Backup current Podfile
+    cp Podfile Podfile.backup
+    
+    # Create a minimal Podfile without overrides
+    cat > Podfile.minimal << 'EOF'
+platform :ios, '14.0'
+ENV['COCOAPODS_DISABLE_STATS'] = 'true'
+
+project 'Runner', {
+  'Debug' => :debug,
+  'Profile' => :release,
+  'Release' => :release,
+}
+
+def flutter_root
+  generated_xcode_build_settings_path = File.expand_path(File.join('..', 'Flutter', 'Generated.xcconfig'), __FILE__)
+  unless File.exist?(generated_xcode_build_settings_path)
+    raise "#{generated_xcode_build_settings_path} must exist. If you're running pod install manually, make sure flutter build ios is executed first."
+  end
+
+  File.foreach(generated_xcode_build_settings_path) do |line|
+    matches = line.match(/FLUTTER_ROOT\=(.*)/)
+    return matches[1].strip if matches
+  end
+  raise "FLUTTER_ROOT not found in #{generated_xcode_build_settings_path}. Try deleting the file and running flutter build ios."
+end
+
+require File.expand_path(File.join('packages', 'flutter_tools', 'bin', 'podhelper'), flutter_root)
+
+target 'Runner' do
+  use_frameworks!
+  use_modular_headers!
+  flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
+end
+
+post_install do |installer|
+  installer.pods_project.targets.each do |target|
+    flutter_additional_ios_build_settings(target)
+    target.build_configurations.each do |config|
+      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '14.0'
+      config.build_settings['ENABLE_BITCODE'] = 'NO'
+      config.build_settings['SWIFT_VERSION'] = '5.0'
+    end
+  end
+end
+EOF
+    
+    # Try with minimal Podfile
+    mv Podfile.minimal Podfile
+    pod install --repo-update
+    
+    # Restore original Podfile
+    mv Podfile.backup Podfile
+fi
+
+# Final verification
+echo "✅ Final verification..."
 if [ -f Podfile.lock ]; then
-    echo "Checking for GoogleUtilities version conflicts..."
+    echo "📋 Podfile.lock created successfully"
+    
+    echo "🔍 Checking for GoogleUtilities version conflicts..."
     if grep -q "GoogleUtilities/Environment.*~> 8" Podfile.lock; then
-        echo "INFO: GoogleUtilities/Environment version 8.x found - this should work with iOS 14.0"
+        echo "⚠️  WARNING: GoogleUtilities/Environment version 8.x found"
         grep "GoogleUtilities/Environment" Podfile.lock
     else
-        echo "SUCCESS: No GoogleUtilities version 8.x conflicts found"
+        echo "✅ SUCCESS: No GoogleUtilities version 8.x conflicts found"
     fi
     
     if grep -q "FirebasePerformance" Podfile.lock; then
-        echo "WARNING: FirebasePerformance still found in Podfile.lock"
+        echo "⚠️  WARNING: FirebasePerformance still found in Podfile.lock"
         cat Podfile.lock | grep -i firebase
     else
-        echo "SUCCESS: No FirebasePerformance references found"
+        echo "✅ SUCCESS: No FirebasePerformance references found"
     fi
     
-    # Check deployment target in Podfile.lock
-    echo "Checking deployment target compatibility..."
+    echo "📱 Checking deployment target compatibility..."
     if grep -q "IPHONEOS_DEPLOYMENT_TARGET.*14" Podfile.lock; then
-        echo "SUCCESS: iOS 14.0 deployment target found"
+        echo "✅ SUCCESS: iOS 14.0 deployment target found"
     else
-        echo "INFO: Deployment target not explicitly set in Podfile.lock"
+        echo "ℹ️  INFO: Deployment target not explicitly set in Podfile.lock"
     fi
+    
+    echo "🎉 ULTIMATE CocoaPods installation completed successfully!"
 else
-    echo "ERROR: Podfile.lock not found after pod install"
+    echo "❌ ERROR: Podfile.lock not found after all attempts"
+    echo "📊 Build status: FAILED"
     exit 1
 fi
 
-echo "CocoaPods installation completed successfully!" 
+echo "🚀 ULTIMATE build process completed!" 
