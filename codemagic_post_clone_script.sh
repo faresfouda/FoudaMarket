@@ -19,6 +19,9 @@ flutter build ios --simulator
 # Fix CocoaPods issues for CI
 cd ios
 
+# Patch all plugin podspecs to require iOS 14.0
+find .symlinks/plugins -name "*.podspec" -exec sed -i 's/s.ios.deployment_target = .*/s.ios.deployment_target = "14.0"/' {} +
+
 echo "🧹 Performing BEST PRACTICE CocoaPods cleanup..."
 
 # BEST PRACTICE: Complete cleanup of all CocoaPods artifacts
