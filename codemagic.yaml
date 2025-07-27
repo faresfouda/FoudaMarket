@@ -10,6 +10,13 @@ workflows:
         script: |
           flutter pub get
 
+      - name: Debug CocoaPods sources
+        script: |
+          cd ios
+          pod repo list
+          pod search GoogleUtilities
+          cd ..
+
       - name: Clean and update CocoaPods (iOS)
         script: |
           cd ios
