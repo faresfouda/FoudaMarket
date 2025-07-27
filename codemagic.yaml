@@ -13,6 +13,8 @@ workflows:
       - name: Clean and update CocoaPods (iOS)
         script: |
           cd ios
+          rm -rf ~/.cocoapods/repos
+          rm -rf ~/Library/Caches/CocoaPods
           pod deintegrate
           pod cache clean --all
           rm -rf Pods Podfile.lock
