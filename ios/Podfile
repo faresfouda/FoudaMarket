@@ -1,3 +1,4 @@
+source 'https://github.com/CocoaPods/Specs.git'
 source 'https://cdn.cocoapods.org/'
 
 platform :ios, '14.0'
@@ -32,12 +33,6 @@ target 'Runner' do
 
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
   
-  # BEST PRACTICE: Use flexible version constraint for GoogleUtilities
-  # This allows CocoaPods to resolve the best compatible version
-  pod 'GoogleUtilities', '~> 7.12'
-  
-  # Pin AppCheckCore to 11.0.0 to resolve GoogleUtilities conflict
-  pod 'AppCheckCore', '11.0.0'
 end
 
 post_install do |installer|
