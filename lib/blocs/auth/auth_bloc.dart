@@ -2,7 +2,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../services/firebase_service.dart';
-import '../../services/google_auth_service.dart';
 import '../../models/user_model.dart';
 import 'auth_event.dart';
 import 'auth_state.dart';
@@ -10,15 +9,12 @@ import '../../core/services/auth_service.dart';
 
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final FirebaseService _firebaseService = FirebaseService();
-  final GoogleAuthService _googleAuthService = GoogleAuthService();
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final AuthService _authService = AuthService();
-
   AuthBloc() : super(AuthInitial()) {
     on<AuthCheckRequested>(_onAuthCheckRequested);
     on<SignInRequested>(_onSignInRequested);
     on<SignUpRequested>(_onSignUpRequested);
-    on<GoogleSignInRequested>(_onGoogleSignInRequested);
     on<SignOutRequested>(_onSignOutRequested);
     on<PasswordResetRequested>(_onPasswordResetRequested);
     on<GuestLoginRequested>((event, emit) {
@@ -192,31 +188,31 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     }
   }
 
-  Future<void> _onGoogleSignInRequested(
-    GoogleSignInRequested event,
-    Emitter<AuthState> emit,
-  ) async {
-    emit(AuthLoading());
-    try {
-      final userCredential = await _googleAuthService.signInWithGoogle();
+  // Future<void> _onGoogleSignInRequested(
+  //   GoogleSignInRequested event,
+  //   Emitter<AuthState> emit,
+  // ) async {
+  //   emit(AuthLoading());
+  //   try {
+  //     final userCredential = await _googleAuthService.signInWithGoogle();
 
-      if (userCredential?.user != null) {
-        // Get user profile from Firestore
-        final userProfile = await _googleAuthService.getUserProfile(
-          userCredential!.user!.uid,
-        );
-        UserModel? userModel;
-        if (userProfile != null) {
-          userModel = userProfile;
-        }
-        emit(Authenticated(user: userCredential.user!, userProfile: userModel));
-      } else {
-        emit(AuthError(message: 'تم إلغاء تسجيل الدخول بجوجل من قبل المستخدم.'));
-      }
-    } catch (e) {
-      emit(AuthError(message: _getGoogleSignInErrorMessage(e)));
-    }
-  }
+  //     if (userCredential?.user != null) {
+  //       // Get user profile from Firestore
+  //       final userProfile = await _googleAuthService.getUserProfile(
+  //         userCredential!.user!.uid,
+  //       );
+  //       UserModel? userModel;
+  //       if (userProfile != null) {
+  //         userModel = userProfile;
+  //       }
+  //       emit(Authenticated(user: userCredential.user!, userProfile: userModel));
+  //     } else {
+  //       emit(AuthError(message: 'تم إلغاء تسجيل الدخول بجوجل من قبل المستخدم.'));
+  //     }
+  //   } catch (e) {
+  //     emit(AuthError(message: _getGoogleSignInErrorMessage(e)));
+  //   }
+  // }
 
   Future<void> _onSignOutRequested(
     SignOutRequested event,

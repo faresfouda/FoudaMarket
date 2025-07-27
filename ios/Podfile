@@ -36,8 +36,8 @@ target 'Runner' do
   # This allows CocoaPods to resolve the best compatible version
   pod 'GoogleUtilities', '~> 7.12'
   
-  # Force AppCheckCore to use a compatible version
-  pod 'AppCheckCore', '~> 11.0'
+  # Pin AppCheckCore to 11.0.0 to resolve GoogleUtilities conflict
+  pod 'AppCheckCore', '11.0.0'
 end
 
 post_install do |installer|

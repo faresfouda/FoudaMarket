@@ -1,6 +1,5 @@
 // External Services - Third-party integrations
 export 'cloudinary_service.dart';
-export 'google_auth_service.dart';
 export 'image_cache_service.dart';
 export 'image_compression_service.dart';
 
