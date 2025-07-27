@@ -4,7 +4,7 @@ workflows:
     max_build_duration: 60
     environment:
       flutter: stable
-      xcode: latest
+      xcode: 15.2
     scripts:
       - name: Get Flutter dependencies
         script: |
@@ -28,6 +28,10 @@ workflows:
           pod repo update
           pod install --repo-update
           cd ..
+
+      - name: Clean Flutter build
+        script: |
+          flutter clean
 
       - name: Print Flutter and Xcode versions
         script: |
