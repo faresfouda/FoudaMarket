@@ -27,20 +27,23 @@ end
 
 require File.expand_path(File.join('packages', 'flutter_tools', 'bin', 'podhelper'), flutter_root)
 
+# Pre-install hook to ensure proper setup
+pre_install do |installer|
+  puts "🔧 Pre-install: Setting up Firebase configuration..."
+  # Ensure GoogleService-Info.plist exists
+  google_service_path = File.join(File.dirname(__FILE__), 'Runner', 'GoogleService-Info.plist')
+  unless File.exist?(google_service_path)
+    puts "⚠️  Warning: GoogleService-Info.plist not found at #{google_service_path}"
+  else
+    puts "✅ GoogleService-Info.plist found at #{google_service_path}"
+  end
+end
+
 target 'Runner' do
   use_frameworks!
   use_modular_headers!
 
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
-  
-  # Firebase dependencies - ensure proper linking
-  pod 'Firebase/Core'
-  pod 'Firebase/Auth'
-  pod 'Firebase/Firestore'
-  pod 'Firebase/Messaging'
-  pod 'Firebase/Analytics'
-  pod 'Firebase/Crashlytics'
-  pod 'Firebase/RemoteConfig'
 end
 
 post_install do |installer|
@@ -121,6 +124,15 @@ post_install do |installer|
       # Ensure proper module search paths
       config.build_settings['FRAMEWORK_SEARCH_PATHS'] ||= ['$(inherited)']
       config.build_settings['HEADER_SEARCH_PATHS'] ||= ['$(inherited)']
+      
+      # Additional module linking fixes
+      config.build_settings['SWIFT_INCLUDE_PATHS'] ||= ['$(inherited)']
+      config.build_settings['CLANG_ENABLE_MODULES'] = 'YES'
+      config.build_settings['CLANG_ENABLE_MODULE_DEBUGGING'] = 'YES'
+      
+      # Force module map generation
+      config.build_settings['DEFINES_MODULE'] = 'YES'
+      config.build_settings['SWIFT_INSTALL_OBJC_HEADER'] = 'NO'
     end
   end
 end
