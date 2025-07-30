@@ -133,6 +133,29 @@ post_install do |installer|
       # Force module map generation
       config.build_settings['DEFINES_MODULE'] = 'YES'
       config.build_settings['SWIFT_INSTALL_OBJC_HEADER'] = 'NO'
+      
+      # Additional aggressive module fixes
+      config.build_settings['CLANG_ENABLE_MODULE_IMPORTS'] = 'YES'
+      config.build_settings['CLANG_ENABLE_MODULES'] = 'YES'
+      config.build_settings['SWIFT_OBJC_INTERFACE_HEADER_NAME'] = ''
+      
+      # Ensure Firebase modules are properly linked
+      if target.name.include?('Firebase') || target.name.include?('cloud_firestore') || target.name.include?('firestore')
+        config.build_settings['DEFINES_MODULE'] = 'YES'
+        config.build_settings['CLANG_ENABLE_MODULES'] = 'YES'
+        config.build_settings['SWIFT_INSTALL_OBJC_HEADER'] = 'NO'
+        config.build_settings['CLANG_ENABLE_MODULE_IMPORTS'] = 'YES'
+        puts "🔧 Applied Firebase-specific settings to #{target.name}"
+      end
+      
+      # Additional fixes for all targets
+      config.build_settings['ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES'] = 'YES'
+      config.build_settings['SWIFT_VERSION'] = '5.0'
+      
+      # Debug information
+      puts "🔍 Target: #{target.name}, Config: #{config.name}"
+      puts "   - DEFINES_MODULE: #{config.build_settings['DEFINES_MODULE']}"
+      puts "   - CLANG_ENABLE_MODULES: #{config.build_settings['CLANG_ENABLE_MODULES']}"
     end
   end
 end
