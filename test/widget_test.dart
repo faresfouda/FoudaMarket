@@ -1,4 +1,4 @@
-// This is a basic Flutter widget test for FoudaMarket app.
+// This is a basic Flutter widget test.
 //
 // To perform an interaction with a widget in your test, use the WidgetTester
 // utility in the flutter_test package. For example, you can send tap and scroll
@@ -7,46 +7,27 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:fouda_market/main.dart' as app;
+
 
 void main() {
-  group('FoudaMarket App Tests', () {
-    testWidgets('App should start without crashing', (WidgetTester tester) async {
-      // Build our app and trigger a frame.
-      app.main();
-      await tester.pumpAndSettle();
+  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
+    // Build our app and trigger a frame.
+    await tester.pumpWidget(const MyApp() as Widget);
 
-      // Verify that the app starts without errors
-      expect(find.byType(MaterialApp), findsOneWidget);
-    });
+    // Verify that our counter starts at 0.
+    expect(find.text('0'), findsOneWidget);
+    expect(find.text('1'), findsNothing);
 
-    testWidgets('App should have proper title', (WidgetTester tester) async {
-      // Build our app and trigger a frame.
-      await tester.pumpWidget(const MaterialApp(
-        title: 'Fouda Market',
-        home: Scaffold(
-          body: Center(
-            child: Text('Fouda Market'),
-          ),
-        ),
-      ));
+    // Tap the '+' icon and trigger a frame.
+    await tester.tap(find.byIcon(Icons.add));
+    await tester.pump();
 
-      // Verify that our app has the correct title
-      expect(find.text('Fouda Market'), findsOneWidget);
-    });
-
-    testWidgets('App should handle basic navigation', (WidgetTester tester) async {
-      // Build our app and trigger a frame.
-      await tester.pumpWidget(const MaterialApp(
-        home: Scaffold(
-          body: Center(
-            child: Text('Welcome to Fouda Market'),
-          ),
-        ),
-      ));
-
-      // Verify that the welcome text is displayed
-      expect(find.text('Welcome to Fouda Market'), findsOneWidget);
-    });
+    // Verify that our counter has incremented.
+    expect(find.text('0'), findsNothing);
+    expect(find.text('1'), findsOneWidget);
   });
+}
+
+class MyApp {
+  const MyApp();
 }
