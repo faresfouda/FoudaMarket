@@ -10,7 +10,7 @@ import 'package:fouda_market/components/item_container.dart';
 class HorizontalProductList extends StatelessWidget {
   final List<ProductModel> products;
 
-  const HorizontalProductList({this.products = const []});
+  const HorizontalProductList({super.key, this.products = const []});
 
   @override
   Widget build(BuildContext context) {
@@ -21,7 +21,11 @@ class HorizontalProductList extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.inventory_2_outlined, size: 48, color: Colors.grey[400]),
+              Icon(
+                Icons.inventory_2_outlined,
+                size: 48,
+                color: Colors.grey[400],
+              ),
               const SizedBox(height: 8),
               Text('لا توجد منتجات', style: TextStyle(color: Colors.grey[600])),
             ],
@@ -41,7 +45,9 @@ class HorizontalProductList extends StatelessWidget {
             listenable: context.read<ProductBloc>().favoritesNotifier,
             builder: (context, child) {
               final bloc = context.read<ProductBloc>();
-              final isFavorite = bloc.favoritesNotifier.isProductFavorite(product.id);
+              final isFavorite = bloc.favoritesNotifier.isProductFavorite(
+                product.id,
+              );
               return ProductCard(
                 product: product,
                 isFavorite: isFavorite,
@@ -49,26 +55,18 @@ class HorizontalProductList extends StatelessWidget {
                   final user = FirebaseAuth.instance.currentUser;
                   if (user != null) {
                     if (isFavorite) {
-                      context.read<ProductBloc>().add(RemoveFromFavorites(user.uid, product.id));
+                      context.read<ProductBloc>().add(
+                        RemoveFromFavorites(user.uid, product.id),
+                      );
                     } else {
-                      context.read<ProductBloc>().add(AddToFavorites(user.uid, product.id));
+                      context.read<ProductBloc>().add(
+                        AddToFavorites(user.uid, product.id),
+                      );
                     }
                   }
                 },
                 onAddPressed: () async {
-                  final result = await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => ProductDetailScreen(product: product),
-                    ),
-                  );
-                  if (result == true) {
-                    final user = FirebaseAuth.instance.currentUser;
-                    if (user != null) {
-                      context.read<ProductBloc>().add(LoadFavorites(user.uid));
-                      context.read<ProductBloc>().add(const ResetHomeProducts());
-                    }
-                  }
+                  // Add to cart logic can be implemented here
                 },
               );
             },
@@ -77,4 +75,4 @@ class HorizontalProductList extends StatelessWidget {
       ),
     );
   }
-} 
+}

@@ -12,7 +12,7 @@ import 'home_screen.dart';
 import 'widgets/my_navigationbar.dart';
 
 class MainScreen extends StatefulWidget {
-  const MainScreen({Key? key}) : super(key: key);
+  const MainScreen({super.key});
 
   @override
   State<MainScreen> createState() => _MainScreenState();
@@ -20,7 +20,7 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
-  final List <Widget> _screens = [
+  final List<Widget> _screens = [
     const HomeScreen(),
     const CategoriesScreen(),
     const CartScreen(),
@@ -50,6 +50,20 @@ class _MainScreenState extends State<MainScreen> {
     }
   }
 
+  // إضافة دالة لإعادة تحميل البيانات عند العودة من شاشات أخرى
+  void _refreshCurrentScreen() {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      // إعادة تحميل العربة
+      context.read<CartBloc>().add(LoadCart(user.uid));
+
+      // تحديث الشاشة الحالية
+      setState(() {
+        // إعادة بناء الشاشة الحالية
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Directionality(
@@ -71,4 +85,3 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 }
-

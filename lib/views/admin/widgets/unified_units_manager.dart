@@ -14,7 +14,7 @@ class UnifiedUnitsManager extends StatefulWidget {
   final ValueChanged<UnifiedUnitsData> onUnitsChanged;
 
   const UnifiedUnitsManager({
-    Key? key,
+    super.key,
     this.initialBaseUnit,
     this.initialBasePrice,
     this.initialBaseOfferPrice,
@@ -23,7 +23,7 @@ class UnifiedUnitsManager extends StatefulWidget {
     this.initialBaseIsActive, // إضافة معامل جديد
     this.initialAdditionalUnits,
     required this.onUnitsChanged,
-  }) : super(key: key);
+  });
 
   @override
   State<UnifiedUnitsManager> createState() => _UnifiedUnitsManagerState();
@@ -68,7 +68,9 @@ class _UnifiedUnitsManagerState extends State<UnifiedUnitsManager> {
       text: widget.initialBaseStock?.toString() ?? '0',
     );
     baseHasOffer = widget.initialBaseHasOffer ?? false;
-    baseIsActive = widget.initialBaseIsActive ?? true; // استخدام القيمة المرسلة بدلاً من true ثابتة
+    baseIsActive =
+        widget.initialBaseIsActive ??
+        true; // استخدام القيمة المرسلة بدلاً من true ثابتة
     baseIsPrimary = true; // الوحدة الأساسية دائماً primary
     baseIsBestSeller = false;
 
@@ -290,7 +292,7 @@ class _UnifiedUnitsManagerState extends State<UnifiedUnitsManager> {
                         Text(
                           'عرض خاص للوحدة الأساسية',
                           style: TextStyle(
-                            fontSize: 14,
+                            fontSize: 12,
                             fontWeight: FontWeight.w500,
                             color: Colors.grey[700],
                           ),

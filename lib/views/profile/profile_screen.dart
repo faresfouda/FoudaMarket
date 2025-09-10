@@ -1,33 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:fouda_market/views/profile/orders_screen.dart';
 import 'package:fouda_market/views/profile/my_details_screen.dart';
-import 'package:fouda_market/views/profile/delivery_address_screen.dart';
+import 'package:fouda_market/views/profile/delivery_address_screen.dart' as delivery;
 import 'package:fouda_market/views/profile/promo_code_screen.dart';
 import 'package:fouda_market/views/profile/notifications_screen.dart';
-import 'package:fouda_market/views/profile/help_screen.dart';
 import 'package:fouda_market/views/profile/about_screen.dart';
 import 'package:fouda_market/views/profile/my_reviews_screen.dart';
+import 'package:fouda_market/views/profile/orders_screen.dart' as profile_orders;
 import 'package:fouda_market/blocs/auth/index.dart';
-import 'package:fouda_market/views/auth/auth_selection_screen.dart';
 import 'package:fouda_market/theme/appcolors.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/services.dart';
-import 'package:fouda_market/services/notification_service.dart';
 import '../../routes.dart';
-import 'package:fouda_market/components/loading_indicator.dart';
-import 'package:fouda_market/components/error_view.dart';
+import '../admin/promo_codes_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
-  const ProfileScreen({Key? key}) : super(key: key);
+  const ProfileScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
         if (state is Unauthenticated) {
-          Navigator.of(context).pushNamedAndRemoveUntil(AppRoutes.authSelection, (route) => false);
+          Navigator.of(
+            context,
+          ).pushNamedAndRemoveUntil(AppRoutes.authSelection, (route) => false);
         }
       },
       child: BlocBuilder<AuthBloc, AuthState>(
@@ -71,9 +68,12 @@ class ProfileScreen extends StatelessWidget {
                       children: [
                         CircleAvatar(
                           radius: 36,
-                          backgroundImage: (state.userProfile!.avatarUrl != null && state.userProfile!.avatarUrl!.isNotEmpty)
+                          backgroundImage:
+                              (state.userProfile!.avatarUrl != null &&
+                                  state.userProfile!.avatarUrl!.isNotEmpty)
                               ? NetworkImage(state.userProfile!.avatarUrl!)
-                              : const AssetImage('assets/home/logo.jpg') as ImageProvider,
+                              : const AssetImage('assets/home/logo.jpg')
+                                    as ImageProvider,
                         ),
                         const SizedBox(width: 20),
                         Expanded(
@@ -88,7 +88,8 @@ class ProfileScreen extends StatelessWidget {
                                 ),
                               ),
                               SizedBox(height: 6),
-                              if (state.userProfile!.email != null && state.userProfile!.email!.isNotEmpty)
+                              if (state.userProfile!.email != null &&
+                                  state.userProfile!.email!.isNotEmpty)
                                 Text(
                                   state.userProfile!.email!,
                                   style: TextStyle(
@@ -98,9 +99,12 @@ class ProfileScreen extends StatelessWidget {
                                 ),
                               SizedBox(height: 4),
                               Container(
-                                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
                                 decoration: BoxDecoration(
-                                  color: AppColors.orangeColor.withOpacity(0.1),
+                                  color: AppColors.orangeColor.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Text(
@@ -134,7 +138,12 @@ class ProfileScreen extends StatelessWidget {
                             title: 'الطلبات',
                             iconPath: 'assets/home/Orders icon.svg',
                             onTap: () {
-                              Navigator.pushNamed(context, AppRoutes.orders);
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute<void>(
+                                  builder: (_) => const profile_orders.OrdersScreen(),
+                                ),
+                              );
                             },
                           ),
                         ],
@@ -144,7 +153,11 @@ class ProfileScreen extends StatelessWidget {
                             iconPath: 'assets/home/Orders icon.svg',
                             onTap: () {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('يجب تسجيل الدخول لعرض الطلبات')),
+                                SnackBar(
+                                  content: Text(
+                                    'يجب تسجيل الدخول لعرض الطلبات',
+                                  ),
+                                ),
                               );
                             },
                             enabled: false,
@@ -154,51 +167,91 @@ class ProfileScreen extends StatelessWidget {
                           title: 'بياناتي',
                           iconPath: 'assets/home/My Details icon.svg',
                           onTap: () {
-                            Navigator.push(context, MaterialPageRoute(builder: (_) => const MyDetailsScreen()));
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute<void>(
+                                builder: (_) => const MyDetailsScreen(),
+                              ),
+                            );
                           },
                         ),
                         _ProfileListTile(
                           title: 'عنوان التوصيل',
                           iconPath: 'assets/home/Delicery address.svg',
                           onTap: () {
-                            Navigator.push(context, MaterialPageRoute(builder: (_) => const DeliveryAddressScreen()));
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute<void>(
+                                builder: (_) => const delivery.DeliveryAddressScreen(),
+                              ),
+                            );
                           },
                         ),
-                        _ProfileListTile(
-                          title: 'كود الخصم',
-                          iconPath: 'assets/home/Promo Cord icon.svg',
-                          onTap: () {
-                            Navigator.push(context, MaterialPageRoute(builder: (_) => const PromoCodeScreen()));
-                          },
-                        ),
+                        // عرض كود الخصم للمستخدمين العاديين فقط، وإدارة أكواد الخصم للمدير فقط
+                        if (state.userProfile!.role == 'admin') ...[
+                          _ProfileListTile(
+                            title: 'إدارة أكواد الخصم',
+                            iconPath: 'assets/home/Promo Cord icon.svg',
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute<void>(
+                                  builder: (_) => const PromoCodesScreen(),
+                                ),
+                              );
+                            },
+                          ),
+                        ] else if (state.userProfile!.role == 'user') ...[
+                          _ProfileListTile(
+                            title: 'كود الخصم',
+                            iconPath: 'assets/home/Promo Cord icon.svg',
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute<void>(
+                                  builder: (_) => const PromoCodeScreen(),
+                                ),
+                              );
+                            },
+                          ),
+                        ],
                         _ProfileListTile(
                           title: 'الإشعارات',
                           iconPath: 'assets/home/Bell icon.svg',
                           onTap: () {
-                            Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsScreen()));
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute<void>(
+                                builder: (_) => const NotificationsScreen(),
+                              ),
+                            );
                           },
                         ),
                         if (state is! Guest) ...[
                           _ProfileListTile(
                             title: 'مراجعاتي',
-                            iconPath: 'assets/home/help icon.svg', // يمكن تغيير الأيقونة لاحقاً
+                            iconPath:
+                                'assets/home/help icon.svg', // يمكن تغيير الأيقونة لاحقاً
                             onTap: () {
-                              Navigator.push(context, MaterialPageRoute(builder: (_) => const MyReviewsScreen()));
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute<void>(
+                                  builder: (_) => const MyReviewsScreen(),
+                                ),
+                              );
                             },
                           ),
                         ],
                         _ProfileListTile(
-                          title: 'مساعدة',
-                          iconPath: 'assets/home/help icon.svg',
-                          onTap: () {
-                            Navigator.push(context, MaterialPageRoute(builder: (_) => const HelpScreen()));
-                          },
-                        ),
-                        _ProfileListTile(
                           title: 'حول',
                           iconPath: 'assets/home/about icon.svg',
                           onTap: () {
-                            Navigator.push(context, MaterialPageRoute(builder: (_) => const AboutScreen()));
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute<void>(
+                                builder: (_) => const AboutScreen(),
+                              ),
+                            );
                           },
                         ),
                       ],
@@ -265,7 +318,9 @@ class ProfileScreen extends StatelessWidget {
                       children: [
                         CircleAvatar(
                           radius: 36,
-                          backgroundColor: AppColors.orangeColor.withOpacity(0.1),
+                          backgroundColor: AppColors.orangeColor.withValues(
+                            alpha: 0.1,
+                          ),
                           child: Icon(
                             Icons.person,
                             size: 36,
@@ -310,7 +365,7 @@ class ProfileScreen extends StatelessWidget {
                           Icon(
                             Icons.account_circle,
                             size: 80,
-                            color: AppColors.orangeColor.withOpacity(0.3),
+                            color: AppColors.orangeColor.withValues(alpha: 0.3),
                           ),
                           SizedBox(height: 20),
                           Text(
@@ -336,20 +391,23 @@ class ProfileScreen extends StatelessWidget {
                             padding: EdgeInsets.symmetric(horizontal: 40),
                             child: ElevatedButton(
                               onPressed: () {
-                                Navigator.pushNamed(context, AppRoutes.authSelection);
+                                Navigator.pushNamed(
+                                  context,
+                                  AppRoutes.authSelection,
+                                );
                               },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppColors.orangeColor,
-                                padding: EdgeInsets.symmetric(vertical: 16),
+                                foregroundColor: Colors.white,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(16),
                                 ),
+                                padding: const EdgeInsets.symmetric(vertical: 18),
                               ),
                               child: Text(
                                 'تسجيل الدخول',
                                 style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 16,
+                                  fontSize: 18,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
@@ -369,32 +427,18 @@ class ProfileScreen extends StatelessWidget {
   }
 
   Widget _buildGuestProfile(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.person_outline, size: 80, color: AppColors.orangeColor),
-            SizedBox(height: 24),
-            Text('أنت تتصفح التطبيق كزائر', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-            SizedBox(height: 16),
-            Text('سجّل الدخول أو أنشئ حسابًا للاستفادة من جميع الميزات', style: TextStyle(fontSize: 16, color: AppColors.mediumGrayColor)),
-            SizedBox(height: 32),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).pushNamedAndRemoveUntil(AppRoutes.authSelection, (route) => false);
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.orangeColor,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-              child: Text('تسجيل الدخول أو إنشاء حساب', style: TextStyle(fontSize: 18, color: Colors.white)),
-            ),
-          ],
-        ),
-      ),
-    );
+    return _buildAuthenticatedProfile(context, Guest() as Authenticated);
+  }
+
+  String _getRoleText(String role) {
+    switch (role) {
+      case 'admin':
+        return 'مدير';
+      case 'user':
+        return 'مستخدم';
+      default:
+        return 'زائر';
+    }
   }
 
   void _showSignOutDialog(BuildContext context) {
@@ -402,75 +446,89 @@ class ProfileScreen extends StatelessWidget {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('تسجيل الخروج'),
-          content: Text('هل أنت متأكد من تسجيل الخروج؟'),
+          backgroundColor: Colors.white,
+          title: Text(
+            'تسجيل الخروج',
+            style: TextStyle(fontSize: 18, color: Colors.black),
+          ),
+          content: Text(
+            'هل أنت متأكد من أنك تريد تسجيل الخروج؟',
+            style: TextStyle(fontSize: 16, color: Colors.grey[700]),
+          ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text('إلغاء'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text('إلغاء', style: TextStyle(color: Colors.grey)),
             ),
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop();
                 context.read<AuthBloc>().add(SignOutRequested());
               },
-              child: Text(
-                'تأكيد',
-                style: TextStyle(color: Colors.red),
-              ),
+              child: Text('تأكيد', style: TextStyle(color: Colors.red)),
             ),
           ],
         );
       },
     );
   }
-
-  String _getRoleText(String role) {
-    switch (role) {
-      case 'admin':
-        return 'مدير';
-      case 'data_entry':
-        return 'مدخل بيانات';
-      default:
-        return 'مستخدم';
-    }
-  }
 }
 
 class _ProfileListTile extends StatelessWidget {
   final String title;
   final String iconPath;
-  final VoidCallback? onTap;
-  final bool? enabled;
-  const _ProfileListTile({required this.title, required this.iconPath, this.onTap, this.enabled});
+  final VoidCallback onTap;
+  final bool enabled;
+
+  const _ProfileListTile({
+    required this.title,
+    required this.iconPath,
+    required this.onTap,
+    this.enabled = true,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2.0, horizontal: 4.0),
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        color: Colors.white.withValues(alpha: 0.9),
+      ),
       child: ListTile(
-        leading: Container(
-          width: 40,
-          height: 40,
-          alignment: Alignment.center,
-          child: SvgPicture.asset(
-            iconPath,
-            color: Colors.black,
+        onTap: enabled ? onTap : null,
+        leading: SvgPicture.asset(
+          iconPath,
+          width: 24,
+          height: 24,
+          colorFilter: ColorFilter.mode(
+            enabled ? Colors.black : Colors.grey,
+            BlendMode.srcIn,
           ),
         ),
         title: Text(
           title,
-          style: TextStyle(fontWeight: FontWeight.w500, fontSize: 16, color: Colors.black),
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
+            color: enabled ? Colors.black : Colors.grey,
+          ),
         ),
         trailing: Icon(
-          Icons.arrow_back_ios_new,
-          color: Colors.black,
+          Icons.arrow_forward_ios,
+          color: enabled ? Colors.black : Colors.grey,
           size: 18,
         ),
-        onTap: enabled == false ? null : onTap,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
         tileColor: Colors.white,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 20,
+          vertical: 8,
+        ),
       ),
     );
   }

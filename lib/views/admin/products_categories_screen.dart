@@ -8,130 +8,281 @@ import '../../models/category_model.dart';
 import '../../blocs/category/category_bloc.dart';
 import '../../blocs/category/category_event.dart';
 import '../../blocs/category/category_state.dart';
-import '../../services/firebase_service.dart';
-import '../../services/image_compression_service.dart';
+import '../../blocs/auth/index.dart';
 import '../../services/cloudinary_service.dart';
-import '../../theme/appcolors.dart';
-import '../../components/Button.dart';
+import '../../services/image_compression_service.dart';
 import 'category_items_screen.dart';
-// import 'widgets/category_form_bottom_sheet.dart';
 
 class ProductsCategoriesScreen extends StatefulWidget {
   const ProductsCategoriesScreen({super.key});
 
   @override
-  State<ProductsCategoriesScreen> createState() =>
-      _ProductsCategoriesScreenState();
+  State<ProductsCategoriesScreen> createState() => _ProductsCategoriesScreenState();
 }
 
-class _ProductsCategoriesScreenState
-    extends State<ProductsCategoriesScreen> {
-  late TextEditingController _categoryNameController;
-  late TextEditingController _searchController;
-  late ScrollController _scrollController;
-  Timer? _debounceTimer;
-  bool _isLoadingMore = false;
+class _ProductsCategoriesScreenState extends State<ProductsCategoriesScreen> {
+  final TextEditingController _categoryNameController = TextEditingController();
   File? _pickedImage;
-  Color? _pickedColor;
-  bool isUploading = false; // مؤشر التحميل
-
-  final List<Color> _colorOptions = [
-    Colors.red,
-    Colors.pink,
-    Colors.purple,
-    Colors.deepPurple,
-    Colors.indigo,
-    Colors.blue,
-    Colors.lightBlue,
-    Colors.cyan,
-    Colors.teal,
-    Colors.green,
-    Colors.lightGreen,
-    Colors.lime,
-    Colors.yellow,
-    Colors.amber,
-    Colors.orange,
-    Colors.deepOrange,
-    Colors.brown,
-    Colors.grey,
-    Colors.blueGrey,
-  ];
+  Color _pickedColor = Colors.orange;
+  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    _categoryNameController = TextEditingController();
-    _searchController = TextEditingController();
-    _scrollController = ScrollController();
-    _scrollController.addListener(_onScroll);
-    // Fetch categories using BLoC
-    Future.microtask(
-      () => context.read<CategoryBloc>().add(
-        const FetchCategories(limit: CategoryBloc.defaultLimit),
-      ),
-    );
+    context.read<CategoryBloc>().add(const FetchCategories());
   }
 
   @override
   void dispose() {
-    _debounceTimer?.cancel();
     _categoryNameController.dispose();
-    _searchController.dispose();
-    _scrollController.dispose();
     super.dispose();
   }
 
-  void _onScroll() {
-    if (!_scrollController.hasClients) return;
-    final maxScroll = _scrollController.position.maxScrollExtent;
-    final currentScroll = _scrollController.position.pixels;
-    if (maxScroll - currentScroll <= 200 && !_isLoadingMore) {
-      final bloc = context.read<CategoryBloc>();
-      final state = bloc.state;
-      if (state is CategoriesLoaded && state.hasMore) {
-        _isLoadingMore = true;
-        bloc.add(
-          LoadMoreCategories(
-            limit: CategoryBloc.defaultLimit,
-            lastCategory: state.categories.isNotEmpty
-                ? state.categories.last
-                : null,
+  @override
+  Widget build(BuildContext context) {
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('إدارة فئات المنتجات'),
+          backgroundColor: Colors.white,
+          foregroundColor: Colors.black,
+          elevation: 1,
+        ),
+        backgroundColor: Colors.grey[50],
+        body: BlocBuilder<CategoryBloc, CategoryState>(
+          builder: (context, state) {
+            if (state is CategoriesLoading) {
+              return const Center(child: CircularProgressIndicator());
+            } else if (state is CategoriesError) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.error, size: 64, color: Colors.red),
+                    const SizedBox(height: 16),
+                    Text('خطأ: ${state.message}'),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: () {
+                        context.read<CategoryBloc>().add(const FetchCategories());
+                      },
+                      child: const Text('إعادة المحاولة'),
+                    ),
+                  ],
+                ),
+              );
+            } else if (state is CategoriesLoaded) {
+              return Column(
+                children: [
+                  // Header with add button
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    color: Colors.white,
+                    child: Row(
+                      children: [
+                        const Icon(Icons.category, color: Colors.orange),
+                        const SizedBox(width: 8),
+                        const Text(
+                          'الفئات المتاحة',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const Spacer(),
+                        ElevatedButton.icon(
+                          onPressed: () => _showAddEditCategoryDialog(),
+                          icon: const Icon(Icons.add, color: Colors.white),
+                          label: const Text(
+                            'إضافة فئة',
+                            style: TextStyle(color: Colors.white),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.orange,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Categories list
+                  Expanded(
+                    child: state.categories.isEmpty
+                        ? const Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.category_outlined, size: 64, color: Colors.grey),
+                                SizedBox(height: 16),
+                                Text(
+                                  'لا توجد فئات مضافة بعد',
+                                  style: TextStyle(fontSize: 16, color: Colors.grey),
+                                ),
+                              ],
+                            ),
+                          )
+                        : ListView.builder(
+                            padding: const EdgeInsets.all(16),
+                            itemCount: state.categories.length,
+                            itemBuilder: (context, index) {
+                              final category = state.categories[index];
+                              return _buildCategoryCard(category);
+                            },
+                          ),
+                  ),
+                ],
+              );
+            }
+            return const SizedBox.shrink();
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCategoryCard(CategoryModel category) {
+    return GestureDetector(
+      onTap: () {
+        // Navigate to category items screen
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => CategoryItemsScreen(
+              categoryId: category.id,
+              categoryName: category.name,
+            ),
           ),
         );
-      }
+      },
+      child: Card(
+        margin: const EdgeInsets.only(bottom: 12),
+        elevation: 2,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              // Category image
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: category.imageUrl != null && category.imageUrl!.isNotEmpty
+                    ? Image.network(
+                        category.imageUrl!,
+                        width: 60,
+                        height: 60,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            width: 60,
+                            height: 60,
+                            color: Colors.grey[300],
+                            child: const Icon(Icons.category, color: Colors.grey),
+                          );
+                        },
+                      )
+                    : Container(
+                        width: 60,
+                        height: 60,
+                        color: Colors.grey[300],
+                        child: const Icon(Icons.category, color: Colors.grey),
+                      ),
+              ),
+              const SizedBox(width: 16),
+              // Category details
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      category.name,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    if (category.color != null && category.color!.isNotEmpty)
+                      Row(
+                        children: [
+                          Container(
+                            width: 16,
+                            height: 16,
+                            decoration: BoxDecoration(
+                              color: _parseColor(category.color!),
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.grey[300]!),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'لون الفئة',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                      ),
+                  ],
+                ),
+              ),
+              // Action buttons
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.edit, color: Colors.blue),
+                    tooltip: 'تعديل',
+                    onPressed: () => _showAddEditCategoryDialog(editing: category),
+                  ),
+                  // Delete button - only for admin
+                  BlocBuilder<AuthBloc, AuthState>(
+                    builder: (context, authState) {
+                      if (authState is Authenticated &&
+                          authState.userProfile != null &&
+                          authState.userProfile!.role == 'admin') {
+                        return IconButton(
+                          icon: const Icon(Icons.delete, color: Colors.red),
+                          tooltip: 'حذف',
+                          onPressed: () => _showDeleteDialog(category),
+                        );
+                      }
+                      return const SizedBox.shrink();
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Color _parseColor(String colorString) {
+    try {
+      return Color(int.parse(colorString.replaceFirst('#', '0xff')));
+    } catch (_) {
+      return Colors.orange;
     }
   }
 
-  void _onLoadMoreFinished() {
-    _isLoadingMore = false;
-  }
-
-  void _onSearchChanged(String value) {
-    // إلغاء البحث السابق
-    _debounceTimer?.cancel();
-
-    // تأخير البحث لمدة 500 مللي ثانية لتجنب البحث المتكرر
-    _debounceTimer = Timer(const Duration(milliseconds: 500), () {
-      if (value.trim().isNotEmpty) {
-        context.read<CategoryBloc>().add(SearchCategories(value.trim()));
-      } else {
-        context.read<CategoryBloc>().add(const ClearSearch());
-      }
-    });
-  }
-
-  Future<void> _showCategoryForm({CategoryModel? editing}) async {
-    _categoryNameController.text = editing?.name ?? '';
+  Future<void> _showAddEditCategoryDialog({CategoryModel? editing}) async {
+    _categoryNameController.clear();
     _pickedImage = null;
-    _pickedColor = null;
-    String? imageUrl = editing?.imageUrl;
-    Color? initialColor;
-    if (editing != null && editing.color != null && editing.color!.isNotEmpty) {
-      try {
-        initialColor = Color(int.parse(editing.color!.replaceFirst('#', '0xff')));
-      } catch (_) {}
+    String? imageUrl;
+
+    if (editing != null) {
+      _categoryNameController.text = editing.name;
+      imageUrl = editing.imageUrl;
+
+      if (editing.color != null && editing.color!.isNotEmpty) {
+        _pickedColor = _parseColor(editing.color!);
+      }
     }
-    _pickedColor = initialColor ?? Colors.orange; // لون افتراضي
 
     await showModalBottomSheet(
       context: context,
@@ -142,13 +293,17 @@ class _ProductsCategoriesScreenState
       builder: (context) => Padding(
         padding: EdgeInsets.only(
           bottom: MediaQuery.of(context).viewInsets.bottom,
-          left: 16, right: 16, top: 24),
+          left: 16,
+          right: 16,
+          top: 24,
+        ),
         child: StatefulBuilder(
           builder: (context, setState) => SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                // Handle bar
                 Center(
                   child: Container(
                     width: 40,
@@ -160,24 +315,32 @@ class _ProductsCategoriesScreenState
                     ),
                   ),
                 ),
+                // Title
                 Text(
                   editing != null ? 'تعديل الفئة' : 'إضافة فئة جديدة',
-                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 20),
+                // Category name field
                 TextField(
                   controller: _categoryNameController,
-                  decoration: InputDecoration(
+                  decoration: const InputDecoration(
                     labelText: 'اسم الفئة *',
                     border: OutlineInputBorder(),
-                    prefixIcon: const Icon(Icons.category),
+                    prefixIcon: Icon(Icons.category),
                   ),
                 ),
                 const SizedBox(height: 16),
+                // Image picker
                 GestureDetector(
                   onTap: () async {
-                    final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
+                    final picked = await ImagePicker().pickImage(
+                      source: ImageSource.gallery,
+                    );
                     if (picked != null) {
                       setState(() {
                         _pickedImage = File(picked.path);
@@ -189,12 +352,22 @@ class _ProductsCategoriesScreenState
                     child: _pickedImage != null
                         ? ClipRRect(
                             borderRadius: BorderRadius.circular(12),
-                            child: Image.file(_pickedImage!, width: 120, height: 120, fit: BoxFit.cover),
+                            child: Image.file(
+                              _pickedImage!,
+                              width: 120,
+                              height: 120,
+                              fit: BoxFit.cover,
+                            ),
                           )
                         : (imageUrl != null && imageUrl!.isNotEmpty)
                             ? ClipRRect(
                                 borderRadius: BorderRadius.circular(12),
-                                child: Image.network(imageUrl!, width: 120, height: 120, fit: BoxFit.cover),
+                                child: Image.network(
+                                  imageUrl!,
+                                  width: 120,
+                                  height: 120,
+                                  fit: BoxFit.cover,
+                                ),
                               )
                             : Container(
                                 width: 120,
@@ -204,69 +377,30 @@ class _ProductsCategoriesScreenState
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(color: Colors.grey[400]!),
                                 ),
-                                child: const Icon(Icons.camera_alt, size: 48, color: Colors.grey),
+                                child: const Icon(
+                                  Icons.camera_alt,
+                                  size: 48,
+                                  color: Colors.grey,
+                                ),
                               ),
                   ),
                 ),
                 const SizedBox(height: 16),
+                // Color picker
                 Row(
                   children: [
                     const Text('لون الفئة *:'),
                     const SizedBox(width: 8),
                     GestureDetector(
                       onTap: () async {
-                        Color pickerColor = _pickedColor ?? Colors.orange;
-                        await showDialog(
-                          context: context,
-                          builder: (context) => AlertDialog(
-                            title: const Text('اختر لون الفئة'),
-                            content: SingleChildScrollView(
-                              child: ColorPicker(
-                                pickerColor: pickerColor,
-                                onColorChanged: (color) {
-                                  pickerColor = color;
-                                },
-                                enableAlpha: false,
-                                showLabel: false,
-                              ),
-                            ),
-                            actions: [
-                              TextButton(
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: const [
-                                    Icon(Icons.close, color: Colors.grey),
-                                    SizedBox(width: 4),
-                                    Text('إلغاء', style: TextStyle(color: Colors.grey)),
-                                  ],
-                                ),
-                                onPressed: () => Navigator.of(context).pop(),
-                              ),
-                              ElevatedButton.icon(
-                                icon: const Icon(Icons.check, color: Colors.white),
-                                label: const Text('اختيار', style: TextStyle(color: Colors.white)),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: pickerColor, // لون الزر نفس اللون المختار
-                                  foregroundColor: Colors.white,
-                                  textStyle: const TextStyle(fontWeight: FontWeight.bold),
-                                ),
-                                onPressed: () {
-                                  setState(() {
-                                    _pickedColor = pickerColor;
-                                  });
-                                  Navigator.of(context).pop();
-                                },
-                              ),
-                            ],
-                          ),
-                        );
+                        await _showColorPicker(setState);
                       },
                       child: Container(
-                        width: 32,
-                        height: 32,
+                        width: 40,
+                        height: 40,
                         decoration: BoxDecoration(
-                          color: _pickedColor ?? Colors.orange,
-                          borderRadius: BorderRadius.circular(8),
+                          color: _pickedColor,
+                          shape: BoxShape.circle,
                           border: Border.all(color: Colors.grey[400]!),
                         ),
                       ),
@@ -274,83 +408,36 @@ class _ProductsCategoriesScreenState
                   ],
                 ),
                 const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  height: 56,
-                  child: ElevatedButton.icon(
-                    icon: Icon(editing != null ? Icons.save : Icons.add),
-                    label: isUploading
-                        ? const SizedBox(
-                            width: 28,
-                            height: 28,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 3,
-                            ),
-                          )
-                        : Text(editing != null ? 'تحديث الفئة' : 'إضافة الفئة'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                // Action buttons
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('إلغاء'),
+                      ),
                     ),
-                    onPressed: isUploading ? null : () async {
-                      final name = _categoryNameController.text.trim();
-                      final color = _pickedColor;
-                      final image = _pickedImage;
-                      final isEdit = editing != null;
-                      if (name.isEmpty || (image == null && (imageUrl == null || imageUrl?.isEmpty == true)) || color == null) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('جميع الحقول مطلوبة: الاسم، الصورة، اللون')),
-                        );
-                        return;
-                      }
-                      setState(() => isUploading = true);
-                      String? uploadedImageUrl = imageUrl;
-                      File? compressedImage = image;
-                      if (image != null) {
-                        compressedImage = await ImageCompressionService().compressImageSmart(image);
-                        if (compressedImage == null) {
-                          setState(() => isUploading = false);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('فشل في ضغط الصورة!')),
-                          );
-                          return;
-                        }
-                        uploadedImageUrl = await CloudinaryService().uploadImage(compressedImage.path);
-                        if (uploadedImageUrl == null) {
-                          setState(() => isUploading = false);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('فشل رفع الصورة!')),
-                          );
-                          return;
-                        }
-                      }
-                      final hexColor = '#${color.value.toRadixString(16).substring(2)}';
-                      final category = CategoryModel(
-                        id: isEdit ? editing!.id : DateTime.now().millisecondsSinceEpoch.toString(),
-                        name: name,
-                        color: hexColor,
-                        imageUrl: uploadedImageUrl,
-                        createdAt: isEdit ? editing!.createdAt : DateTime.now(),
-                        updatedAt: DateTime.now(),
-                      );
-                      if (isEdit) {
-                        context.read<CategoryBloc>().add(UpdateCategory(category));
-                      } else {
-                        context.read<CategoryBloc>().add(AddCategory(category));
-                      }
-                      setState(() => isUploading = false);
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(this.context).showSnackBar(
-                        SnackBar(content: Text(isEdit ? 'تم تحديث الفئة بنجاح' : 'تمت إضافة الفئة بنجاح'), backgroundColor: Colors.green),
-                      );
-                      _categoryNameController.clear();
-                      _pickedImage = null;
-                      _pickedColor = null;
-                    },
-                  ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: _isLoading ? null : () => _saveCategory(editing),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orange,
+                          foregroundColor: Colors.white,
+                        ),
+                        child: _isLoading
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                ),
+                              )
+                            : Text(editing != null ? 'تحديث' : 'إضافة'),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 16),
               ],
@@ -361,416 +448,182 @@ class _ProductsCategoriesScreenState
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('إدارة الفئات'), centerTitle: true),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            // Search bar - خارج BlocBuilder لتجنب إعادة البناء
-            TextField(
-              controller: _searchController,
-              onChanged: _onSearchChanged,
-              textDirection: TextDirection.rtl,
-              decoration: InputDecoration(
-                hintText: 'ابحث عن الفئات...',
-                prefixIcon: const Icon(Icons.search),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                contentPadding: const EdgeInsets.symmetric(
-                  vertical: 0,
-                  horizontal: 12,
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            // Content area - فقط هذا الجزء يتم إعادة بنائه
-            Expanded(
-              child: BlocBuilder<CategoryBloc, CategoryState>(
-                builder: (context, state) {
-                  if (state is CategoriesLoading ||
-                      state is CategoriesSearching) {
-                    return const Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          CircularProgressIndicator(),
-                          SizedBox(height: 16),
-                          Text('جاري التحميل...'),
-                        ],
-                      ),
-                    );
-                  } else if (state is CategoriesLoaded ||
-                      state is CategoriesSearchLoaded) {
-                    final categories = state is CategoriesLoaded
-                        ? state.categories
-                        : (state as CategoriesSearchLoaded).categories;
-
-                    if (categories.isEmpty) {
-                      return Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              state is CategoriesSearchLoaded
-                                  ? Icons.search_off
-                                  : Icons.category_outlined,
-                              size: 64,
-                              color: Colors.grey[400],
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              state is CategoriesSearchLoaded
-                                  ? 'لا توجد نتائج للبحث'
-                                  : 'لا توجد فئات متاحة',
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: Colors.grey[600],
-                              ),
-                            ),
-                            if (state is CategoriesSearchLoaded) ...[
-                              const SizedBox(height: 8),
-                              Text(
-                                'جرب البحث بكلمات مختلفة',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.grey[500],
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      );
-                    }
-
-                    if (_isLoadingMore &&
-                        (state is CategoriesLoaded ||
-                            state is CategoriesSearchLoaded)) {
-                      WidgetsBinding.instance.addPostFrameCallback((_) {
-                        setState(() {
-                          _isLoadingMore = false;
-                        });
-                      });
-                    }
-
-                    return Stack(
-                      children: [
-                        ListView.separated(
-                          controller: _scrollController,
-                          itemCount: categories.length,
-                          separatorBuilder: (context, index) =>
-                              const SizedBox(height: 12),
-                          itemBuilder: (context, index) {
-                            final category = categories[index];
-                            Color bgColor = Colors.white;
-                            if (category.color != null &&
-                                category.color!.startsWith('#')) {
-                              try {
-                                bgColor = Color(
-                                  int.parse(
-                                    category.color!.replaceFirst('#', '0xff'),
-                                  ),
-                                );
-                              } catch (e) {
-                                bgColor = Colors.white;
-                              }
-                            }
-                            return InkWell(
-                              borderRadius: BorderRadius.circular(16),
-                              onTap: () async {
-                                showDialog(
-                                  context: context,
-                                  barrierDismissible: false,
-                                  builder: (context) => const Center(
-                                    child: CircularProgressIndicator(),
-                                  ),
-                                );
-                                final products = await FirebaseService()
-                                    .getProductsForCategory(category.id);
-                                Navigator.pop(context);
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => CategoryItemsScreen(
-                                      categoryName: category.name,
-                                      categoryId: category.id,
-                                    ),
-                                  ),
-                                );
-                              },
-                              child: Container(
-                                margin: const EdgeInsets.symmetric(vertical: 6),
-                                padding: const EdgeInsets.all(14),
-                                decoration: BoxDecoration(
-                                  color: bgColor,
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(
-                                    color: Colors.grey.shade200,
-                                    width: 1,
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.03),
-                                      blurRadius: 8,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ],
-                                ),
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    CircleAvatar(
-                                      radius: 32,
-                                      backgroundColor: Colors.white,
-                                      backgroundImage:
-                                          (category.imageUrl != null &&
-                                              category.imageUrl!.isNotEmpty)
-                                          ? NetworkImage(category.imageUrl!)
-                                          : null,
-                                      child:
-                                          (category.imageUrl == null ||
-                                              category.imageUrl!.isEmpty)
-                                          ? const Icon(Icons.category, size: 32)
-                                          : null,
-                                    ),
-                                    const SizedBox(width: 16),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.spaceBetween,
-                                            children: [
-                                              Expanded(
-                                                child: Text(
-                                                  category.name,
-                                                  style: const TextStyle(
-                                                    fontWeight: FontWeight.bold,
-                                                    fontSize: 18,
-                                                  ),
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
-                                                ),
-                                              ),
-                                              Row(
-                                                children: [
-                                                  IconButton(
-                                                    icon: const Icon(
-                                                      Icons.edit,
-                                                      color: Colors.blue,
-                                                    ),
-                                                    tooltip: 'تعديل',
-                                                    onPressed: () =>
-                                                        _showCategoryForm(
-                                                          editing: category,
-                                                        ),
-                                                  ),
-                                                  const SizedBox(width: 4),
-                                                  IconButton(
-                                                    icon: const Icon(
-                                                      Icons.delete,
-                                                      color: Colors.red,
-                                                    ),
-                                                    tooltip: 'حذف',
-                                                    onPressed: () async {
-                                                      final confirm = await showDialog<bool>(
-                                                        context: context,
-                                                        barrierDismissible: false,
-                                                        builder: (context) {
-                                                          final controller = TextEditingController();
-                                                          return AlertDialog(
-                                                            title: const Text('تأكيد حذف الفئة'),
-                                                            content: Column(
-                                                              mainAxisSize: MainAxisSize.min,
-                                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                                              children: [
-                                                                Text('⚠️ حذف الفئة سيؤدي إلى حذف جميع المنتجات المرتبطة بها!'),
-                                                                const SizedBox(height: 12),
-                                                                Text('للتأكيد، اكتب اسم الفئة بالضبط:'),
-                                                                const SizedBox(height: 8),
-                                                                TextField(
-                                                                  controller: controller,
-                                                                  decoration: InputDecoration(
-                                                                    border: OutlineInputBorder(),
-                                                                    hintText: category.name,
-                                                                  ),
-                                                                ),
-                                                              ],
-                                                            ),
-                                                            actions: [
-                                                              TextButton(
-                                                                child: const Text('إلغاء'),
-                                                                onPressed: () => Navigator.of(context).pop(false),
-                                                              ),
-                                                              ElevatedButton(
-                                                                style: ElevatedButton.styleFrom(
-                                                                  backgroundColor: Colors.red,
-                                                                  foregroundColor: Colors.white,
-                                                                ),
-                                                                child: const Text('تأكيد الحذف'),
-                                                                onPressed: () {
-                                                                  if (controller.text.trim() == category.name.trim()) {
-                                                                    Navigator.of(context).pop(true);
-                                                                  } else {
-                                                                    ScaffoldMessenger.of(context).showSnackBar(
-                                                                      const SnackBar(
-                                                                        content: Text('يجب كتابة اسم الفئة بشكل مطابق للتأكيد!'),
-                                                                        backgroundColor: Colors.red,
-                                                                      ),
-                                                                    );
-                                                                  }
-                                                                },
-                                                              ),
-                                                            ],
-                                                          );
-                                                        },
-                                                      );
-                                                      if (confirm == true) {
-                                                        context.read<CategoryBloc>().add(
-                                                          DeleteCategory(category.id),
-                                                        );
-                                                      }
-                                                    },
-                                                  ),
-                                                ],
-                                              ),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 4),
-                                          FutureBuilder<int>(
-                                            future: FirebaseService()
-                                                .getAllProductCountForCategory(
-                                                  category.id,
-                                                ),
-                                            builder: (context, snapshot) {
-                                              if (snapshot.connectionState ==
-                                                  ConnectionState.waiting) {
-                                                return const SizedBox(
-                                                  width: 20,
-                                                  height: 20,
-                                                  child:
-                                                      CircularProgressIndicator(
-                                                        strokeWidth: 2,
-                                                      ),
-                                                );
-                                              }
-                                              if (snapshot.hasError) {
-                                                return const Text(
-                                                  '-',
-                                                  style: TextStyle(
-                                                    color: Colors.red,
-                                                    fontSize: 13,
-                                                  ),
-                                                );
-                                              }
-                                              return Text(
-                                                '${snapshot.data ?? 0} منتج',
-                                                style: TextStyle(
-                                                  fontSize: 13,
-                                                  color: AppColors.blackColor,
-                                                ),
-                                              );
-                                            },
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                        if (_isLoadingMore)
-                          Positioned(
-                            left: 0,
-                            right: 0,
-                            bottom: 8,
-                            child: Center(
-                              child: Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(16),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.05),
-                                      blurRadius: 8,
-                                    ),
-                                  ],
-                                ),
-                                child: const SizedBox(
-                                  width: 28,
-                                  height: 28,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                      ],
-                    );
-                  } else if (state is CategoriesError) {
-                    return Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(
-                            Icons.error_outline,
-                            size: 64,
-                            color: Colors.red,
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            'حدث خطأ في تحميل الفئات',
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: Colors.grey[600],
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          ElevatedButton(
-                            onPressed: () {
-                              context.read<CategoryBloc>().add(
-                                const FetchCategories(
-                                  limit: CategoryBloc.defaultLimit,
-                                ),
-                              );
-                            },
-                            child: const Text('إعادة المحاولة'),
-                          ),
-                        ],
-                      ),
-                    );
-                  }
-
-                  return const Center(child: CircularProgressIndicator());
-                },
-              ),
-            ),
-            // Add Category button (full width) - خارج BlocBuilder
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              height: 70,
-              child: Button(
-                buttonContent: const Text(
-                  'إضافة فئة',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                buttonColor: AppColors.primary,
-                onPressed: () => _showCategoryForm(),
-              ),
-            ),
-          ],
+  Future<void> _showColorPicker(StateSetter setState) async {
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('اختر لون الفئة'),
+        content: SingleChildScrollView(
+          child: ColorPicker(
+            pickerColor: _pickedColor,
+            onColorChanged: (color) {
+              setState(() {
+                _pickedColor = color;
+              });
+            },
+          ),
         ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('تم'),
+          ),
+        ],
       ),
     );
+  }
+
+  Future<void> _saveCategory(CategoryModel? editing) async {
+    if (_categoryNameController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('يرجى إدخال اسم الفئة'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final colorString = '#${_pickedColor.toARGB32().toRadixString(16).padLeft(8, '0').substring(2)}';
+      String? uploadedImageUrl;
+
+      // رفع الصورة إذا تم اختيار صورة جديدة
+      if (_pickedImage != null) {
+        try {
+          uploadedImageUrl = await _uploadCategoryImage(_pickedImage!);
+        } catch (e) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('فشل في رفع الصورة: ${e.toString()}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+          setState(() {
+            _isLoading = false;
+          });
+          return;
+        }
+      }
+
+      if (editing != null) {
+        // Update existing category
+        final updatedCategory = CategoryModel(
+          id: editing.id,
+          name: _categoryNameController.text.trim(),
+          imageUrl: uploadedImageUrl ?? editing.imageUrl, // استخدام الصورة الجديدة أو الموجودة
+          color: colorString,
+          createdAt: editing.createdAt,
+          updatedAt: DateTime.now(),
+        );
+
+        context.read<CategoryBloc>().add(UpdateCategory(updatedCategory));
+      } else {
+        // Add new category
+        final newCategory = CategoryModel(
+          id: '', // Will be generated by Firebase
+          name: _categoryNameController.text.trim(),
+          imageUrl: uploadedImageUrl, // استخدام الصورة المرفوعة
+          color: colorString,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        );
+
+        context.read<CategoryBloc>().add(AddCategory(newCategory));
+      }
+
+      Navigator.pop(context);
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<String> _uploadCategoryImage(File imageFile) async {
+    try {
+      // ضغط الصورة أولاً قبل الرفع (كما في رفع صور المنتجات)
+      final ImageCompressionService compressionService = ImageCompressionService();
+      final compressedImage = await compressionService.compressImageFile(imageFile);
+
+      // استخدام الصورة المضغوطة أو الأصلية في حالة فشل الضغط
+      final imageToUpload = compressedImage ?? imageFile;
+
+      // رفع الصورة إلى Cloudinary
+      final CloudinaryService cloudinaryService = CloudinaryService();
+      final imageUrl = await cloudinaryService.uploadImage(imageToUpload.path);
+
+      if (imageUrl == null) {
+        throw Exception('فشل في رفع الصورة إلى الخدمة');
+      }
+
+      return imageUrl;
+    } catch (e) {
+      print('Error uploading category image: $e');
+      throw Exception('فشل في رفع الصورة: $e');
+    }
+  }
+
+  Future<void> _showDeleteDialog(CategoryModel category) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        final controller = TextEditingController();
+        return AlertDialog(
+          title: const Text('تأكيد حذف الفئة'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('⚠️ حذف الفئة سيؤدي إلى حذف جميع المنتجات المرتبطة بها!'),
+              const SizedBox(height: 12),
+              const Text('للتأكيد، اكتب اسم الفئة بالضبط:'),
+              const SizedBox(height: 8),
+              TextField(
+                controller: controller,
+                decoration: InputDecoration(
+                  border: const OutlineInputBorder(),
+                  hintText: category.name,
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              child: const Text('إلغاء'),
+              onPressed: () => Navigator.of(context).pop(false),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('تأكيد الحذف'),
+              onPressed: () {
+                if (controller.text.trim() == category.name.trim()) {
+                  Navigator.of(context).pop(true);
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('يجب كتابة اسم الفئة بشكل مطابق للتأكيد!'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              },
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirm == true) {
+      context.read<CategoryBloc>().add(DeleteCategory(category.id));
+    }
   }
 }

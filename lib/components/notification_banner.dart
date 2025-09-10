@@ -7,12 +7,12 @@ class NotificationBanner extends StatelessWidget {
   final VoidCallback? onDismiss;
 
   const NotificationBanner({
-    Key? key,
+    super.key,
     required this.title,
     required this.message,
     this.onTap,
     this.onDismiss,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -80,11 +80,7 @@ class NotificationBanner extends StatelessWidget {
                 if (onDismiss != null)
                   IconButton(
                     onPressed: onDismiss,
-                    icon: const Icon(
-                      Icons.close,
-                      color: Colors.grey,
-                      size: 20,
-                    ),
+                    icon: const Icon(Icons.close, color: Colors.grey, size: 20),
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
                   ),
@@ -136,4 +132,4 @@ class NotificationOverlay {
     _currentEntry?.remove();
     _currentEntry = null;
   }
-} 
+}

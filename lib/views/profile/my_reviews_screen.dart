@@ -7,7 +7,7 @@ import '../../models/review_model.dart';
 import '../../core/services/review_service.dart';
 
 class MyReviewsScreen extends StatefulWidget {
-  const MyReviewsScreen({Key? key}) : super(key: key);
+  const MyReviewsScreen({super.key});
 
   @override
   State<MyReviewsScreen> createState() => _MyReviewsScreenState();
@@ -115,7 +115,10 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
   }
 
   void _onScroll() {
-    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200 && !_isLoadingMore && _hasMore) {
+    if (_scrollController.position.pixels >=
+            _scrollController.position.maxScrollExtent - 200 &&
+        !_isLoadingMore &&
+        _hasMore) {
       _loadMoreReviews();
     }
   }
@@ -164,10 +167,10 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? _buildErrorWidget()
-              : _reviews.isEmpty
-                  ? _buildEmptyWidget()
-                  : _buildReviewsList(),
+          ? _buildErrorWidget()
+          : _reviews.isEmpty
+          ? _buildEmptyWidget()
+          : _buildReviewsList(),
     );
   }
 
@@ -176,25 +179,18 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.error_outline,
-            size: 64,
-            color: Colors.red[300],
-          ),
+          Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
           const SizedBox(height: 16),
           Text(
             _error!,
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.grey[600],
-            ),
+            style: TextStyle(fontSize: 16, color: Colors.grey[600]),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: _loadUserReviews,
-            child: const Text('إعادة المحاولة'),
-          ),
+          // ElevatedButton(
+          //   onPressed: _loadUserReviews,
+          //   child: const Text('إعادة المحاولة'),
+          // ),
         ],
       ),
     );
@@ -205,11 +201,7 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.rate_review_outlined,
-            size: 64,
-            color: Colors.grey[400],
-          ),
+          Icon(Icons.rate_review_outlined, size: 64, color: Colors.grey[400]),
           const SizedBox(height: 16),
           Text(
             'لا توجد مراجعات بعد',
@@ -222,10 +214,7 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
           const SizedBox(height: 8),
           Text(
             'ابدأ بمراجعة المنتجات التي اشتريتها',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey[500],
-            ),
+            style: TextStyle(fontSize: 14, color: Colors.grey[500]),
             textAlign: TextAlign.center,
           ),
         ],
@@ -238,7 +227,10 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
       onRefresh: () => _loadUserReviews(refresh: true),
       child: NotificationListener<ScrollNotification>(
         onNotification: (scrollInfo) {
-          if (scrollInfo.metrics.pixels >= scrollInfo.metrics.maxScrollExtent - 200 && !_isLoadingMore && _hasMore) {
+          if (scrollInfo.metrics.pixels >=
+                  scrollInfo.metrics.maxScrollExtent - 200 &&
+              !_isLoadingMore &&
+              _hasMore) {
             _loadMoreReviews();
           }
           return false;
@@ -266,9 +258,7 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -305,19 +295,19 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
                       const SizedBox(height: 4),
                       Text(
                         _formatDate(review.createdAt),
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                        ),
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                       ),
                     ],
                   ),
                 ),
                 // حالة المراجعة
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
-                    color: _getStatusColor(review.status).withOpacity(0.1),
+                    color: _getStatusColor(review.status).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
                       color: _getStatusColor(review.status),
@@ -335,15 +325,16 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
                 ),
               ],
             ),
-            
+
             const SizedBox(height: 16),
-            
+
             // التقييم
             Row(
               children: [
                 RatingBarIndicator(
                   rating: review.rating,
-                  itemBuilder: (context, _) => const Icon(Icons.star, color: Colors.amber),
+                  itemBuilder: (context, _) =>
+                      const Icon(Icons.star, color: Colors.amber),
                   itemCount: 5,
                   itemSize: 20.0,
                   direction: Axis.horizontal,
@@ -359,9 +350,9 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
                 ),
               ],
             ),
-            
+
             const SizedBox(height: 12),
-            
+
             // نص المراجعة
             Container(
               width: double.infinity,
@@ -373,13 +364,10 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
               ),
               child: Text(
                 review.reviewText,
-                style: const TextStyle(
-                  fontSize: 14,
-                  height: 1.4,
-                ),
+                style: const TextStyle(fontSize: 14, height: 1.4),
               ),
             ),
-            
+
             // معلومات إضافية
             if (review.status == ReviewStatus.rejected)
               Container(
@@ -397,10 +385,7 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
                     Expanded(
                       child: Text(
                         'تم رفض مراجعتك لعدم الالتزام بقواعد المراجعات',
-                        style: TextStyle(
-                          color: Colors.red[700],
-                          fontSize: 12,
-                        ),
+                        style: TextStyle(color: Colors.red[700], fontSize: 12),
                       ),
                     ),
                   ],
@@ -411,4 +396,4 @@ class _MyReviewsScreenState extends State<MyReviewsScreen> {
       ),
     );
   }
-} 
+}

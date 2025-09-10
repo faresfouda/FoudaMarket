@@ -15,21 +15,20 @@ class AuthWrapper extends StatelessWidget {
       builder: (context, state) {
         print('AuthWrapper: Current state is $state');
         if (state is AuthLoading) {
-          return Scaffold(
-            body: Center(
-              child: CircularProgressIndicator(),
-            ),
-          );
+          return Scaffold(body: Center(child: CircularProgressIndicator()));
         } else if (state is Authenticated) {
           print('AuthWrapper: Entered Authenticated block');
-          print('AuthWrapper: userProfile is: \\${state.userProfile}');
+          print('AuthWrapper: userProfile is: ${state.userProfile}');
           if (state.userProfile != null) {
-            print('AuthWrapper: Navigating to home for role: \\${state.userProfile!.role}');
+            print(
+              'AuthWrapper: Navigating to home for role: ${state.userProfile!.role}',
+            );
             switch (state.userProfile!.role) {
               case 'admin':
                 return DashboardScreen();
               case 'data_entry':
                 return DataEntryHomeScreen();
+              case 'user':
               default:
                 return MainScreen();
             }
@@ -44,4 +43,4 @@ class AuthWrapper extends StatelessWidget {
       },
     );
   }
-} 
+}

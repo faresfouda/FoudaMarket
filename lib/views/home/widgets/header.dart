@@ -7,9 +7,11 @@ import 'package:fouda_market/views/profile/notifications_screen.dart';
 import 'package:fouda_market/theme/appcolors.dart';
 
 class Header extends StatelessWidget {
+  const Header({super.key});
+
   @override
   Widget build(BuildContext context) {
-    final _isRefreshing = false; // يمكنك تمريرها كبراميتر إذا أردت
+    final isRefreshing = false; // يمكنك تمريرها كبراميتر إذا أردت
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -26,24 +28,43 @@ class Header extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('فودة ماركت', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    Text(
+                      'فودة ماركت',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
                     BlocBuilder<AddressBloc, AddressState>(
                       builder: (context, state) {
-                        if (state is DefaultAddressLoaded && state.defaultAddress != null) {
+                        if (state is DefaultAddressLoaded &&
+                            state.defaultAddress != null) {
                           return GestureDetector(
-                            onTap: () {}, // يمكنك تمرير دالة اختيار العنوان إذا أردت
+                            onTap:
+                                () {}, // يمكنك تمرير دالة اختيار العنوان إذا أردت
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.location_on, color: AppColors.orangeColor, size: 16),
+                                Icon(
+                                  Icons.location_on,
+                                  color: AppColors.orangeColor,
+                                  size: 16,
+                                ),
                                 Flexible(
                                   child: Text(
                                     state.defaultAddress!.name,
-                                    style: TextStyle(fontSize: 12, color: Colors.grey[700]),
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey[700],
+                                    ),
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
-                                Icon(Icons.keyboard_arrow_down, size: 16, color: Colors.grey[700]),
+                                Icon(
+                                  Icons.keyboard_arrow_down,
+                                  size: 16,
+                                  color: Colors.grey[700],
+                                ),
                               ],
                             ),
                           );
@@ -53,9 +74,23 @@ class Header extends StatelessWidget {
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.location_on, color: AppColors.orangeColor, size: 16),
-                                Text('إضافة عنوان التوصيل', style: TextStyle(fontSize: 12, color: Colors.grey[700])),
-                                Icon(Icons.keyboard_arrow_down, size: 16, color: Colors.grey[700]),
+                                Icon(
+                                  Icons.location_on,
+                                  color: AppColors.orangeColor,
+                                  size: 16,
+                                ),
+                                Text(
+                                  'إضافة عنوان التوصيل',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey[700],
+                                  ),
+                                ),
+                                Icon(
+                                  Icons.keyboard_arrow_down,
+                                  size: 16,
+                                  color: Colors.grey[700],
+                                ),
                               ],
                             ),
                           );
@@ -70,7 +105,7 @@ class Header extends StatelessWidget {
         ),
         Row(
           children: [
-            if (_isRefreshing)
+            if (isRefreshing)
               Container(
                 margin: EdgeInsets.only(right: 8),
                 child: SizedBox(
@@ -89,18 +124,11 @@ class Header extends StatelessWidget {
                   onPressed: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => const NotificationsScreen()),
+                      MaterialPageRoute(
+                        builder: (context) => const NotificationsScreen(),
+                      ),
                     );
                   },
-                ),
-                Positioned(
-                  right: 10,
-                  top: 10,
-                  child: Container(
-                    width: 8,
-                    height: 8,
-                    decoration: BoxDecoration(color: Colors.red, shape: BoxShape.circle),
-                  ),
                 ),
               ],
             ),
@@ -109,4 +137,4 @@ class Header extends StatelessWidget {
       ],
     );
   }
-} 
+}

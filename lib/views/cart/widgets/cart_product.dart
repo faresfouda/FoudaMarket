@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../../theme/appcolors.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../../../components/cached_image.dart';
 
 class ProductQuantityControl extends StatefulWidget {
@@ -87,10 +86,7 @@ class _ProductQuantityControlState extends State<ProductQuantityControl> {
                     const SizedBox(height: 2),
                     Text(
                       widget.quantityInfo,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.grey[600],
-                      ),
+                      style: TextStyle(fontSize: 13, color: Colors.grey[600]),
                       textDirection: TextDirection.rtl,
                     ),
                     const SizedBox(height: 25),
@@ -105,7 +101,11 @@ class _ProductQuantityControlState extends State<ProductQuantityControl> {
                             shape: BoxShape.circle,
                           ),
                           child: IconButton(
-                            icon: Icon(Icons.add, color: Colors.white, size: 22),
+                            icon: Icon(
+                              Icons.add,
+                              color: Colors.white,
+                              size: 22,
+                            ),
                             onPressed: _incrementQuantity,
                             padding: EdgeInsets.zero,
                             constraints: const BoxConstraints(),
@@ -115,7 +115,10 @@ class _ProductQuantityControlState extends State<ProductQuantityControl> {
                         // Quantity
                         Text(
                           '$_quantity',
-                          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                          style: const TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                         const SizedBox(width: 10),
                         // - button
@@ -127,7 +130,11 @@ class _ProductQuantityControlState extends State<ProductQuantityControl> {
                             shape: BoxShape.circle,
                           ),
                           child: IconButton(
-                            icon: Icon(Icons.remove, color: Colors.white, size: 22),
+                            icon: Icon(
+                              Icons.remove,
+                              color: Colors.white,
+                              size: 22,
+                            ),
                             onPressed: _decrementQuantity,
                             padding: EdgeInsets.zero,
                             constraints: const BoxConstraints(),

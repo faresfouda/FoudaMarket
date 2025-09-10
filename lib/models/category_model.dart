@@ -66,4 +66,4 @@ class CategoryModel {
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }
-} 
+}

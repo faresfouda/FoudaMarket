@@ -44,7 +44,7 @@ dependencies:
   smooth_page_indicator: ^1.2.1
   flutter_rating_bar: ^4.0.1
   image_picker: ^1.0.7
-  cloudinary_public: 
+  cloudinary_public:
   flutter_image_compress: ^2.1.0
   flutter_colorpicker: ^1.0.3
   

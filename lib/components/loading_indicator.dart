@@ -4,7 +4,7 @@ import 'package:fouda_market/theme/appcolors.dart';
 class LoadingIndicator extends StatelessWidget {
   final double size;
   final Color? color;
-  const LoadingIndicator({Key? key, this.size = 32, this.color}) : super(key: key);
+  const LoadingIndicator({super.key, this.size = 32, this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -14,9 +14,11 @@ class LoadingIndicator extends StatelessWidget {
         height: size,
         child: CircularProgressIndicator(
           strokeWidth: 3,
-          valueColor: AlwaysStoppedAnimation<Color>(color ?? AppColors.orangeColor),
+          valueColor: AlwaysStoppedAnimation<Color>(
+            color ?? AppColors.orangeColor,
+          ),
         ),
       ),
     );
   }
-} 
+}

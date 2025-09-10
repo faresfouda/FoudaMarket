@@ -7,43 +7,33 @@ class ConnectionAwareWidget extends StatefulWidget {
   final void Function(bool isOffline)? onConnectionChanged;
 
   const ConnectionAwareWidget({
-    Key? key,
+    super.key,
     required this.child,
     this.onConnectionChanged,
-  }) : super(key: key);
+  });
 
   @override
   State<ConnectionAwareWidget> createState() => _ConnectionAwareWidgetState();
 }
 
 class _ConnectionAwareWidgetState extends State<ConnectionAwareWidget> {
-  late final StreamController<ConnectivityResult> _controller;
-  late final Stream<ConnectivityResult> _connectivityStream;
+  late final StreamController<List<ConnectivityResult>> _controller;
+  late final Stream<List<ConnectivityResult>> _connectivityStream;
   bool _isOffline = false;
 
   @override
   void initState() {
     super.initState();
-    _controller = StreamController<ConnectivityResult>();
+    _controller = StreamController<List<ConnectivityResult>>();
     Connectivity().onConnectivityChanged.listen((event) {
-      if (event is ConnectivityResult) {
-        _controller.add(event as ConnectivityResult);
-      } else if (event is List) {
-        final valid = event.whereType<ConnectivityResult>().toList();
-        if (valid.isEmpty) {
-          _controller.add(ConnectivityResult.none);
-        } else {
-          final first = valid.firstWhere((e) => e != ConnectivityResult.none, orElse: () => ConnectivityResult.none);
-          _controller.add(first);
-        }
-      } else {
-        _controller.add(ConnectivityResult.none);
-      }
+      _controller.add(event);
     });
     _connectivityStream = _controller.stream.asBroadcastStream();
 
-    Connectivity().checkConnectivity().then((result) {
-      final offline = result == ConnectivityResult.none;
+    Connectivity().checkConnectivity().then((results) {
+      final offline =
+          results.isEmpty ||
+          results.every((result) => result == ConnectivityResult.none);
       setState(() {
         _isOffline = offline;
       });
@@ -59,11 +49,14 @@ class _ConnectionAwareWidgetState extends State<ConnectionAwareWidget> {
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<ConnectivityResult>(
+    return StreamBuilder<List<ConnectivityResult>>(
       stream: _connectivityStream,
       builder: (context, snapshot) {
         if (snapshot.hasData) {
-          final isNowOffline = snapshot.data == ConnectivityResult.none;
+          final results = snapshot.data!;
+          final isNowOffline =
+              results.isEmpty ||
+              results.every((result) => result == ConnectivityResult.none);
           if (isNowOffline != _isOffline) {
             _isOffline = isNowOffline;
             widget.onConnectionChanged?.call(_isOffline);

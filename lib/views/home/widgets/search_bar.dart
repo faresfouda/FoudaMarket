@@ -4,6 +4,8 @@ import 'package:fouda_market/views/home/widgets/my_searchbutton.dart';
 import 'package:fouda_market/theme/appcolors.dart';
 
 class SearchBar extends StatelessWidget {
+  const SearchBar({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Row(
@@ -22,7 +24,9 @@ class SearchBar extends StatelessWidget {
             onPressed: () async {
               await Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => SearchScreen(openFilterOnStart: true)),
+                MaterialPageRoute(
+                  builder: (context) => SearchScreen(openFilterOnStart: true),
+                ),
               );
               // يمكنك إضافة منطق إعادة تحميل المنتجات هنا إذا أردت
             },
@@ -31,4 +35,4 @@ class SearchBar extends StatelessWidget {
       ],
     );
   }
-} 
+}

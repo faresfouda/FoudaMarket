@@ -1,6 +1,6 @@
 {
-    "name": "fodamarket",
-    "short_name": "fodamarket",
+    "name": "fouda_market",
+    "short_name": "fouda_market",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

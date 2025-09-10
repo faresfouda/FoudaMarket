@@ -28,7 +28,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _isLoading = false;
-  String _selectedRole = 'user';
+  final String _selectedRole = 'user';
   bool _isOffline = false; // جديد
 
   @override
@@ -98,7 +98,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
             // Navigate to login screen after a short delay
             Future.delayed(Duration(seconds: 2), () {
               // إذا أردت تمرير بيانات (preFilledEmail) استخدم push مع MaterialPageRoute
-              Navigator.of(context).pushNamedAndRemoveUntil(AppRoutes.login, (route) => false);
+              Navigator.of(
+                context,
+              ).pushNamedAndRemoveUntil(AppRoutes.login, (route) => false);
             });
           } else if (state is AuthError) {
             String errorMsg = state.message;
@@ -112,17 +114,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
               errorMsg = 'تحقق من اتصال الإنترنت.';
             }
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(errorMsg),
-                backgroundColor: Colors.red,
-              ),
+              SnackBar(content: Text(errorMsg), backgroundColor: Colors.red),
             );
           }
         },
         child: BlocBuilder<AuthBloc, AuthState>(
           builder: (context, state) {
             _isLoading = state is AuthLoading;
-            
+
             return WillPopScope(
               onWillPop: () async {
                 Navigator.of(context).pushReplacementNamed(AppRoutes.signIn);
@@ -134,12 +133,17 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   backgroundColor: Colors.transparent,
                   elevation: 0,
                   leading: IconButton(
-                    icon: Icon(Icons.arrow_back_ios, color: AppColors.blackColor),
-                    onPressed: () => Navigator.of(context).pushReplacementNamed(AppRoutes.signIn),
+                    icon: Icon(
+                      Icons.arrow_back_ios,
+                      color: AppColors.blackColor,
+                    ),
+                    onPressed: () => Navigator.of(
+                      context,
+                    ).pushReplacementNamed(AppRoutes.signIn),
                   ),
                 ),
                 body: Signing(
-                  title: 'انشاء حساب',
+                  title: 'إنشاء حساب جديد',
                   subTitle: 'أدخل بياناتك للاستمرار',
                   screenContent: Expanded(
                     child: Form(
@@ -171,7 +175,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                               if (value == null || value.isEmpty) {
                                 return 'يرجى إدخال البريد الإلكتروني';
                               }
-                              if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                              if (!RegExp(
+                                r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                              ).hasMatch(value)) {
                                 return 'يرجى إدخال بريد إلكتروني صحيح';
                               }
                               return null;
@@ -200,9 +206,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                             button: IconButton(
                               onPressed: _togglePasswordVisibility,
                               icon: Icon(
-                                _obscurePassword 
-                                  ? Icons.remove_red_eye_outlined
-                                  : Icons.visibility_off_outlined,
+                                _obscurePassword
+                                    ? Icons.remove_red_eye_outlined
+                                    : Icons.visibility_off_outlined,
                               ),
                             ),
                             obscureText: _obscurePassword,
@@ -223,9 +229,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                             button: IconButton(
                               onPressed: _toggleConfirmPasswordVisibility,
                               icon: Icon(
-                                _obscureConfirmPassword 
-                                  ? Icons.remove_red_eye_outlined
-                                  : Icons.visibility_off_outlined,
+                                _obscureConfirmPassword
+                                    ? Icons.remove_red_eye_outlined
+                                    : Icons.visibility_off_outlined,
                               ),
                             ),
                             obscureText: _obscureConfirmPassword,
@@ -241,24 +247,28 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           ),
                           SizedBox(height: 30),
                           Button(
-                            onPressed: (_isLoading || _isOffline) ? null : _handleSignUp,
+                            onPressed: (_isLoading || _isOffline)
+                                ? null
+                                : _handleSignUp,
                             buttonContent: _isLoading
-                              ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        Colors.white,
+                                      ),
+                                    ),
+                                  )
+                                : Text(
+                                    'أنشئ حساب',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w800,
+                                      color: AppColors.whiteColor,
+                                    ),
                                   ),
-                                )
-                              : Text(
-                                  'أنشئ حساب',
-                                  style: TextStyle(
-                                    fontSize: 18, 
-                                    fontWeight: FontWeight.w800,
-                                    color: AppColors.whiteColor,
-                                  ),
-                                ),
                             buttonColor: AppColors.orangeColor,
                           ),
                           SizedBox(height: 20),
@@ -279,7 +289,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                     Navigator.of(context).push(
                                       MaterialPageRoute(
                                         builder: (context) => LoginScreen(
-                                          preFilledEmail: _emailController.text.trim().isNotEmpty
+                                          preFilledEmail:
+                                              _emailController.text
+                                                  .trim()
+                                                  .isNotEmpty
                                               ? _emailController.text.trim()
                                               : null,
                                         ),

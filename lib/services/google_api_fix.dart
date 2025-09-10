@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 class GoogleApiFix {
@@ -5,6 +6,12 @@ class GoogleApiFix {
 
   /// إصلاح مشاكل Google API في المحاكي
   static Future<void> fixGoogleApiIssues() async {
+    // تجاهل هذه الوظيفة على الويب
+    if (kIsWeb) {
+      print('Google API fix skipped on web platform');
+      return;
+    }
+
     try {
       await _channel.invokeMethod('fixGoogleApiIssues');
     } catch (e) {
@@ -15,6 +22,11 @@ class GoogleApiFix {
 
   /// التحقق من توفر Google Play Services
   static Future<bool> isGooglePlayServicesAvailable() async {
+    // على الويب، Google Play Services غير مطلوبة
+    if (kIsWeb) {
+      return true;
+    }
+
     try {
       final bool result = await _channel.invokeMethod('isGooglePlayServicesAvailable');
       return result;
@@ -23,4 +35,4 @@ class GoogleApiFix {
       return false;
     }
   }
-} 
+}

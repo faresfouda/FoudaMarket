@@ -36,23 +36,26 @@ class _SearchScreenState extends State<SearchScreen> {
           builder: (context) => SearchFilterSheet(
             selectedCategory: null,
             selectedBrand: null,
-            onApply: (List<String> categories, double minPrice, double maxPrice) {
-              setState(() {
-                _selectedCategories = categories;
-                _minPrice = minPrice;
-                _maxPrice = maxPrice;
-              });
-              context.read<ProductBloc>().add(SearchVisibleProducts(
-                _searchQuery,
-                categories: categories,
-                minPrice: minPrice,
-                maxPrice: maxPrice,
-              ));
-            },
+            onApply:
+                (List<String> categories, double minPrice, double maxPrice) {
+                  setState(() {
+                    _selectedCategories = categories;
+                    _minPrice = minPrice;
+                    _maxPrice = maxPrice;
+                  });
+                  context.read<ProductBloc>().add(
+                    SearchVisibleProducts(
+                      _searchQuery,
+                      categories: categories,
+                      minPrice: minPrice,
+                      maxPrice: maxPrice,
+                    ),
+                  );
+                },
           ),
         );
       }
-      
+
       // تحميل حالة المفضلة للمستخدم الحالي
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
@@ -76,16 +79,21 @@ class _SearchScreenState extends State<SearchScreen> {
 
     // إلغاء البحث السابق
     _debounceTimer?.cancel();
-    
+
     // تأخير البحث لمدة 300 مللي ثانية لتجنب البحث المتكرر
     _debounceTimer = Timer(const Duration(milliseconds: 300), () {
-      if (value.trim().isNotEmpty || _selectedCategories.isNotEmpty || _minPrice != 0 || _maxPrice != 1000) {
-        context.read<ProductBloc>().add(SearchVisibleProducts(
-          value.trim(),
-          categories: _selectedCategories,
-          minPrice: _minPrice,
-          maxPrice: _maxPrice,
-        ));
+      if (value.trim().isNotEmpty ||
+          _selectedCategories.isNotEmpty ||
+          _minPrice != 0 ||
+          _maxPrice != 1000) {
+        context.read<ProductBloc>().add(
+          SearchVisibleProducts(
+            value.trim(),
+            categories: _selectedCategories,
+            minPrice: _minPrice,
+            maxPrice: _maxPrice,
+          ),
+        );
       } else {
         context.read<ProductBloc>().add(const SearchVisibleProducts(''));
       }
@@ -102,11 +110,8 @@ class _SearchScreenState extends State<SearchScreen> {
 
   void _clearSearchAndPop() {
     _clearSearch();
-    // إعادة تحميل المنتجات الرئيسية عند العودة
-    final bloc = context.read<ProductBloc>();
-    bloc.add(const FetchSpecialOffers(limit: 10));
-    bloc.add(const FetchBestSellers(limit: 10));
-    bloc.add(const FetchRecommendedProducts(limit: 10));
+    // إزالة إعادة تحميل المنتجات لتجنب اختفائها مؤقتاً
+    // البيانات محفوظة بالفعل في HomeScreen
     Navigator.pop(context);
   }
 
@@ -124,12 +129,14 @@ class _SearchScreenState extends State<SearchScreen> {
             _minPrice = minPrice;
             _maxPrice = maxPrice;
           });
-          context.read<ProductBloc>().add(SearchVisibleProducts(
-            _searchQuery,
-            categories: categories,
-            minPrice: minPrice,
-            maxPrice: maxPrice,
-          ));
+          context.read<ProductBloc>().add(
+            SearchVisibleProducts(
+              _searchQuery,
+              categories: categories,
+              minPrice: minPrice,
+              maxPrice: maxPrice,
+            ),
+          );
         },
       ),
     );
@@ -157,7 +164,10 @@ class _SearchScreenState extends State<SearchScreen> {
                 children: [
                   IconButton(
                     onPressed: _clearSearchAndPop,
-                    icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.black),
+                    icon: const Icon(
+                      Icons.arrow_back_ios_new_rounded,
+                      color: Colors.black,
+                    ),
                   ),
                   Expanded(
                     child: Container(
@@ -243,7 +253,7 @@ class _SearchScreenState extends State<SearchScreen> {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'البحث عن "${_searchQuery}"',
+                            'البحث عن "$_searchQuery"',
                             style: const TextStyle(
                               fontSize: 14,
                               color: Colors.grey,
@@ -254,7 +264,7 @@ class _SearchScreenState extends State<SearchScreen> {
                     );
                   } else if (state is ProductsSearchLoaded) {
                     final products = state.products;
-                    
+
                     if (products.isEmpty) {
                       return Center(
                         child: Column(
@@ -266,7 +276,11 @@ class _SearchScreenState extends State<SearchScreen> {
                                 color: Colors.grey[100],
                                 shape: BoxShape.circle,
                               ),
-                              child: const Icon(Icons.search_off, size: 48, color: Colors.grey),
+                              child: const Icon(
+                                Icons.search_off,
+                                size: 48,
+                                color: Colors.grey,
+                              ),
                             ),
                             const SizedBox(height: 24),
                             Text(
@@ -295,7 +309,10 @@ class _SearchScreenState extends State<SearchScreen> {
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppColors.orangeColor,
                                 foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 24,
+                                  vertical: 12,
+                                ),
                               ),
                             ),
                           ],
@@ -321,9 +338,14 @@ class _SearchScreenState extends State<SearchScreen> {
                                   ),
                                 ),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
                                   decoration: BoxDecoration(
-                                    color: AppColors.orangeColor.withOpacity(0.1),
+                                    color: AppColors.orangeColor.withOpacity(
+                                      0.1,
+                                    ),
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: Text(
@@ -340,35 +362,51 @@ class _SearchScreenState extends State<SearchScreen> {
                           ),
                           Expanded(
                             child: GridView.builder(
-                              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: 2,
-                                crossAxisSpacing: 8,
-                                mainAxisSpacing: 8,
-                                childAspectRatio: 0.75,
-                              ),
+                              gridDelegate:
+                                  const SliverGridDelegateWithFixedCrossAxisCount(
+                                    crossAxisCount: 2,
+                                    crossAxisSpacing: 8,
+                                    mainAxisSpacing: 8,
+                                    childAspectRatio: 0.75,
+                                  ),
                               itemCount: products.length,
                               itemBuilder: (context, index) {
                                 final product = products[index];
                                 return ListenableBuilder(
-                                  listenable: context.read<ProductBloc>().favoritesNotifier,
+                                  listenable: context
+                                      .read<ProductBloc>()
+                                      .favoritesNotifier,
                                   builder: (context, child) {
                                     final bloc = context.read<ProductBloc>();
-                                    final isFavorite = bloc.favoritesNotifier.isProductFavorite(product.id);
-                                    
+                                    final isFavorite = bloc.favoritesNotifier
+                                        .isProductFavorite(product.id);
+
                                     return ProductCard(
                                       product: product,
                                       isFavorite: isFavorite,
                                       onFavoritePressed: () {
-                                        final user = FirebaseAuth.instance.currentUser;
+                                        final user =
+                                            FirebaseAuth.instance.currentUser;
                                         if (user != null) {
                                           if (isFavorite) {
-                                            context.read<ProductBloc>().add(RemoveFromFavorites(user.uid, product.id));
+                                            context.read<ProductBloc>().add(
+                                              RemoveFromFavorites(
+                                                user.uid,
+                                                product.id,
+                                              ),
+                                            );
                                           } else {
-                                            context.read<ProductBloc>().add(AddToFavorites(user.uid, product.id));
+                                            context.read<ProductBloc>().add(
+                                              AddToFavorites(
+                                                user.uid,
+                                                product.id,
+                                              ),
+                                            );
                                           }
                                         }
                                       },
-                                      onAddPressed: () {}, // سيتم التعامل معه داخل ProductCard
+                                      onAddPressed:
+                                          () {}, // سيتم التعامل معه داخل ProductCard
                                     );
                                   },
                                 );
@@ -383,18 +421,27 @@ class _SearchScreenState extends State<SearchScreen> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(Icons.error_outline, size: 64, color: Colors.red),
+                          const Icon(
+                            Icons.error_outline,
+                            size: 64,
+                            color: Colors.red,
+                          ),
                           const SizedBox(height: 16),
                           Text(
                             'حدث خطأ في البحث',
-                            style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.grey[600],
+                            ),
                           ),
                           const SizedBox(height: 16),
                           ElevatedButton(
                             onPressed: () {
                               if (_searchQuery.trim().isNotEmpty) {
                                 // استخدام البحث للمنتجات المتوفرة فقط للمستخدمين
-                                context.read<ProductBloc>().add(SearchVisibleProducts(_searchQuery.trim()));
+                                context.read<ProductBloc>().add(
+                                  SearchVisibleProducts(_searchQuery.trim()),
+                                );
                               }
                             },
                             child: const Text('إعادة المحاولة'),
@@ -403,7 +450,7 @@ class _SearchScreenState extends State<SearchScreen> {
                       ),
                     );
                   }
-                  
+
                   // الحالة الافتراضية - عرض رسالة ترحيب
                   return Center(
                     child: Column(
@@ -415,7 +462,11 @@ class _SearchScreenState extends State<SearchScreen> {
                             color: AppColors.orangeColor.withOpacity(0.1),
                             shape: BoxShape.circle,
                           ),
-                          child: Icon(Icons.search, size: 48, color: AppColors.orangeColor),
+                          child: Icon(
+                            Icons.search,
+                            size: 48,
+                            color: AppColors.orangeColor,
+                          ),
                         ),
                         const SizedBox(height: 24),
                         const Text(
@@ -430,42 +481,39 @@ class _SearchScreenState extends State<SearchScreen> {
                         const SizedBox(height: 12),
                         const Text(
                           'اكتب اسم المنتج للبدء في البحث\nأو استخدم الفلاتر للبحث المتقدم',
-                          style: TextStyle(
-                            color: Colors.grey,
-                            fontSize: 14,
-                          ),
+                          style: TextStyle(color: Colors.grey, fontSize: 14),
                           textAlign: TextAlign.center,
                         ),
                         const SizedBox(height: 24),
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Colors.grey[50],
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.grey[200]!),
-                          ),
-                          child: Column(
-                            children: [
-                              const Text(
-                                'نصائح للبحث:',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.grey,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              const Text(
-                                '• اكتب اسم المنتج بالكامل أو جزء منه\n• جرب البحث باللغة العربية أو الإنجليزية\n• استخدم الفلاتر للبحث في فئة محددة',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ],
-                          ),
-                        ),
+                        // Container(
+                        //   padding: const EdgeInsets.all(16),
+                        //   decoration: BoxDecoration(
+                        //     color: Colors.grey[50],
+                        //     borderRadius: BorderRadius.circular(12),
+                        //     border: Border.all(color: Colors.grey[200]!),
+                        //   ),
+                        //   // child: Column(
+                        //   //   children: [
+                        //   //     const Text(
+                        //   //       'نصائح للبحث:',
+                        //   //       style: TextStyle(
+                        //   //         fontSize: 14,
+                        //   //         fontWeight: FontWeight.bold,
+                        //   //         color: Colors.grey,
+                        //   //       ),
+                        //   //     ),
+                        //   //     const SizedBox(height: 8),
+                        //   //     const Text(
+                        //   //       '• اكتب اسم المنتج بالكامل أو جزء منه\n• جرب البحث باللغة العربية أو الإنجليزية\n• استخدم الفلاتر للبحث في فئة محددة',
+                        //   //       style: TextStyle(
+                        //   //         fontSize: 12,
+                        //   //         color: Colors.grey,
+                        //   //       ),
+                        //   //       textAlign: TextAlign.center,
+                        //   //     ),
+                        //   //   ],
+                        //   // ),
+                        // ),
                       ],
                     ),
                   );
@@ -477,4 +525,4 @@ class _SearchScreenState extends State<SearchScreen> {
       ),
     );
   }
-} 
+}

@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../models/category_model.dart';
 
 class CategoryService {
@@ -7,6 +8,24 @@ class CategoryService {
   CategoryService._internal();
 
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+
+  // Helper method to check if current user is admin
+  Future<bool> _isCurrentUserAdmin() async {
+    final user = _auth.currentUser;
+    if (user == null) return false;
+
+    try {
+      final doc = await _firestore.collection('users').doc(user.uid).get();
+      if (!doc.exists) return false;
+
+      final data = doc.data()!;
+      return data['role'] == 'admin';
+    } catch (e) {
+      print('Error checking user role: $e');
+      return false;
+    }
+  }
 
   // Basic category methods
   Future<List<CategoryModel>> getCategories() async {
@@ -21,7 +40,18 @@ class CategoryService {
   }
 
   Future<void> addCategory(CategoryModel category) async {
-    await _firestore.collection('categories').doc(category.id).set(category.toJson());
+    // إنشاء ID تلقائي إذا كان فارغاً
+    final docRef = category.id.isEmpty
+        ? _firestore.collection('categories').doc()
+        : _firestore.collection('categories').doc(category.id);
+
+    // تحديث الفئة بالـ ID الجديد
+    final categoryData = category.toJson();
+    categoryData['id'] = docRef.id;
+    categoryData['createdAt'] = FieldValue.serverTimestamp();
+    categoryData['updatedAt'] = FieldValue.serverTimestamp();
+
+    await docRef.set(categoryData);
   }
 
   Future<void> updateCategory(String categoryId, Map<String, dynamic> data) async {
@@ -32,6 +62,12 @@ class CategoryService {
   }
 
   Future<void> deleteCategory(String categoryId) async {
+    // التحقق من صلاحيات المدير قبل الحذف
+    final isAdmin = await _isCurrentUserAdmin();
+    if (!isAdmin) {
+      throw Exception('غير مسموح! صلاحية حذف الفئات مقتصرة على المدير فقط');
+    }
+
     await _firestore.collection('categories').doc(categoryId).delete();
   }
 
@@ -54,7 +90,7 @@ class CategoryService {
     if (query.trim().isEmpty) {
       return getCategories();
     }
-    
+
     try {
       final querySnapshot = await _firestore
           .collection('categories')
@@ -85,7 +121,7 @@ class CategoryService {
     if (query.trim().isEmpty) {
       return getCategoriesPaginated(limit: limit, lastCategory: lastCategory);
     }
-    
+
     try {
       var firestoreQuery = _firestore
           .collection('categories')
@@ -94,16 +130,16 @@ class CategoryService {
           .orderBy('name')
           .orderBy('created_at')
           .limit(limit);
-      
+
       if (lastCategory != null) {
         firestoreQuery = firestoreQuery.startAfter([
           lastCategory.name,
           lastCategory.createdAt.toIso8601String(),
         ]);
       }
-      
+
       final querySnapshot = await firestoreQuery.get();
-      
+
       return querySnapshot.docs
           .map((doc) {
             final data = doc.data();
@@ -126,7 +162,7 @@ class CategoryService {
           .orderBy('created_at', descending: true)
           .limit(limit)
           .get();
-      
+
       return querySnapshot.docs.map((doc) {
         final data = doc.data();
         data['id'] = doc.id;
@@ -137,4 +173,4 @@ class CategoryService {
       return [];
     }
   }
-} 
+}

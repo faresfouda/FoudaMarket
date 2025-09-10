@@ -1,0 +1,25 @@
+# Ignore source files - only deploy build output
+lib/
+test/
+android/
+ios/
+linux/
+macos/
+windows/
+web/
+assets/
+fonts/
+.dart_tool/
+.git/
+.gitignore
+pubspec.yaml
+pubspec.lock
+*.md
+analysis_options.yaml
+codemagic.yaml
+firebase.json
+firestore.rules
+firestore.indexes.json
+
+# Keep only build output
+!build/web/

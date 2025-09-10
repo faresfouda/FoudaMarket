@@ -1,21 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../../components/item_container.dart';
-import '../../models/category_model.dart';
 import '../../models/product_model.dart';
 import '../../blocs/product/product_bloc.dart';
 import '../../blocs/product/product_event.dart';
 import '../../blocs/product/product_state.dart';
 import '../../theme/appcolors.dart';
-import '../../services/firebase_service.dart';
 
 class CategoryScreen extends StatefulWidget {
   final String categoryName;
   final String categoryId;
-  
+
   const CategoryScreen({
-    super.key, 
+    super.key,
     required this.categoryName,
     required this.categoryId,
   });
@@ -25,482 +22,285 @@ class CategoryScreen extends StatefulWidget {
 }
 
 class _CategoryScreenState extends State<CategoryScreen> {
+  final ScrollController _scrollController = ScrollController();
+  late ProductBloc _productBloc;
+  bool _isLoadingMore = false;
+  bool _hasReachedMax = false;
+
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      // تحميل منتجات الفئة عند فتح الشاشة
-      context.read<ProductBloc>().add(FetchProductsByCategory(
-        categoryId: widget.categoryId,
-        limit: 10,
+    _productBloc = context.read<ProductBloc>();
+
+    // Load products for this category
+    _productBloc.add(FetchProducts(
+      widget.categoryId,
+      limit: 20,
+    ));
+
+    // Setup infinite scroll
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200 &&
+        !_isLoadingMore &&
+        !_hasReachedMax) {
+      _loadMoreProducts();
+    }
+  }
+
+  void _loadMoreProducts() {
+    if (!_isLoadingMore && _productBloc.state is ProductsLoaded) {
+      final currentState = _productBloc.state as ProductsLoaded;
+      final lastProduct = currentState.products.isNotEmpty
+          ? currentState.products.last
+          : null;
+
+      _productBloc.add(LoadMoreProducts(
+        widget.categoryId,
+        lastProduct: lastProduct,
+        limit: 20,
       ));
-      
-      // تحميل حالة المفضلة للمستخدم الحالي
-      final user = FirebaseAuth.instance.currentUser;
-      if (user != null) {
-        context.read<ProductBloc>().add(LoadFavorites(user.uid));
-      }
-    });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.categoryName),
-        centerTitle: true,
-        backgroundColor: Colors.white,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.black),
-      ),
-      body: BlocBuilder<ProductBloc, ProductState>(
-        builder: (context, state) {
-          if (state is ProductsLoading) {
-            return  Center(
-              child: CircularProgressIndicator(color: AppColors.orangeColor),
-            );
-          } else if (state is CategoryProductsLoaded) {
-            final products = state.products;
-            
-            if (products.isEmpty) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.inventory_2_outlined,
-                      size: 64,
-                      color: Colors.grey[400],
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'لا توجد منتجات في هذه الفئة',
-                      style: TextStyle(
-                        fontSize: 18,
-                        color: Colors.grey[600],
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'سيتم إضافة منتجات قريباً',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[500],
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }
-            
-            return Padding(
-              padding: const EdgeInsets.all(16.0),
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF6F6F6),
+        body: Stack(
+          children: [
+            // Background image
+            Image.asset(
+              'assets/home/backgroundblur.png',
+              fit: BoxFit.cover,
+              width: double.infinity,
+              height: double.infinity,
+            ),
+            SafeArea(
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // عنوان الفئة وعدد المنتجات
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        widget.categoryName,
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black,
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: AppColors.orangeColor.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Text(
-                          '${products.length} منتج',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.orangeColor,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  
-                  // شبكة المنتجات
+                  // Custom AppBar
+                  _buildAppBar(),
+                  // Products Grid
                   Expanded(
-                    child: GridView.builder(
-                      padding: const EdgeInsets.only(bottom: 16.0),
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        crossAxisSpacing: 16.0,
-                        mainAxisSpacing: 16.0,
-                        childAspectRatio: 0.65, // تقليل النسبة لتجنب overflow
-                      ),
-                      itemCount: products.length,
-                      itemBuilder: (context, index) {
-                        final product = products[index];
-                        return ListenableBuilder(
-                          listenable: context.read<ProductBloc>().favoritesNotifier,
-                          builder: (context, child) {
-                            final bloc = context.read<ProductBloc>();
-                            final isFavorite = bloc.favoritesNotifier.isProductFavorite(product.id);
-                            
-                            return ProductCard(
-                              product: product,
-                              isFavorite: isFavorite,
-                              onFavoritePressed: () {
-                                final user = FirebaseAuth.instance.currentUser;
-                                if (user != null) {
-                                  if (isFavorite) {
-                                    context.read<ProductBloc>().add(RemoveFromFavorites(user.uid, product.id));
-                                  } else {
-                                    context.read<ProductBloc>().add(AddToFavorites(user.uid, product.id));
-                                  }
-                                }
-                              },
-                              onAddPressed: () {}, // سيتم التعامل معه داخل ProductCard
-                            );
-                          },
-                        );
+                    child: BlocConsumer<ProductBloc, ProductState>(
+                      listener: (context, state) {
+                        if (state is ProductsError) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('خطأ في تحميل المنتجات: ${state.message}'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+
+                        if (state is ProductsLoaded) {
+                          setState(() {
+                            _isLoadingMore = false;
+                            _hasReachedMax = !state.hasMore;
+                          });
+                        }
+                      },
+                      builder: (context, state) {
+                        if (state is ProductsLoading) {
+                          return Center(
+                            child: CircularProgressIndicator(
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                AppColors.orangeColor,
+                              ),
+                            ),
+                          );
+                        }
+
+                        if (state is ProductsLoaded) {
+                          if (state.products.isEmpty) {
+                            return _buildEmptyState();
+                          }
+
+                          return _buildProductsGrid(state.products);
+                        }
+
+                        if (state is ProductsError) {
+                          return _buildErrorState(state.message);
+                        }
+
+                        return const SizedBox.shrink();
                       },
                     ),
                   ),
                 ],
               ),
-            );
-          } else if (state is ProductsError) {
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAppBar() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(
+        children: [
+          IconButton(
+            onPressed: () => Navigator.of(context).pop(),
+            icon: const Icon(
+              Icons.arrow_back_ios_new,
+              color: Colors.black,
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              widget.categoryName,
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.black,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          const SizedBox(width: 48), // Balance the back button
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProductsGrid(List<ProductModel> products) {
+    return RefreshIndicator(
+      onRefresh: () async {
+        _productBloc.add(FetchProducts(
+          widget.categoryId,
+          limit: 20,
+        ));
+      },
+      child: GridView.builder(
+        controller: _scrollController,
+        padding: const EdgeInsets.all(16),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          childAspectRatio: 0.75,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 16,
+        ),
+        itemCount: products.length + (_isLoadingMore ? 2 : 0),
+        itemBuilder: (context, index) {
+          if (index >= products.length) {
             return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.error_outline,
-                    size: 64,
-                    color: Colors.red[400],
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'حدث خطأ في تحميل المنتجات',
-                    style: TextStyle(
-                      fontSize: 18,
-                      color: Colors.grey[600],
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: () {
-                      context.read<ProductBloc>().add(FetchProductsByCategory(
-                        categoryId: widget.categoryId,
-                        limit: 10,
-                      ));
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.orangeColor,
-                      foregroundColor: Colors.white,
-                    ),
-                    child: const Text('إعادة المحاولة'),
-                  ),
-                ],
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  AppColors.orangeColor,
+                ),
               ),
             );
-          } else {
-            return  Center(
-              child: CircularProgressIndicator(color: AppColors.orangeColor),
-            );
           }
+
+          final product = products[index];
+          return ProductCard(
+            product: product,
+            isFavorite: false, // يمكن تحديثه لاحقاً للتحقق من المفضلة
+            onFavoritePressed: () {
+              // منطق إضافة/إزالة من المفضلة
+            },
+            onAddPressed: () {
+              // منطق إضافة للسلة
+            },
+          );
         },
       ),
     );
   }
-}
 
-// شاشة الأكثر مبيعاً
-class BestSellersScreen extends StatefulWidget {
-  const BestSellersScreen({Key? key}) : super(key: key);
-
-  @override
-  State<BestSellersScreen> createState() => _BestSellersScreenState();
-}
-
-class _BestSellersScreenState extends State<BestSellersScreen> {
-  final FirebaseService _firebaseService = FirebaseService();
-  final ScrollController _scrollController = ScrollController();
-  List<ProductModel> _products = [];
-  bool _isLoading = true;
-  bool _isLoadingMore = false;
-  bool _hasMore = true;
-  ProductModel? _lastProduct;
-  static const int _pageSize = 20;
-
-  @override
-  void initState() {
-    super.initState();
-    _scrollController.addListener(_onScroll);
-    _loadBestSellers();
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      context.read<ProductBloc>().add(LoadFavorites(user.uid));
-    }
-  }
-
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _loadBestSellers({bool refresh = false}) async {
-    if (refresh) {
-      setState(() {
-        _products = [];
-        _hasMore = true;
-        _lastProduct = null;
-      });
-    }
-    setState(() { _isLoading = true; });
-    final products = await _firebaseService.getBestSellers(limit: _pageSize, lastProduct: _lastProduct);
-    setState(() {
-      _products.addAll(products);
-      _isLoading = false;
-      _hasMore = products.length == _pageSize;
-      if (products.isNotEmpty) _lastProduct = products.last;
-    });
-  }
-
-  Future<void> _loadMoreBestSellers() async {
-    if (_isLoadingMore || !_hasMore || _isLoading) return;
-    setState(() { _isLoadingMore = true; });
-    final products = await _firebaseService.getBestSellers(limit: _pageSize, lastProduct: _lastProduct);
-    setState(() {
-      _products.addAll(products);
-      _isLoadingMore = false;
-      _hasMore = products.length == _pageSize;
-      if (products.isNotEmpty) _lastProduct = products.last;
-    });
-  }
-
-  void _onScroll() {
-    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200 && !_isLoadingMore && _hasMore) {
-      _loadMoreBestSellers();
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('الأكثر مبيعاً'),
-        centerTitle: true,
-        backgroundColor: Colors.white,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.black),
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.inventory_2_outlined,
+            size: 80,
+            color: Colors.grey[400],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'لا توجد منتجات',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w500,
+              color: Colors.grey[600],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'لا توجد منتجات في هذه الفئة حالياً',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey[500],
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
       ),
-      body: _isLoading && _products.isEmpty
-          ? Center(child: CircularProgressIndicator(color: AppColors.orangeColor))
-          : _products.isEmpty
-              ? Center(child: Text('لا توجد منتجات الأكثر مبيعاً حالياً'))
-              : Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: NotificationListener<ScrollNotification>(
-                    onNotification: (scrollInfo) {
-                      if (scrollInfo.metrics.pixels >= scrollInfo.metrics.maxScrollExtent - 200 && !_isLoadingMore && _hasMore) {
-                        _loadMoreBestSellers();
-                      }
-                      return false;
-                    },
-                    child: GridView.builder(
-                      controller: _scrollController,
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        crossAxisSpacing: 16.0,
-                        mainAxisSpacing: 16.0,
-                        childAspectRatio: 0.65,
-                      ),
-                      itemCount: _products.length + (_isLoadingMore ? 1 : 0),
-                      itemBuilder: (context, index) {
-                        if (index == _products.length && _isLoadingMore) {
-                          return const Center(
-                            child: Padding(
-                              padding: EdgeInsets.symmetric(vertical: 16),
-                              child: CircularProgressIndicator(),
-                            ),
-                          );
-                        }
-                        final product = _products[index];
-                        return ListenableBuilder(
-                          listenable: context.read<ProductBloc>().favoritesNotifier,
-                          builder: (context, child) {
-                            final bloc = context.read<ProductBloc>();
-                            final isFavorite = bloc.favoritesNotifier.isProductFavorite(product.id);
-                            return ProductCard(
-                              product: product,
-                              isFavorite: isFavorite,
-                              onFavoritePressed: () {
-                                final user = FirebaseAuth.instance.currentUser;
-                                if (user != null) {
-                                  if (isFavorite) {
-                                    context.read<ProductBloc>().add(RemoveFromFavorites(user.uid, product.id));
-                                  } else {
-                                    context.read<ProductBloc>().add(AddToFavorites(user.uid, product.id));
-                                  }
-                                }
-                              },
-                              onAddPressed: () {},
-                            );
-                          },
-                        );
-                      },
-                    ),
-                  ),
-                ),
     );
   }
-}
 
-// شاشة العروض الخاصة
-class SpecialOffersScreen extends StatefulWidget {
-  const SpecialOffersScreen({Key? key}) : super(key: key);
-
-  @override
-  State<SpecialOffersScreen> createState() => _SpecialOffersScreenState();
-}
-
-class _SpecialOffersScreenState extends State<SpecialOffersScreen> {
-  final FirebaseService _firebaseService = FirebaseService();
-  final ScrollController _scrollController = ScrollController();
-  List<ProductModel> _products = [];
-  bool _isLoading = true;
-  bool _isLoadingMore = false;
-  bool _hasMore = true;
-  ProductModel? _lastProduct;
-  static const int _pageSize = 20;
-
-  @override
-  void initState() {
-    super.initState();
-    _scrollController.addListener(_onScroll);
-    _loadSpecialOffers();
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      context.read<ProductBloc>().add(LoadFavorites(user.uid));
-    }
-  }
-
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _loadSpecialOffers({bool refresh = false}) async {
-    if (refresh) {
-      setState(() {
-        _products = [];
-        _hasMore = true;
-        _lastProduct = null;
-      });
-    }
-    setState(() { _isLoading = true; });
-    final products = await _firebaseService.getSpecialOffers(limit: _pageSize, lastProduct: _lastProduct);
-    setState(() {
-      _products.addAll(products);
-      _isLoading = false;
-      _hasMore = products.length == _pageSize;
-      if (products.isNotEmpty) _lastProduct = products.last;
-    });
-  }
-
-  Future<void> _loadMoreSpecialOffers() async {
-    if (_isLoadingMore || !_hasMore || _isLoading) return;
-    setState(() { _isLoadingMore = true; });
-    final products = await _firebaseService.getSpecialOffers(limit: _pageSize, lastProduct: _lastProduct);
-    setState(() {
-      _products.addAll(products);
-      _isLoadingMore = false;
-      _hasMore = products.length == _pageSize;
-      if (products.isNotEmpty) _lastProduct = products.last;
-    });
-  }
-
-  void _onScroll() {
-    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200 && !_isLoadingMore && _hasMore) {
-      _loadMoreSpecialOffers();
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('كل العروض الخاصة'),
-        centerTitle: true,
-        backgroundColor: Colors.white,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.black),
+  Widget _buildErrorState(String message) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.error_outline,
+            size: 80,
+            color: Colors.red[400],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'حدث خطأ',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w500,
+              color: Colors.red[600],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            message,
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey[600],
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: () {
+              _productBloc.add(FetchProducts(
+                widget.categoryId,
+                limit: 20,
+              ));
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.orangeColor,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('إعادة المحاولة'),
+          ),
+        ],
       ),
-      body: _isLoading && _products.isEmpty
-          ? Center(child: CircularProgressIndicator(color: AppColors.orangeColor))
-          : _products.isEmpty
-              ? Center(child: Text('لا توجد عروض خاصة حالياً'))
-              : Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: NotificationListener<ScrollNotification>(
-                    onNotification: (scrollInfo) {
-                      if (scrollInfo.metrics.pixels >= scrollInfo.metrics.maxScrollExtent - 200 && !_isLoadingMore && _hasMore) {
-                        _loadMoreSpecialOffers();
-                      }
-                      return false;
-                    },
-                    child: GridView.builder(
-                      controller: _scrollController,
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        crossAxisSpacing: 16.0,
-                        mainAxisSpacing: 16.0,
-                        childAspectRatio: 0.65,
-                      ),
-                      itemCount: _products.length + (_isLoadingMore ? 1 : 0),
-                      itemBuilder: (context, index) {
-                        if (index == _products.length && _isLoadingMore) {
-                          return const Center(
-                            child: Padding(
-                              padding: EdgeInsets.symmetric(vertical: 16),
-                              child: CircularProgressIndicator(),
-                            ),
-                          );
-                        }
-                        final product = _products[index];
-                        return ListenableBuilder(
-                          listenable: context.read<ProductBloc>().favoritesNotifier,
-                          builder: (context, child) {
-                            final bloc = context.read<ProductBloc>();
-                            final isFavorite = bloc.favoritesNotifier.isProductFavorite(product.id);
-                            return ProductCard(
-                              product: product,
-                              isFavorite: isFavorite,
-                              onFavoritePressed: () {
-                                final user = FirebaseAuth.instance.currentUser;
-                                if (user != null) {
-                                  if (isFavorite) {
-                                    context.read<ProductBloc>().add(RemoveFromFavorites(user.uid, product.id));
-                                  } else {
-                                    context.read<ProductBloc>().add(AddToFavorites(user.uid, product.id));
-                                  }
-                                }
-                              },
-                              onAddPressed: () {},
-                            );
-                          },
-                        );
-                      },
-                    ),
-                  ),
-                ),
     );
   }
 }

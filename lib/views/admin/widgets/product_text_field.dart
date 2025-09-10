@@ -14,7 +14,7 @@ class ProductTextField extends StatelessWidget {
   final VoidCallback? onChanged;
 
   const ProductTextField({
-    Key? key,
+    super.key,
     required this.controller,
     required this.labelText,
     this.prefixIcon,
@@ -26,7 +26,7 @@ class ProductTextField extends StatelessWidget {
     this.maxLines = 1,
     this.alignLabelWithHint = false,
     this.onChanged,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

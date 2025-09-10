@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/material.dart';
 import '../../components/Button.dart';
 import '../../theme/appcolors.dart';
 import '../../routes.dart';
+import '../profile/orders_screen.dart' as profile_orders;
 
 class OrderAcceptedScreen extends StatelessWidget {
   final String? orderId;
-  
+
   const OrderAcceptedScreen({super.key, this.orderId});
 
   @override
@@ -53,11 +53,16 @@ class OrderAcceptedScreen extends StatelessWidget {
                         const SizedBox(height: 16),
                         if (orderId != null) ...[
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 8,
+                            ),
                             decoration: BoxDecoration(
-                              color: AppColors.orangeColor.withOpacity(0.1),
+                              color: AppColors.orangeColor.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: AppColors.orangeColor.withOpacity(0.3)),
+                              border: Border.all(
+                                color: AppColors.orangeColor.withValues(alpha: 0.3),
+                              ),
                             ),
                             child: Text(
                               'رقم الطلب: $orderId',
@@ -87,34 +92,51 @@ class OrderAcceptedScreen extends StatelessWidget {
                   ),
                   // Bottom buttons
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 24.0),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24.0,
+                      vertical: 24.0,
+                    ),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Container(
+                        // زر تتبع الطلب
+                        SizedBox(
                           height: 65,
                           child: Button(
                             onPressed: () {
                               if (orderId != null) {
-                                Navigator.pushNamedAndRemoveUntil(
-                                  context,
-                                  '${AppRoutes.orderDetails}/$orderId',
-                                  (route) => false,
-                                );
-                              } else {
+                                // الانتقال مباشرة لصفحة الطلبات
                                 Navigator.pushNamedAndRemoveUntil(
                                   context,
                                   AppRoutes.main,
                                   (route) => false,
                                 );
+                                Future.delayed(const Duration(seconds: 5));
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'لا يمكن تتبع الطلب بدون رقم الطلب',
+                                    ),
+                                    backgroundColor: Colors.orange,
+                                  ),
+                                );
                               }
                             },
-                            buttonContent: const Text('تتبع الطلب'),
+                            buttonContent: const Text(
+                              'تتبع الطلب',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                             buttonColor: AppColors.orangeColor,
                           ),
                         ),
                         const SizedBox(height: 16),
-                        Container(
+                        // زر العودة للرئيسية
+                        SizedBox(
                           height: 65,
                           child: Button(
                             onPressed: () {
@@ -124,7 +146,14 @@ class OrderAcceptedScreen extends StatelessWidget {
                                 (route) => false,
                               );
                             },
-                            buttonContent: const Text('العودة إلى الرئيسية'),
+                            buttonContent: const Text(
+                              'العودة إلى الرئيسية',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                             buttonColor: AppColors.orangeColor,
                           ),
                         ),
@@ -139,4 +168,4 @@ class OrderAcceptedScreen extends StatelessWidget {
       ),
     );
   }
-} 
+}

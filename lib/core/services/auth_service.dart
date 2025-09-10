@@ -33,6 +33,7 @@ class AuthService {
             'role': role,
             'createdAt': FieldValue.serverTimestamp(),
             'updatedAt': FieldValue.serverTimestamp(),
+            'authProvider': 'email', // إضافة مصدر المصادقة
           });
 
           await credential.user!.updateDisplayName(name);
@@ -88,7 +89,10 @@ class AuthService {
     }
   }
 
-  Future<void> updateUserProfile(String userId, Map<String, dynamic> data) async {
+  Future<void> updateUserProfile(
+    String userId,
+    Map<String, dynamic> data,
+  ) async {
     await _firestore.collection('users').doc(userId).update({
       ...data,
       'updatedAt': FieldValue.serverTimestamp(),
@@ -114,7 +118,7 @@ class AuthService {
       } else {
         final data = doc.data();
         // إذا كانت البيانات ليست Map، أعد إنشاءها
-        if (data == null || data is! Map<String, dynamic>) {
+        if (data == null) {
           await _firestore.collection('users').doc(userId).set({
             'id': userId,
             'name': user.displayName ?? data?['name'] ?? 'User',
@@ -136,6 +140,24 @@ class AuthService {
   // Get current user
   User? get currentUser => _auth.currentUser;
 
+  // Get current admin info - يشمل المدير ومدخل البيانات
+  Future<Map<String, String>?> getCurrentAdminInfo() async {
+    final user = currentUser;
+    if (user == null) return null;
+
+    final doc = await _firestore.collection('users').doc(user.uid).get();
+    if (!doc.exists) return null;
+
+    final data = doc.data()!;
+    // السماح للمدير ومدخل البيانات
+    if (data['role'] != 'admin' && data['role'] != 'data_entry') return null;
+
+    return {
+      'id': user.uid,
+      'name': data['name'] ?? user.displayName ?? user.email ?? user.uid,
+    };
+  }
+
   // Stream of auth state changes
   Stream<User?> get authStateChanges => _auth.authStateChanges();
-} 
+}

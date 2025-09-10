@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fouda_market/components/phonetextfield.dart';
-import 'package:fouda_market/components/navigatorbutton.dart';
 import 'package:fouda_market/theme/appcolors.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../blocs/auth/auth_bloc.dart';
@@ -9,12 +8,8 @@ import '../../blocs/auth/auth_event.dart';
 import '../../blocs/auth/auth_state.dart';
 
 import '../../components/Button.dart';
-import '../home/main_screen.dart';
-import 'package:fouda_market/views/auth/auth_selection_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'complete_profile_screen.dart';
-import '../admin/data_entry_home_screen.dart';
-import '../admin/dashboard_screen.dart';
 import '../../routes.dart';
 import '../../components/connection_aware_widget.dart';
 
@@ -33,9 +28,9 @@ class _PhoneLoginScreenState extends State<PhoneLoginScreen> {
   void sendCode() async {
     String phone = phoneController.text.trim();
     if (phone.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("من فضلك أدخل رقم الهاتف")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("من فضلك أدخل رقم الهاتف")));
       return;
     }
 
@@ -53,19 +48,21 @@ class _PhoneLoginScreenState extends State<PhoneLoginScreen> {
         setState(() {
           _isLoading = false;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.message ?? "فشل التحقق")),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.message ?? "فشل التحقق")));
       },
       codeSent: (String verificationId, int? resendToken) {
         setState(() {
           _isLoading = false;
         });
         Navigator.of(context).push(
-          MaterialPageRoute(builder: (context) => OtpScreen(
-          verificationId: verificationId,
-          phoneNumber: '+20$phone',
-          )),
+          MaterialPageRoute(
+            builder: (context) => OtpScreen(
+              verificationId: verificationId,
+              phoneNumber: '+20$phone',
+            ),
+          ),
         );
       },
       codeAutoRetrievalTimeout: (String verificationId) {
@@ -78,27 +75,37 @@ class _PhoneLoginScreenState extends State<PhoneLoginScreen> {
 
   void _signInWithCredential(PhoneAuthCredential credential) async {
     try {
-      final userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
+      final userCredential = await FirebaseAuth.instance.signInWithCredential(
+        credential,
+      );
       final user = userCredential.user;
       if (user != null) {
-        final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+        final doc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
         if (doc.exists) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text("تم تسجيل الدخول بنجاح")),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text("تم تسجيل الدخول بنجاح")));
           // Use BLoC to update auth state instead of direct navigation
           BlocProvider.of<AuthBloc>(context).add(AuthCheckRequested());
         } else {
           Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (context) => CompleteProfileScreen(phone: user.phoneNumber ?? '', uid: user.uid)),
+            MaterialPageRoute(
+              builder: (context) => CompleteProfileScreen(
+                phone: user.phoneNumber ?? '',
+                uid: user.uid,
+              ),
+            ),
             (route) => false,
           );
         }
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("فشل في تسجيل الدخول")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("فشل في تسجيل الدخول")));
     }
   }
 
@@ -113,37 +120,43 @@ class _PhoneLoginScreenState extends State<PhoneLoginScreen> {
         }
       },
       child: BlocListener<AuthBloc, AuthState>(
-      listener: (context, state) {
-        if (state is Authenticated) {
-          if (state.userProfile != null) {
-            switch (state.userProfile!.role) {
-              case 'admin':
-                Navigator.of(context).pushNamedAndRemoveUntil(AppRoutes.adminDashboard, (route) => false);
-                break;
-              case 'data_entry':
-                Navigator.of(context).pushNamedAndRemoveUntil(AppRoutes.dataEntryHome, (route) => false);
-                break;
-              default:
-                Navigator.of(context).pushNamedAndRemoveUntil(AppRoutes.main, (route) => false);
+        listener: (context, state) {
+          print('🔍 [PhoneLogin] BlocListener received state: $state');
+          if (state is Authenticated) {
+            print('🔍 [PhoneLogin] User authenticated with role: ${state.userProfile?.role}');
+            if (state.userProfile != null) {
+              // الاعتماد على AuthWrapper للتوجيه بدلاً من التوجيه المباشر
+              Navigator.of(context).pushNamedAndRemoveUntil(
+                AppRoutes.authWrapper,
+                (route) => false,
+              );
+            } else {
+              // منع الدخول بدون ملف شخصي
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('خطأ في بيانات المستخدم'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+              context.read<AuthBloc>().add(SignOutRequested());
             }
-          } else {
-            Navigator.of(context).pushNamedAndRemoveUntil(AppRoutes.main, (route) => false);
           }
-        }
-      },
-      child: WillPopScope(
-        onWillPop: () async {
-          Navigator.of(context).pushReplacementNamed(AppRoutes.authSelection);
-          return false;
         },
-        child: Scaffold(
+        child: WillPopScope(
+          onWillPop: () async {
+            Navigator.of(context).pushReplacementNamed(AppRoutes.authSelection);
+            return false;
+          },
+          child: Scaffold(
             appBar: AppBar(
               automaticallyImplyLeading: false,
               backgroundColor: Colors.transparent,
               elevation: 0,
               leading: IconButton(
                 icon: Icon(Icons.arrow_back_ios, color: AppColors.blackColor),
-                onPressed: () => Navigator.of(context).pushReplacementNamed(AppRoutes.authSelection),
+                onPressed: () => Navigator.of(
+                  context,
+                ).pushReplacementNamed(AppRoutes.authSelection),
               ),
             ),
             body: Padding(
@@ -188,22 +201,24 @@ class _PhoneLoginScreenState extends State<PhoneLoginScreen> {
                   Button(
                     onPressed: (_isLoading || _isOffline) ? null : sendCode,
                     buttonContent: _isLoading
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
+                            ),
+                          )
+                        : Text(
+                            'إرسال رمز التحقق',
+                            style: TextStyle(
+                              color: AppColors.whiteColor,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
-                        )
-                      : Text(
-                          'إرسال رمز التحقق',
-                          style: TextStyle(
-                            color: AppColors.whiteColor,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
                     buttonColor: AppColors.orangeColor,
                   ),
                 ],
@@ -260,11 +275,11 @@ class _OtpScreenState extends State<OtpScreen> {
 
   void verifyCode() async {
     final smsCode = otpController.text.trim();
-    
+
     if (smsCode.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("من فضلك أدخل رمز التحقق")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("من فضلك أدخل رمز التحقق")));
       return;
     }
 
@@ -278,19 +293,29 @@ class _OtpScreenState extends State<OtpScreen> {
     );
 
     try {
-      final userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
+      final userCredential = await FirebaseAuth.instance.signInWithCredential(
+        credential,
+      );
       final user = userCredential.user;
       if (user != null) {
-        final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+        final doc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
         if (doc.exists) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text("تم تسجيل الدخول بنجاح")),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text("تم تسجيل الدخول بنجاح")));
           // Use BLoC to update auth state instead of direct navigation
           BlocProvider.of<AuthBloc>(context).add(AuthCheckRequested());
         } else {
           Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (context) => CompleteProfileScreen(phone: user.phoneNumber ?? '', uid: user.uid)),
+            MaterialPageRoute(
+              builder: (context) => CompleteProfileScreen(
+                phone: user.phoneNumber ?? '',
+                uid: user.uid,
+              ),
+            ),
             (route) => false,
           );
         }
@@ -310,9 +335,9 @@ class _OtpScreenState extends State<OtpScreen> {
       } else if (e.code == 'network-request-failed') {
         errorMsg = 'تحقق من اتصال الإنترنت.';
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(errorMsg)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(errorMsg)));
     }
   }
 
@@ -332,14 +357,14 @@ class _OtpScreenState extends State<OtpScreen> {
         _signInWithCredential(credential);
       },
       verificationFailed: (FirebaseAuthException e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.message ?? "فشل إرسال الكود")),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.message ?? "فشل إرسال الكود")));
       },
       codeSent: (String verificationId, int? resendToken) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("تم إرسال الكود مرة أخرى")),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("تم إرسال الكود مرة أخرى")));
       },
       codeAutoRetrievalTimeout: (String verificationId) {},
     );
@@ -347,27 +372,37 @@ class _OtpScreenState extends State<OtpScreen> {
 
   void _signInWithCredential(PhoneAuthCredential credential) async {
     try {
-      final userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
+      final userCredential = await FirebaseAuth.instance.signInWithCredential(
+        credential,
+      );
       final user = userCredential.user;
       if (user != null) {
-        final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+        final doc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
         if (doc.exists) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text("تم تسجيل الدخول بنجاح")),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text("تم تسجيل الدخول بنجاح")));
           // Use BLoC to update auth state instead of direct navigation
           BlocProvider.of<AuthBloc>(context).add(AuthCheckRequested());
         } else {
           Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (context) => CompleteProfileScreen(phone: user.phoneNumber ?? '', uid: user.uid)),
+            MaterialPageRoute(
+              builder: (context) => CompleteProfileScreen(
+                phone: user.phoneNumber ?? '',
+                uid: user.uid,
+              ),
+            ),
             (route) => false,
           );
         }
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("فشل في تسجيل الدخول")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("فشل في تسجيل الدخول")));
     }
   }
 
@@ -382,97 +417,122 @@ class _OtpScreenState extends State<OtpScreen> {
         }
       },
       child: BlocListener<AuthBloc, AuthState>(
-      listener: (context, state) {
-        if (state is Authenticated) {
-          if (state.userProfile != null) {
-            switch (state.userProfile!.role) {
-              case 'admin':
-                Navigator.of(context).pushNamedAndRemoveUntil(AppRoutes.adminDashboard, (route) => false);
-                break;
-              case 'data_entry':
-                Navigator.of(context).pushNamedAndRemoveUntil(AppRoutes.dataEntryHome, (route) => false);
-                break;
-              default:
-                Navigator.of(context).pushNamedAndRemoveUntil(AppRoutes.main, (route) => false);
+        listener: (context, state) {
+          if (state is Authenticated) {
+            if (state.userProfile != null) {
+              switch (state.userProfile!.role) {
+                case 'admin':
+                  Navigator.of(context).pushNamedAndRemoveUntil(
+                    AppRoutes.adminDashboard,
+                    (route) => false,
+                  );
+                  break;
+                case 'data_entry':
+                  Navigator.of(context).pushNamedAndRemoveUntil(
+                    AppRoutes.dataEntryHome,
+                    (route) => false,
+                  );
+                  break;
+                default:
+                  // توجيه المستخدمين العاديين للشاشة الرئيسية
+                  Navigator.of(context).pushNamedAndRemoveUntil(
+                    AppRoutes.main,
+                    (route) => false,
+                  );
+                  break;
+              }
+            } else {
+              // منع الدخول بدون ملف شخصي
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('خطأ في بيانات المستخدم'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+              context.read<AuthBloc>().add(SignOutRequested());
             }
-          } else {
-            Navigator.of(context).pushNamedAndRemoveUntil(AppRoutes.main, (route) => false);
           }
-        }
-      },
-      child: WillPopScope(
-        onWillPop: () async {
-          Navigator.of(context).pushReplacementNamed(AppRoutes.authSelection);
-          return false;
         },
-        child: Scaffold(
+        child: WillPopScope(
+          onWillPop: () async {
+            Navigator.of(context).pushReplacementNamed(AppRoutes.authSelection);
+            return false;
+          },
+          child: Scaffold(
             backgroundColor: Colors.white,
             body: SingleChildScrollView(
-                child: Column(
-                  children: [
-                    Stack(
-                      children: [
-                        Image.asset('assets/login/logo.png'),
-                        Positioned(
-                          top: 25,
-                          right: 8,
-                          child: IconButton(
-                            icon: Icon(Icons.arrow_back_ios, color: AppColors.blackColor),
-                            onPressed: () => Navigator.of(context).pushReplacementNamed(AppRoutes.authSelection),
-                          ),
-                        ),
-                      ]
-                    ),
-                    const SizedBox(height: 20),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: Align(
-                        alignment: Alignment.centerRight,
-                        child: Text(
-                          'أدخل الكود المرسل إلى ${widget.phoneNumber}',
-                          style: TextStyle(
+              child: Column(
+                children: [
+                  Stack(
+                    children: [
+                      Image.asset('assets/login/logo.png'),
+                      Positioned(
+                        top: 25,
+                        right: 8,
+                        child: IconButton(
+                          icon: Icon(
+                            Icons.arrow_back_ios,
                             color: AppColors.blackColor,
-                            fontSize: 20,
-                            fontWeight: FontWeight.w600,
                           ),
+                          onPressed: () => Navigator.of(
+                            context,
+                          ).pushReplacementNamed(AppRoutes.authSelection),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Align(
+                      alignment: Alignment.centerRight,
+                      child: Text(
+                        'أدخل الكود المرسل إلى ${widget.phoneNumber}',
+                        style: TextStyle(
+                          color: AppColors.blackColor,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ),
-                    const SizedBox(height: 20),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: TextField(
-                        controller: otpController,
-                        keyboardType: TextInputType.number,
-                        textInputAction: TextInputAction.done,
-                        autofillHints: const [AutofillHints.oneTimeCode],
-                        maxLength: 6,
-                        decoration: InputDecoration(
-                          labelText: "كود التحقق",
-                          hintText: "أدخل الكود المكون من 6 أرقام",
-                          counterText: "",
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderSide: BorderSide(color: AppColors.orangeColor),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
+                  ),
+                  const SizedBox(height: 20),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: TextField(
+                      controller: otpController,
+                      keyboardType: TextInputType.number,
+                      textInputAction: TextInputAction.done,
+                      autofillHints: const [AutofillHints.oneTimeCode],
+                      maxLength: 6,
+                      decoration: InputDecoration(
+                        labelText: "كود التحقق",
+                        hintText: "أدخل الكود المكون من 6 أرقام",
+                        counterText: "",
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderSide: BorderSide(color: AppColors.orangeColor),
+                          borderRadius: BorderRadius.circular(12),
                         ),
                       ),
                     ),
-                    const SizedBox(height: 20),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: Button(
-                        onPressed: (_isLoading || _isOffline) ? null : verifyCode,
-                        buttonContent: _isLoading
+                  ),
+                  const SizedBox(height: 20),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Button(
+                      onPressed: (_isLoading || _isOffline) ? null : verifyCode,
+                      buttonContent: _isLoading
                           ? const SizedBox(
                               width: 20,
                               height: 20,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Colors.white,
+                                ),
                               ),
                             )
                           : Text(
@@ -483,32 +543,34 @@ class _OtpScreenState extends State<OtpScreen> {
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
-                        buttonColor: AppColors.orangeColor,
-                      ),
+                      buttonColor: AppColors.orangeColor,
                     ),
-                    const SizedBox(height: 20),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          _canResend
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        _canResend
                             ? 'لم يصلك الكود؟'
                             : 'يمكنك إعادة الإرسال بعد $_timeLeft ثانية',
-                          style: TextStyle(
-                            color: AppColors.mediumGrayColor,
-                            fontSize: 14,
-                          ),
+                        style: TextStyle(
+                          color: AppColors.mediumGrayColor,
+                          fontSize: 14,
                         ),
-                        SizedBox(width: 8),
-                        TextButton(
-                          onPressed: (!_canResend || _isOffline) ? null : resendCode,
-                          child: Text('إعادة الإرسال'),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+                      ),
+                      SizedBox(width: 8),
+                      TextButton(
+                        onPressed: (!_canResend || _isOffline)
+                            ? null
+                            : resendCode,
+                        child: Text('إعادة الإرسال'),
+                      ),
+                    ],
+                  ),
+                ],
               ),
+            ),
           ),
         ),
       ),

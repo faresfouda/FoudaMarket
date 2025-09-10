@@ -12,11 +12,8 @@ import '../../components/connection_aware_widget.dart';
 
 class AddReviewScreen extends StatefulWidget {
   final ProductModel product;
-  
-  const AddReviewScreen({
-    Key? key,
-    required this.product,
-  }) : super(key: key);
+
+  const AddReviewScreen({super.key, required this.product});
 
   @override
   State<AddReviewScreen> createState() => _AddReviewScreenState();
@@ -26,7 +23,7 @@ class _AddReviewScreenState extends State<AddReviewScreen> {
   final TextEditingController _reviewController = TextEditingController();
   final ReviewService _reviewService = ReviewService();
   final AuthService _authService = AuthService();
-  
+
   double _rating = 5.0;
   bool _isSubmitting = false;
   bool _hasUserReviewed = false;
@@ -52,7 +49,7 @@ class _AddReviewScreenState extends State<AddReviewScreen> {
           user.uid,
           widget.product.id,
         );
-        
+
         if (mounted) {
           setState(() {
             _hasUserReviewed = hasReviewed;
@@ -93,7 +90,7 @@ class _AddReviewScreenState extends State<AddReviewScreen> {
 
       // الحصول على بيانات المستخدم
       final userData = await _authService.getUserProfile(user.uid);
-      
+
       final review = ReviewModel(
         id: '',
         userId: user.uid,
@@ -101,7 +98,9 @@ class _AddReviewScreenState extends State<AddReviewScreen> {
         userAvatar: userData?['avatarUrl'],
         productId: widget.product.id,
         productName: widget.product.name,
-        productImage: widget.product.images.isNotEmpty ? widget.product.images.first : null,
+        productImage: widget.product.images.isNotEmpty
+            ? widget.product.images.first
+            : null,
         reviewText: _reviewController.text.trim(),
         rating: _rating,
         status: ReviewStatus.pending,
@@ -182,8 +181,8 @@ class _AddReviewScreenState extends State<AddReviewScreen> {
                     ClipRRect(
                       borderRadius: BorderRadius.circular(8),
                       child: CachedImage(
-                        imageUrl: widget.product.images.isNotEmpty 
-                            ? widget.product.images.first 
+                        imageUrl: widget.product.images.isNotEmpty
+                            ? widget.product.images.first
                             : '',
                         width: 80,
                         height: 80,
@@ -220,9 +219,9 @@ class _AddReviewScreenState extends State<AddReviewScreen> {
                   ],
                 ),
               ),
-              
+
               const SizedBox(height: 24),
-              
+
               // رسالة إذا كان المستخدم قد راجع من قبل
               if (_hasUserReviewed)
                 Container(
@@ -234,7 +233,11 @@ class _AddReviewScreenState extends State<AddReviewScreen> {
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.info_outline, color: Colors.orange[700], size: 20),
+                      Icon(
+                        Icons.info_outline,
+                        color: Colors.orange[700],
+                        size: 20,
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
@@ -248,9 +251,9 @@ class _AddReviewScreenState extends State<AddReviewScreen> {
                     ],
                   ),
                 ),
-              
+
               const SizedBox(height: 24),
-              
+
               // التقييم بالنجوم
               Text(
                 'تقييمك للمنتج',
@@ -269,10 +272,8 @@ class _AddReviewScreenState extends State<AddReviewScreen> {
                   allowHalfRating: false,
                   itemCount: 5,
                   itemSize: 40,
-                  itemBuilder: (context, _) => const Icon(
-                    Icons.star,
-                    color: Colors.amber,
-                  ),
+                  itemBuilder: (context, _) =>
+                      const Icon(Icons.star, color: Colors.amber),
                   onRatingUpdate: (rating) {
                     setState(() {
                       _rating = rating;
@@ -291,9 +292,9 @@ class _AddReviewScreenState extends State<AddReviewScreen> {
                   ),
                 ),
               ),
-              
+
               const SizedBox(height: 24),
-              
+
               // نص المراجعة
               Text(
                 'مراجعتك',
@@ -309,11 +310,9 @@ class _AddReviewScreenState extends State<AddReviewScreen> {
                 maxLines: 6,
                 maxLength: 1000,
                 decoration: InputDecoration(
-                  hintText: 'اكتب مراجعتك هنا...\n\nمثال:\n- جودة المنتج\n- سرعة التوصيل\n- السعر\n- تجربتك العامة',
-                  hintStyle: TextStyle(
-                    color: Colors.grey[500],
-                    fontSize: 14,
-                  ),
+                  hintText:
+                      'اكتب مراجعتك هنا...\n\nمثال:\n- جودة المنتج\n- سرعة التوصيل\n- السعر\n- تجربتك العامة',
+                  hintStyle: TextStyle(color: Colors.grey[500], fontSize: 14),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide(color: Colors.grey[300]!),
@@ -326,18 +325,15 @@ class _AddReviewScreenState extends State<AddReviewScreen> {
                   fillColor: Colors.grey[50],
                 ),
               ),
-              
+
               const SizedBox(height: 8),
               Text(
                 '${_reviewController.text.length}/1000 حرف',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey[600],
-                ),
+                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
               ),
-              
+
               const SizedBox(height: 32),
-              
+
               // زر الإرسال
               SizedBox(
                 width: double.infinity,
@@ -359,7 +355,9 @@ class _AddReviewScreenState extends State<AddReviewScreen> {
                                 height: 20,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.white,
+                                  ),
                                 ),
                               ),
                               SizedBox(width: 12),
@@ -388,9 +386,9 @@ class _AddReviewScreenState extends State<AddReviewScreen> {
                         buttonColor: AppColors.primary,
                       ),
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               // معلومات إضافية
               Container(
                 padding: const EdgeInsets.all(16),
@@ -404,7 +402,11 @@ class _AddReviewScreenState extends State<AddReviewScreen> {
                   children: [
                     Row(
                       children: [
-                        Icon(Icons.info_outline, color: Colors.blue[700], size: 20),
+                        Icon(
+                          Icons.info_outline,
+                          color: Colors.blue[700],
+                          size: 20,
+                        ),
                         const SizedBox(width: 8),
                         Text(
                           'معلومات مهمة',
@@ -442,4 +444,4 @@ class _AddReviewScreenState extends State<AddReviewScreen> {
       ),
     );
   }
-} 
+}

@@ -1,18 +1,19 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'dart:io';
+import 'dart:typed_data';
 import '../../../components/cached_image.dart';
 
 class ProductImagePicker extends StatelessWidget {
-  final File? pickedImage;
+  final dynamic pickedImage; // يمكن أن يكون File أو Uint8List
   final String? imageUrl;
   final VoidCallback onTap;
 
   const ProductImagePicker({
-    Key? key,
+    super.key,
     this.pickedImage,
     this.imageUrl,
     required this.onTap,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -41,12 +42,7 @@ class ProductImagePicker extends StatelessWidget {
     if (pickedImage != null) {
       return ClipRRect(
         borderRadius: BorderRadius.circular(14),
-        child: Image.file(
-          pickedImage!,
-          width: 150,
-          height: 150,
-          fit: BoxFit.cover,
-        ),
+        child: _buildPickedImage(),
       );
     } else if (imageUrl != null && imageUrl!.isNotEmpty) {
       return ClipRRect(
@@ -81,6 +77,28 @@ class ProductImagePicker extends StatelessWidget {
           ),
         ],
       );
+    }
+  }
+
+  Widget _buildPickedImage() {
+    if (kIsWeb && pickedImage is Uint8List) {
+      // على الويب، استخدم Memory Image
+      return Image.memory(
+        pickedImage as Uint8List,
+        width: 150,
+        height: 150,
+        fit: BoxFit.cover,
+      );
+    } else if (!kIsWeb && pickedImage != null) {
+      // على المنصات الأخرى، استخدم File Image
+      return Image.file(
+        pickedImage,
+        width: 150,
+        height: 150,
+        fit: BoxFit.cover,
+      );
+    } else {
+      return const Icon(Icons.broken_image, size: 48);
     }
   }
 }

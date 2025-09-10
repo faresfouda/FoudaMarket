@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../devtools/seed_fake_data.dart';
 import '../../core/services/review_service.dart';
+import '../../core/services/onboarding_service.dart';
+import 'banner_management_screen.dart';
 
 class AdminDevToolsScreen extends StatefulWidget {
-  const AdminDevToolsScreen({Key? key}) : super(key: key);
+  const AdminDevToolsScreen({super.key});
 
   @override
   State<AdminDevToolsScreen> createState() => _AdminDevToolsScreenState();
@@ -19,6 +22,7 @@ class _AdminDevToolsScreenState extends State<AdminDevToolsScreen> {
   bool _isLoadingMultiUnits = false;
   bool _isLoadingOrders = false;
   bool _isLoadingReviews = false;
+  bool _isDeletingAllData = false;
   String? _result;
 
   Future<void> _seedData() async {
@@ -177,7 +181,8 @@ class _AdminDevToolsScreenState extends State<AdminDevToolsScreen> {
     try {
       await seedFakeOrders();
       setState(() {
-        _result = 'تم إنشاء 50 طلب افتراضي بنجاح! يمكنك الآن اختبار نظام إدارة الطلبات.';
+        _result =
+            'تم إنشاء 50 طلب افتراضي بنجاح! يمكنك الآن اختبار نظام إدارة الطلبات.';
       });
     } catch (e) {
       setState(() {
@@ -199,7 +204,8 @@ class _AdminDevToolsScreenState extends State<AdminDevToolsScreen> {
       final reviewService = ReviewService();
       await reviewService.seedFakeReviews();
       setState(() {
-        _result = 'تم إنشاء مراجعات وهمية بنجاح! يمكنك الآن اختبار نظام إدارة المراجعات.';
+        _result =
+            'تم إنشاء مراجعات وهمية بنجاح! يمكنك الآن اختبار نظام إدارة المراجعات.';
       });
     } catch (e) {
       setState(() {
@@ -208,6 +214,159 @@ class _AdminDevToolsScreenState extends State<AdminDevToolsScreen> {
     } finally {
       setState(() {
         _isLoadingReviews = false;
+      });
+    }
+  }
+
+  Future<void> _resetOnboarding() async {
+    setState(() {
+      _result = null;
+    });
+    try {
+      await OnboardingService.resetOnboarding();
+      setState(() {
+        _result =
+            'تم إعادة تعيين Onboarding بنجاح! ستظهر شاشة Onboarding في المرة القادمة.';
+      });
+    } catch (e) {
+      setState(() {
+        _result = 'حدث خطأ أثناء إعادة تعيين Onboarding: $e';
+      });
+    }
+  }
+
+  Future<void> _deleteAllFirebaseData() async {
+    // عرض تأكيد قبل الحذف
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('⚠️ تحذير خطير'),
+          content: const Text(
+            'هل أنت متأكد من حذف جميع البيانات من Firebase؟\n\n'
+            'سيتم حذف:\n'
+            '• جميع المنتجات\n'
+            '• جميع الفئات\n'
+            '• جميع الطلبات\n'
+            '• جميع المراجعات\n'
+            '• جميع المستخدمين (غير الأدمن)\n'
+            '• جميع العروض والكوبونات\n\n'
+            'هذا الإجراء لا يمكن التراجع عنه!',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('إلغاء'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              child: const Text('حذف الكل'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true) return;
+
+    setState(() {
+      _isDeletingAllData = true;
+      _result = null;
+    });
+
+    try {
+      final firestore = FirebaseFirestore.instance;
+
+      // حذف جميع الطلبات
+      final ordersQuery = await firestore.collection('orders').get();
+      for (var doc in ordersQuery.docs) {
+        await doc.reference.delete();
+      }
+      print('تم حذف ${ordersQuery.docs.length} طلب');
+
+      // حذف جميع المراجعات
+      final reviewsQuery = await firestore.collection('reviews').get();
+      for (var doc in reviewsQuery.docs) {
+        await doc.reference.delete();
+      }
+      print('تم حذف ${reviewsQuery.docs.length} مراجعة');
+
+      // حذف جميع المنتجات
+      final productsQuery = await firestore.collection('products').get();
+      for (var doc in productsQuery.docs) {
+        await doc.reference.delete();
+      }
+      print('تم حذف ${productsQuery.docs.length} منتج');
+
+      // حذف جميع الفئات
+      final categoriesQuery = await firestore.collection('categories').get();
+      for (var doc in categoriesQuery.docs) {
+        await doc.reference.delete();
+      }
+      print('تم حذف ${categoriesQuery.docs.length} فئة');
+
+      // حذف جميع العروض (إذا كانت موجودة)
+      try {
+        final offersQuery = await firestore.collection('offers').get();
+        for (var doc in offersQuery.docs) {
+          await doc.reference.delete();
+        }
+        print('تم حذف ${offersQuery.docs.length} عرض');
+      } catch (e) {
+        print('مجموعة العروض غير موجودة أو لا توجد صلاحيات: $e');
+      }
+
+      // حذف جميع الكوبونات (إذا كانت موجودة)
+      try {
+        final couponsQuery = await firestore.collection('coupons').get();
+        for (var doc in couponsQuery.docs) {
+          await doc.reference.delete();
+        }
+        print('تم حذف ${couponsQuery.docs.length} كوبون');
+      } catch (e) {
+        print('مجموعة الكوبونات غير موجودة أو لا توجد صلاحيات: $e');
+      }
+
+      // حذف جميع المستخدمين (غير الأدمن)
+      try {
+        final usersQuery = await firestore.collection('users').get();
+        int deletedUsers = 0;
+        for (var doc in usersQuery.docs) {
+          final userData = doc.data();
+          if (userData['role'] != 'admin') {
+            try {
+              await doc.reference.delete();
+              deletedUsers++;
+            } catch (e) {
+              print('خطأ في حذف المستخدم ${doc.id}: $e');
+            }
+          }
+        }
+        print('تم حذف $deletedUsers مستخدم (غير الأدمن)');
+      } catch (e) {
+        print('خطأ في الوصول إلى مجموعة المستخدمين: $e');
+      }
+
+      setState(() {
+        _result =
+            '✅ تم حذف جميع البيانات من Firebase بنجاح!\n\n'
+            'تم حذف:\n'
+            '• ${ordersQuery.docs.length} طلب\n'
+            '• ${reviewsQuery.docs.length} مراجعة\n'
+            '• ${productsQuery.docs.length} منتج\n'
+            '• ${categoriesQuery.docs.length} فئة\n'
+            '• العروض والكوبونات (إذا كانت موجودة)\n'
+            '• المستخدمين غير الأدمن\n\n'
+            'ملاحظة: بعض المجموعات قد تكون غير موجودة أو لا توجد صلاحيات للوصول إليها.';
+      });
+    } catch (e) {
+      setState(() {
+        _result = '❌ حدث خطأ أثناء حذف البيانات: $e';
+      });
+    } finally {
+      setState(() {
+        _isDeletingAllData = false;
       });
     }
   }
@@ -469,6 +628,174 @@ class _AdminDevToolsScreenState extends State<AdminDevToolsScreen> {
                 foregroundColor: Colors.white,
               ),
             ),
+            const SizedBox(height: 24),
+
+            // قسم إدارة صور العروض
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.orange[50],
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.orange[200]!),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.image, color: Colors.orange[700], size: 24),
+                      const SizedBox(width: 8),
+                      Text(
+                        'إدارة صور العروض',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.orange[700],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'إدارة صور العروض التي تظهر للمستخدمين',
+                    style: TextStyle(fontSize: 14, color: Colors.orange[600]),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const BannerManagementScreen(),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.manage_accounts),
+                    label: const Text('إدارة صور العروض'),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 16,
+                      ),
+                      textStyle: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      backgroundColor: Colors.orange,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // قسم حذف البيانات
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.red[50],
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.red[200]!),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.warning, color: Colors.red[700], size: 24),
+                      const SizedBox(width: 8),
+                      Text(
+                        'حذف البيانات',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.red[700],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'حذف جميع البيانات من Firebase',
+                    style: TextStyle(fontSize: 14, color: Colors.red[600]),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton.icon(
+                    onPressed: _isDeletingAllData
+                        ? null
+                        : _deleteAllFirebaseData,
+                    icon: const Icon(Icons.delete_forever),
+                    label: const Text('حذف جميع البيانات'),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 16,
+                      ),
+                      textStyle: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      backgroundColor: Colors.red,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // قسم إعادة تعيين Onboarding
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.purple[50],
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.purple[200]!),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.refresh, color: Colors.purple[700], size: 24),
+                      const SizedBox(width: 8),
+                      Text(
+                        'إعادة تعيين Onboarding',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.purple[700],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'إعادة تعيين حالة Onboarding لظهورها مرة أخرى',
+                    style: TextStyle(fontSize: 14, color: Colors.purple[600]),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton.icon(
+                    onPressed: _resetOnboarding,
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('إعادة تعيين Onboarding'),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 16,
+                      ),
+                      textStyle: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      backgroundColor: Colors.purple,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ),
             const SizedBox(height: 32),
             if (_isLoading ||
                 _isLoadingOffers ||
@@ -478,7 +805,8 @@ class _AdminDevToolsScreenState extends State<AdminDevToolsScreen> {
                 _isLoadingLocalImages ||
                 _isLoadingMultiUnits ||
                 _isLoadingOrders ||
-                _isLoadingReviews)
+                _isLoadingReviews ||
+                _isDeletingAllData)
               const CircularProgressIndicator(),
             if (_result != null) ...[
               const SizedBox(height: 16),

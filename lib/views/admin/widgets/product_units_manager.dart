@@ -8,10 +8,10 @@ class ProductUnitsManager extends StatefulWidget {
   final ValueChanged<List<ProductUnit>> onUnitsChanged;
 
   const ProductUnitsManager({
-    Key? key,
+    super.key,
     this.initialUnits,
     required this.onUnitsChanged,
-  }) : super(key: key);
+  });
 
   @override
   State<ProductUnitsManager> createState() => _ProductUnitsManagerState();

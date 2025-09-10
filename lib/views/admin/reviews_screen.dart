@@ -4,9 +4,10 @@ import '../../components/search_field.dart';
 import '../../components/cached_image.dart';
 import '../../models/review_model.dart';
 import '../../core/services/review_service.dart';
+import '../../core/services/auth_service.dart';
 
 class ReviewsScreen extends StatefulWidget {
-  const ReviewsScreen({Key? key}) : super(key: key);
+  const ReviewsScreen({super.key});
 
   @override
   State<ReviewsScreen> createState() => _ReviewsScreenState();
@@ -18,7 +19,8 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
   FilterStatus selectedStatus = FilterStatus.all;
   final TextEditingController searchController = TextEditingController();
   final ReviewService _reviewService = ReviewService();
-  
+  final AuthService _authService = AuthService();
+
   List<ReviewModel> _allReviews = [];
   bool _isLoading = true;
   String? _error;
@@ -54,7 +56,9 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
         _isLoading = true;
         _error = null;
       });
-      final reviews = await _reviewService.getAllReviewsPaginated(limit: _pageSize);
+      final reviews = await _reviewService.getAllReviewsPaginated(
+        limit: _pageSize,
+      );
       if (mounted) {
         setState(() {
           _allReviews = reviews;
@@ -103,7 +107,10 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
   }
 
   void _onScroll() {
-    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200 && !_isLoadingMore && _hasMore) {
+    if (_scrollController.position.pixels >=
+            _scrollController.position.maxScrollExtent - 200 &&
+        !_isLoadingMore &&
+        _hasMore) {
       _loadMoreReviews();
     }
   }
@@ -111,16 +118,21 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
   List<ReviewModel> get filteredReviews {
     String query = searchController.text.trim();
     return _allReviews.where((review) {
-      bool matchesStatus = selectedStatus == FilterStatus.all || 
-          (selectedStatus == FilterStatus.pending && review.status == ReviewStatus.pending) ||
-          (selectedStatus == FilterStatus.approved && review.status == ReviewStatus.approved) ||
-          (selectedStatus == FilterStatus.rejected && review.status == ReviewStatus.rejected);
-      
-      bool matchesQuery = query.isEmpty ||
+      bool matchesStatus =
+          selectedStatus == FilterStatus.all ||
+          (selectedStatus == FilterStatus.pending &&
+              review.status == ReviewStatus.pending) ||
+          (selectedStatus == FilterStatus.approved &&
+              review.status == ReviewStatus.approved) ||
+          (selectedStatus == FilterStatus.rejected &&
+              review.status == ReviewStatus.rejected);
+
+      bool matchesQuery =
+          query.isEmpty ||
           review.userName.contains(query) ||
           review.productName.contains(query) ||
           review.reviewText.contains(query);
-      
+
       return matchesStatus && matchesQuery;
     }).toList();
   }
@@ -150,7 +162,7 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
   String formatDate(DateTime date) {
     final now = DateTime.now();
     final difference = now.difference(date);
-    
+
     if (difference.inDays > 0) {
       return 'منذ ${difference.inDays} يوم';
     } else if (difference.inHours > 0) {
@@ -159,41 +171,6 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
       return 'منذ ${difference.inMinutes} دقيقة';
     } else {
       return 'الآن';
-    }
-  }
-
-  Future<void> _seedFakeReviews() async {
-    try {
-      setState(() {
-        _isLoading = true;
-      });
-
-      await _reviewService.seedFakeReviews();
-      await _loadReviews(); // إعادة تحميل المراجعات
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('تم إضافة المراجعات الوهمية بنجاح'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('خطأ في إضافة المراجعات الوهمية: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
     }
   }
 
@@ -267,30 +244,11 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
           padding: const EdgeInsets.all(12.0),
           child: Column(
             children: [
-              // Header with seed button
-              Row(
-                children: [
-                  Expanded(
-                    child: SearchField(
+              // Header
+              SearchField(
                 controller: searchController,
                 hintText: 'البحث في المراجعات...',
                 onChanged: (_) => setState(() {}),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  ElevatedButton.icon(
-                    onPressed: _isLoading ? null : _seedFakeReviews,
-                    icon: const Icon(Icons.add),
-                    label: const Text('إضافة بيانات وهمية'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                  ),
-                ],
               ),
               const SizedBox(height: 12),
               // Status filter row
@@ -301,7 +259,7 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
                     ...FilterStatus.values.map((status) {
                       String statusLabel;
                       Color statusColorValue;
-                      
+
                       switch (status) {
                         case FilterStatus.all:
                           statusLabel = 'الكل';
@@ -320,7 +278,7 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
                           statusColorValue = Colors.red;
                           break;
                       }
-                      
+
                       return Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 4),
                         child: FilterChip(
@@ -338,7 +296,7 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
                           ),
                         ),
                       );
-                    }).toList(),
+                    }),
                   ],
                 ),
               ),
@@ -348,269 +306,15326 @@ class _ReviewsScreenState extends State<ReviewsScreen> {
                 child: _isLoading
                     ? const Center(child: CircularProgressIndicator())
                     : _error != null
-                        ? Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Icons.error_outline,
-                                  size: 64,
-                                  color: Colors.red[300],
-                                ),
-                                const SizedBox(height: 16),
-                                Text(
-                                  'خطأ في تحميل المراجعات',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    color: Colors.red[600],
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                                const SizedBox(height: 16),
-                                ElevatedButton(
-                                  onPressed: () => _loadReviews(refresh: true),
-                                  child: const Text('إعادة المحاولة'),
-                                ),
-                              ],
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.error_outline,
+                              size: 64,
+                              color: Colors.red[300],
                             ),
-                          )
-                        : filteredReviews.isEmpty
-                            ? Center(
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      Icons.rate_review_outlined,
-                                      size: 64,
-                                      color: Colors.grey[400],
-                                    ),
-                                    const SizedBox(height: 16),
-                                    Text(
-                                      'لا توجد مراجعات',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        color: Colors.grey[600],
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              )
-                            : NotificationListener<ScrollNotification>(
-                                onNotification: (scrollInfo) {
-                                  if (scrollInfo.metrics.pixels >= scrollInfo.metrics.maxScrollExtent - 200 && !_isLoadingMore && _hasMore) {
-                                    _loadMoreReviews();
-                                  }
-                                  return false;
-                                },
-                                child: ListView.separated(
-                                  controller: _scrollController,
-                                  itemCount: filteredReviews.length + (_isLoadingMore ? 1 : 0),
-                                  separatorBuilder: (context, index) => const SizedBox(height: 10),
-                                  itemBuilder: (context, index) {
-                                    if (index == filteredReviews.length && _isLoadingMore) {
-                                      return const Padding(
-                                        padding: EdgeInsets.symmetric(vertical: 16),
-                                        child: Center(child: CircularProgressIndicator()),
-                                      );
-                                    }
-                                    final review = filteredReviews[index];
-                                    return Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(14),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.grey.withOpacity(0.08),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: statusColor(
-                                    review.status,
-                                  ).withOpacity(0.15),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  statusText(review.status),
-                                  style: TextStyle(
-                                    color: statusColor(review.status),
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 13,
-                                  ),
-                                ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'خطأ في تحميل المراجعات',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.red[600],
+                                fontWeight: FontWeight.w500,
                               ),
-                              Row(
-                                children: [
-                                  CircleAvatar(
-                                                  backgroundImage: review.userAvatar != null
-                                                      ? NetworkImage(review.userAvatar!)
-                                                      : null,
-                                    radius: 16,
-                                                  child: review.userAvatar == null
-                                                      ? const Icon(Icons.person, size: 16)
-                                                      : null,
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                                  review.userName,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _loadReviews(refresh: true),
+                              child: const Text('إعادة المحاولة'),
+                            ),
+                          ],
+                        ),
+                      )
+                    : filteredReviews.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.rate_review_outlined,
+                              size: 64,
+                              color: Colors.grey[400],
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'لا توجد مراجعات',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.grey[600],
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : NotificationListener<ScrollNotification>(
+                        onNotification: (scrollInfo) {
+                          if (scrollInfo.metrics.pixels >=
+                                  scrollInfo.metrics.maxScrollExtent - 200 &&
+                              !_isLoadingMore &&
+                              _hasMore) {
+                            _loadMoreReviews();
+                          }
+                          return false;
+                        },
+                        child: ListView.separated(
+                          controller: _scrollController,
+                          itemCount:
+                              filteredReviews.length + (_isLoadingMore ? 1 : 0),
+                          separatorBuilder: (context, index) =>
+                              const SizedBox(height: 10),
+                          itemBuilder: (context, index) {
+                            if (index == filteredReviews.length &&
+                                _isLoadingMore) {
+                              return const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 16),
+                                child: Center(
+                                  child: CircularProgressIndicator(),
+                                ),
+                              );
+                            }
+                            final review = filteredReviews[index];
+                            return Container(
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(14),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.grey.withOpacity(0.08),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
                                   ),
                                 ],
                               ),
-                            ],
-                          ),
-                          const SizedBox(height: 6),
-                          Row(
-                            children: [
-                              CachedImage(
-                                              imageUrl: review.productImage ?? '',
-                                width: 60,
-                                height: 60,
-                                fit: BoxFit.cover,
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      review.productName,
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    Row(
-                                      children: [
-                                        ...List.generate(
-                                          5,
-                                          (i) => Icon(
-                                            i < review.rating
-                                                ? Icons.star
-                                                : Icons.star_border,
-                                            color: AppColors.primary,
-                                            size: 18,
+                              padding: const EdgeInsets.all(16),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 10,
+                                          vertical: 4,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: statusColor(
+                                            review.status,
+                                          ).withOpacity(0.15),
+                                          borderRadius: BorderRadius.circular(
+                                            8,
                                           ),
                                         ),
-                                        const SizedBox(width: 6),
-                                        Text(
-                                          review.rating.toString(),
-                                          style: const TextStyle(
+                                        child: Text(
+                                          statusText(review.status),
+                                          style: TextStyle(
+                                            color: statusColor(review.status),
                                             fontWeight: FontWeight.bold,
+                                            fontSize: 13,
                                           ),
                                         ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Text(
-                                              formatDate(review.createdAt),
-                                style: TextStyle(
-                                  color: AppColors.lightGrayColor2,
-                                  fontSize: 13,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            review.reviewText,
-                            style: const TextStyle(fontWeight: FontWeight.w500),
-                          ),
-                          const SizedBox(height: 10),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: ElevatedButton.icon(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: statusColor(review.status),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 12,
-                                      vertical: 8,
+                                      ),
+                                      Row(
+                                        children: [
+                                          CircleAvatar(
+                                            backgroundImage:
+                                                review.userAvatar != null
+                                                ? NetworkImage(
+                                                    review.userAvatar!,
+                                                  )
+                                                : null,
+                                            radius: 16,
+                                            child: review.userAvatar == null
+                                                ? const Icon(
+                                                    Icons.person,
+                                                    size: 16,
+                                                  )
+                                                : null,
+                                          ),
+                                          const SizedBox(width: 6),
+                                          Text(
+                                            review.userName,
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Row(
+                                    children: [
+                                      CachedImage(
+                                        imageUrl: review.productImage ?? '',
+                                        width: 60,
+                                        height: 60,
+                                        fit: BoxFit.cover,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              review.productName,
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                            Row(
+                                              children: [
+                                                ...List.generate(
+                                                  5,
+                                                  (i) => Icon(
+                                                    i < review.rating
+                                                        ? Icons.star
+                                                        : Icons.star_border,
+                                                    color: AppColors.primary,
+                                                    size: 18,
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 6),
+                                                Text(
+                                                  review.rating.toString(),
+                                                  style: const TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      Text(
+                                        formatDate(review.createdAt),
+                                        style: TextStyle(
+                                          color: AppColors.lightGrayColor2,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    review.reviewText,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w500,
                                     ),
                                   ),
-                                  onPressed: () async {
-                                    final newStatus =
-                                        await showStatusBottomSheet(
-                                          context,
-                                          review.status,
-                                        );
-                                    if (newStatus != null &&
-                                        newStatus != review.status) {
-                                                    try {
-                                                      await _reviewService.updateReviewStatus(
-                                                        review.id,
-                                                        newStatus,
+                                  const SizedBox(height: 10),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: ElevatedButton.icon(
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: statusColor(
+                                              review.status,
+                                            ),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                            ),
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 12,
+                                              vertical: 8,
+                                            ),
+                                          ),
+                                          onPressed: () async {
+                                            final newStatus =
+                                                await showStatusBottomSheet(
+                                                  context,
+                                                  review.status,
+                                                );
+                                            if (newStatus != null &&
+                                                newStatus != review.status) {
+                                              try {
+                                                // الحصول على معلومات المسؤول
+                                                final adminInfo =
+                                                    await _authService
+                                                        .getCurrentAdminInfo();
+                                                if (adminInfo == null) {
+                                                  throw Exception(
+                                                    'غير مصرح لك بتحديث حالة المراجعة',
+                                                  );
+                                                }
+
+                                                await _reviewService
+                                                    .updateReviewStatus(
+                                                      review.id,
+                                                      newStatus,
+                                                      adminId: adminInfo['id']!,
+                                                      adminName:
+                                                          adminInfo['name'],
+                                                    );
+
+                                                // تحديث القائمة المحلية
+                                                setState(() {
+                                                  final idx = _allReviews
+                                                      .indexWhere(
+                                                        (r) =>
+                                                            r.id == review.id,
                                                       );
-                                                      
-                                                      // تحديث القائمة المحلية
-                                      setState(() {
-                                                        final idx = _allReviews.indexWhere((r) => r.id == review.id);
-                                                        if (idx != -1) {
-                                                          _allReviews[idx] = review.copyWith(
-                                          status: newStatus,
-                                                            updatedAt: DateTime.now(),
-                                        );
-                                                        }
-                                      });
-                                                      
-                                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(
-                                          content: Text(
-                                            'تم تغيير حالة المراجعة إلى ${statusText(newStatus)}',
+                                                  if (idx != -1) {
+                                                    _allReviews[idx] = review
+                                                        .copyWith(
+                                                          status: newStatus,
+                                                          updatedAt:
+                                                              DateTime.now(),
+                                                        );
+                                                  }
+                                                });
+
+                                                ScaffoldMessenger.of(
+                                                  context,
+                                                ).showSnackBar(
+                                                  SnackBar(
+                                                    content: Text(
+                                                      'تم تغيير حالة المراجعة إلى ${statusText(newStatus)}',
+                                                    ),
+                                                  ),
+                                                );
+                                              } catch (e) {
+                                                ScaffoldMessenger.of(
+                                                  context,
+                                                ).showSnackBar(
+                                                  SnackBar(
+                                                    content: Text(
+                                                      'خطأ في تحديث الحالة: $e',
+                                                    ),
+                                                    backgroundColor: Colors.red,
+                                                  ),
+                                                );
+                                              }
+                                            }
+                                          },
+                                          icon: const Icon(
+                                            Icons.edit,
+                                            size: 18,
+                                            color: Colors.white,
+                                          ),
+                                          label: const Text(
+                                            'تغيير الحالة',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                            ),
                                           ),
                                         ),
-                                      );
-                                                    } catch (e) {
-                                                      ScaffoldMessenger.of(context).showSnackBar(
-                                                        SnackBar(
-                                                          content: Text('خطأ في تحديث الحالة: $e'),
-                                                          backgroundColor: Colors.red,
-                                                        ),
-                                                      );
-                                                    }
-                                    }
-                                  },
-                                  icon: const Icon(
-                                    Icons.edit,
-                                    size: 18,
-                                    color: Colors.white,
+                                      ),
+                                    ],
                                   ),
-                                  label: const Text(
-                                    'تغيير الحالة',
-                                    style: TextStyle(color: Colors.white),
-                                  ),
-                                ),
+                                ],
                               ),
-                            ],
-                          ),
-                        ],
+                            );
+                          },
+                        ),
                       ),
-                    );
-                  },
-                ),
               ),
-          )],
+            ],
           ),
         ),
       ),

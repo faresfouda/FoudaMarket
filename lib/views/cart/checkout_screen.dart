@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../blocs/cart/index.dart';
 import '../../blocs/address/address_bloc.dart';
 import '../../blocs/address/address_event.dart';
@@ -15,7 +16,7 @@ import '../../models/order_model.dart';
 import '../../routes.dart';
 
 class CheckoutScreen extends StatefulWidget {
-  const CheckoutScreen({Key? key}) : super(key: key);
+  const CheckoutScreen({super.key});
 
   @override
   State<CheckoutScreen> createState() => _CheckoutScreenState();
@@ -60,12 +61,15 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     final promoCodeState = context.read<PromoCodeBloc>().state;
     if (promoCodeState is PromoCodeValidated) {
       // إذا الكود غير مفعل اعتبره غير موجود للمستخدم
-      if (promoCodeState.isValid && promoCodeState.promoCode != null && promoCodeState.promoCode!.isActive) {
+      if (promoCodeState.isValid &&
+          promoCodeState.promoCode != null &&
+          promoCodeState.promoCode!.isActive) {
         setState(() {
           _promoCodeError = null;
           _isPromoCodeValid = true;
         });
-      } else if (promoCodeState.promoCode != null && !promoCodeState.promoCode!.isActive) {
+      } else if (promoCodeState.promoCode != null &&
+          !promoCodeState.promoCode!.isActive) {
         setState(() {
           _promoCodeError = 'كود الخصم غير موجود';
           _isPromoCodeValid = false;
@@ -107,9 +111,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       body: BlocBuilder<CartBloc, CartState>(
         builder: (context, cartState) {
           if (cartState is CartEmpty) {
-            return const Center(
-              child: Text('السلة فارغة'),
-            );
+            return const Center(child: Text('السلة فارغة'));
           }
 
           if (cartState is CartLoaded) {
@@ -177,7 +179,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   ],
                 ),
                 const SizedBox(height: 12),
-                if (addressState is DefaultAddressLoaded && addressState.defaultAddress != null) ...[
+                if (addressState is DefaultAddressLoaded &&
+                    addressState.defaultAddress != null) ...[
                   _buildAddressInfo(addressState.defaultAddress!),
                 ] else if (addressState is AddressesLoading) ...[
                   const Center(child: CircularProgressIndicator()),
@@ -223,10 +226,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               const SizedBox(width: 8),
               Text(
                 address.phone,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey[600],
-                ),
+                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
               ),
             ],
           ),
@@ -239,10 +239,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               Expanded(
                 child: Text(
                   address.address,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[600],
-                  ),
+                  style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                 ),
               ),
             ],
@@ -278,10 +275,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 const SizedBox(height: 4),
                 Text(
                   'سيتم استخدام العنوان الافتراضي من ملفك الشخصي',
-                  style: TextStyle(
-                    color: Colors.orange[600],
-                    fontSize: 12,
-                  ),
+                  style: TextStyle(color: Colors.orange[600], fontSize: 12),
                 ),
               ],
             ),
@@ -294,9 +288,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   Widget _buildPromoCodeSection(CartLoaded cartState) {
     return Card(
       elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -308,10 +300,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 const SizedBox(width: 8),
                 const Text(
                   'كود الخصم',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
               ],
             ),
@@ -349,7 +338,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       : () => _applyPromoCode(cartState),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.orangeColor,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
                   ),
                   child: _isApplyingPromoCode
                       ? const SizedBox(
@@ -357,10 +349,15 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                           height: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
                           ),
                         )
-                      : const Text('تطبيق',style: TextStyle(color: Colors.white)),
+                      : const Text(
+                          'تطبيق',
+                          style: TextStyle(color: Colors.white),
+                        ),
                 ),
               ],
             ),
@@ -395,10 +392,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 ),
                 Text(
                   'خصم ${_appliedPromoCode!.discountPercentage.toStringAsFixed(0)}%',
-                  style: TextStyle(
-                    color: Colors.green[600],
-                    fontSize: 12,
-                  ),
+                  style: TextStyle(color: Colors.green[600], fontSize: 12),
                 ),
               ],
             ),
@@ -414,30 +408,38 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   }
 
   Widget _buildPromoCodeSummary() {
-    if (_appliedPromoCode == null || !_isPromoCodeValid) return const SizedBox.shrink();
-    final isFixed = _appliedPromoCode!.fixedAmount != null && _appliedPromoCode!.fixedAmount! > 0;
+    if (_appliedPromoCode == null || !_isPromoCodeValid)
+      return const SizedBox.shrink();
+    final isFixed =
+        _appliedPromoCode!.fixedAmount != null &&
+        _appliedPromoCode!.fixedAmount! > 0;
     return Row(
       children: [
         Icon(Icons.discount, color: Colors.green),
         const SizedBox(width: 8),
         Text(
           isFixed
-            ? 'خصم ${_appliedPromoCode!.fixedAmount!.toStringAsFixed(2)} جنيه'
-            : 'خصم ${_appliedPromoCode!.discountPercentage.toStringAsFixed(2)}%',
+              ? 'خصم ${_appliedPromoCode!.fixedAmount!.toStringAsFixed(2)} جنيه'
+              : 'خصم ${_appliedPromoCode!.discountPercentage.toStringAsFixed(2)}%',
           style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
         ),
         const Spacer(),
-        Text('-${_discountAmount.toStringAsFixed(2)} جنيه', style: TextStyle(color: Colors.green)),
+        Text(
+          '-${_discountAmount.toStringAsFixed(2)} جنيه',
+          style: TextStyle(color: Colors.green),
+        ),
       ],
     );
   }
 
-  Widget _buildOrderDetailsSection(CartLoaded cartState, double subtotal, double finalTotal) {
+  Widget _buildOrderDetailsSection(
+    CartLoaded cartState,
+    double subtotal,
+    double finalTotal,
+  ) {
     return Card(
       elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -449,17 +451,17 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 const SizedBox(width: 8),
                 const Text(
                   'تفاصيل الطلب',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
               ],
             ),
             const SizedBox(height: 16),
             _buildOrderItem('المجموع الفرعي', subtotal.toStringAsFixed(2)),
             if (_discountAmount > 0) ...[
-              _buildOrderItem('الخصم', '-${_discountAmount.toStringAsFixed(2)}'),
+              _buildOrderItem(
+                'الخصم',
+                '-${_discountAmount.toStringAsFixed(2)}',
+              ),
             ],
             const Divider(),
             _buildOrderItem(
@@ -488,7 +490,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             ),
           ),
           Text(
-            '${value} جنيه',
+            '$value جنيه',
             style: TextStyle(
               fontSize: isTotal ? 16 : 14,
               fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
@@ -503,15 +505,21 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   Widget _buildCheckoutButton(CartLoaded cartState, double finalTotal) {
     return BlocBuilder<AddressBloc, AddressState>(
       builder: (context, addressState) {
-        final hasDefaultAddress = addressState is DefaultAddressLoaded && addressState.defaultAddress != null;
-        
+        final hasDefaultAddress =
+            addressState is DefaultAddressLoaded &&
+            addressState.defaultAddress != null;
+
         return SizedBox(
           width: double.infinity,
           height: 56,
           child: ElevatedButton(
-            onPressed: hasDefaultAddress ? () => _createOrder(addressState.defaultAddress!, finalTotal) : null,
+            onPressed: hasDefaultAddress
+                ? () => _createOrder(addressState.defaultAddress!, finalTotal)
+                : null,
             style: ElevatedButton.styleFrom(
-              backgroundColor: hasDefaultAddress ? AppColors.orangeColor : Colors.grey[400],
+              backgroundColor: hasDefaultAddress
+                  ? AppColors.orangeColor
+                  : Colors.grey[400],
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -542,12 +550,16 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       _isApplyingPromoCode = true;
     });
     try {
-      context.read<PromoCodeBloc>().add(ValidatePromoCode(code, cartState.total));
+      context.read<PromoCodeBloc>().add(
+        ValidatePromoCode(code, cartState.total),
+      );
       await Future.delayed(const Duration(milliseconds: 500));
       final promoCodeState = context.read<PromoCodeBloc>().state;
       if (promoCodeState is PromoCodeValidated) {
         // إذا الكود غير مفعل اعتبره غير موجود للمستخدم
-        if (promoCodeState.isValid && promoCodeState.promoCode != null && promoCodeState.promoCode!.isActive) {
+        if (promoCodeState.isValid &&
+            promoCodeState.promoCode != null &&
+            promoCodeState.promoCode!.isActive) {
           setState(() {
             _appliedPromoCode = promoCodeState.promoCode;
             _appliedPromoCodeId = promoCodeState.promoCode!.id;
@@ -557,7 +569,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             _isPromoCodeValid = true;
           });
           _showSnackBar('تم تطبيق كود الخصم بنجاح');
-        } else if (promoCodeState.promoCode != null && !promoCodeState.promoCode!.isActive) {
+        } else if (promoCodeState.promoCode != null &&
+            !promoCodeState.promoCode!.isActive) {
           setState(() {
             _isApplyingPromoCode = false;
             _promoCodeError = 'كود الخصم غير موجود';
@@ -602,7 +615,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     _showSnackBar('تم إزالة كود الخصم');
   }
 
-  Future<void> _createOrder(AddressModel defaultAddress, double finalTotal) async {
+  Future<void> _createOrder(
+    AddressModel defaultAddress,
+    double finalTotal,
+  ) async {
     final currentUserId = FirebaseAuth.instance.currentUser?.uid;
     if (currentUserId == null) {
       _showSnackBar('يرجى تسجيل الدخول', isError: true);
@@ -616,19 +632,43 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const Center(
-        child: CircularProgressIndicator(),
-      ),
+      builder: (context) => const Center(child: CircularProgressIndicator()),
     );
     try {
-      final orderItems = cartState.cartItems.map((item) => OrderItemModel(
-        productId: item.productId,
-        productName: item.productName,
-        productImage: item.productImage,
-        price: item.price,
-        quantity: item.quantity,
-        total: item.total,
-      )).toList();
+      // جلب بيانات المستخدم الحقيقية من قاعدة البيانات
+      String actualCustomerName = 'غير محدد';
+      String actualCustomerPhone = defaultAddress.phone; // استخدام هاتف العنوان كاحتياطي
+      
+      try {
+        final userDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(currentUserId)
+            .get();
+        
+        if (userDoc.exists) {
+          final userData = userDoc.data()!;
+          actualCustomerName = userData['name'] ?? 'غير محدد';
+          actualCustomerPhone = userData['phone'] ?? defaultAddress.phone;
+        }
+      } catch (e) {
+        print('خطأ في جلب بيانات المستخدم: $e');
+        // في حالة الخطأ، استخدم بيانات العنوان كاحتياطي
+        actualCustomerName = defaultAddress.name;
+        actualCustomerPhone = defaultAddress.phone;
+      }
+
+      final orderItems = cartState.cartItems
+          .map(
+            (item) => OrderItemModel(
+              productId: item.productId,
+              productName: item.productName,
+              productImage: item.productImage,
+              price: item.price,
+              quantity: item.quantity,
+              total: item.total,
+            ),
+          )
+          .toList();
       double discountAmount = 0.0;
       String? promoCodeId;
       String? promoCode;
@@ -660,6 +700,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         promoCode: promoCode,
         promoCodeDiscountPercentage: promoCodeDiscountPercentage,
         promoCodeMaxDiscount: promoCodeMaxDiscount,
+        customerName: actualCustomerName,    // ← استخدام الاسم الحقيقي
+        customerPhone: actualCustomerPhone,  // ← استخدام الهاتف الحقيقي
       );
       final orderId = await OrderService().createOrder(order);
       print('[DEBUG] Order created with ID: $orderId');
@@ -673,7 +715,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       if (mounted) {
         Navigator.pushNamedAndRemoveUntil(
           context,
-          '${AppRoutes.orders}/accepted/$orderId',
+          '/order-accepted/$orderId',
           (route) => false,
         );
       }
@@ -695,4 +737,4 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       ),
     );
   }
-} 
+}

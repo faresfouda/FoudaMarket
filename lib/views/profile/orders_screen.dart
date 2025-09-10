@@ -3,8 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fouda_market/models/order_model.dart';
 import 'package:fouda_market/core/services/order_service.dart';
 import 'package:fouda_market/theme/appcolors.dart';
-import 'package:fouda_market/views/cart/order_details_screen.dart';
-import '../../routes.dart';
+import 'package:fouda_market/views/cart/order_details_screen.dart' as order_details;
 
 class OrdersScreen extends StatefulWidget {
   const OrdersScreen({super.key});
@@ -106,76 +105,12 @@ class _OrdersScreenState extends State<OrdersScreen> {
   }
 
   void _onScroll() {
-    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200 && !_isLoadingMore && _hasMore) {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200 &&
+        !_isLoadingMore &&
+        _hasMore) {
       _loadMoreOrders();
     }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Directionality(
-      textDirection: TextDirection.rtl,
-      child: Scaffold(
-        backgroundColor: const Color(0xFFF6F6F6),
-        body: Stack(
-          children: [
-            Image.asset(
-              'assets/home/backgroundblur.png',
-              fit: BoxFit.cover,
-              width: double.infinity,
-              height: double.infinity,
-            ),
-            SafeArea(
-              child: Column(
-                children: [
-                  // AppBar style title bar
-                  Row(
-                    children: [
-                      IconButton(
-                        icon: Icon(Icons.arrow_back_ios_new, color: Colors.black, size: 26),
-                        onPressed: () {
-                          // التحقق من وجود صفحات سابقة في الـ navigation stack
-                          if (Navigator.of(context).canPop()) {
-                            Navigator.of(context).pop();
-                          } else {
-                            Navigator.of(context).pushNamedAndRemoveUntil(AppRoutes.main, (route) => false);
-                          }
-                        },
-                      ),
-                      const Expanded(
-                        child: Text(
-                          'الطلبات',
-                          style: TextStyle(
-                            color: Colors.black,
-                            fontSize: 22,
-                            fontWeight: FontWeight.w500,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                      IconButton(
-                        icon: Icon(Icons.refresh, color: Colors.black, size: 26),
-                        onPressed: _loadOrders,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Expanded(
-                    child: _isLoading
-                        ? const Center(child: CircularProgressIndicator())
-                        : _error != null
-                            ? _buildErrorState()
-                            : _orders.isEmpty
-                                ? _buildEmptyState()
-                                : _buildOrdersList(),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   Widget _buildErrorState() {
@@ -201,6 +136,74 @@ class _OrdersScreenState extends State<OrdersScreen> {
             child: const Text('إعادة المحاولة'),
           ),
         ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF6F6F6),
+        body: Stack(
+          children: [
+            Image.asset(
+              'assets/home/backgroundblur.png',
+              fit: BoxFit.cover,
+              width: double.infinity,
+              height: double.infinity,
+            ),
+            SafeArea(
+              child: Column(
+                children: [
+                  // AppBar style title bar
+                  Row(
+                    children: [
+                      IconButton(
+                        icon: Icon(
+                          Icons.arrow_back_ios_new,
+                          color: Colors.black,
+                          size: 26,
+                        ),
+                        onPressed: Navigator.of(context).pop,
+                      ),
+                      const Expanded(
+                        child: Text(
+                          'الطلبات',
+                          style: TextStyle(
+                            color: Colors.black,
+                            fontSize: 22,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                      IconButton(
+                        icon: Icon(
+                          Icons.refresh,
+                          color: Colors.black,
+                          size: 26,
+                        ),
+                        onPressed: _loadOrders,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Expanded(
+                    child: _isLoading
+                        ? const Center(child: CircularProgressIndicator())
+                        : _error != null
+                        ? _buildErrorState()
+                        : _orders.isEmpty
+                        ? _buildEmptyState()
+                        : _buildOrdersList(),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -258,7 +261,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => OrderDetailsScreen(orderId: order.id),
+            builder: (context) => order_details.OrderDetailsScreen(orderId: order.id),
           ),
         );
       },
@@ -266,11 +269,11 @@ class _OrdersScreenState extends State<OrdersScreen> {
         padding: const EdgeInsets.all(24),
         margin: const EdgeInsets.symmetric(horizontal: 0),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.98),
+          color: Colors.white.withValues(alpha: 0.98),
           borderRadius: BorderRadius.circular(32),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.07),
+              color: Colors.black.withValues(alpha: 0.07),
               blurRadius: 16,
               offset: const Offset(0, 4),
             ),
@@ -281,7 +284,11 @@ class _OrdersScreenState extends State<OrdersScreen> {
           children: [
             Row(
               children: [
-                Icon(Icons.shopping_bag, color: AppColors.orangeColor, size: 28),
+                Icon(
+                  Icons.shopping_bag,
+                  color: AppColors.orangeColor,
+                  size: 28,
+                ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Column(
@@ -289,8 +296,20 @@ class _OrdersScreenState extends State<OrdersScreen> {
                     children: [
                       Text(
                         'طلب رقم ${order.id}',
-                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black),
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                        ),
                       ),
+                      if (order.customerName != null)
+                        Text(
+                          'العميل: ${order.customerName}',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[600],
+                          ),
+                        ),
                       Text(
                         _formatDate(order.createdAt),
                         style: TextStyle(fontSize: 14, color: Colors.grey[600]),
@@ -299,9 +318,12 @@ class _OrdersScreenState extends State<OrdersScreen> {
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
-                    color: statusColor.withOpacity(0.1),
+                    color: statusColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
@@ -424,4 +446,4 @@ class _OrdersScreenState extends State<OrdersScreen> {
   String _formatDate(DateTime date) {
     return '${date.year}/${date.month.toString().padLeft(2, '0')}/${date.day.toString().padLeft(2, '0')}';
   }
-} 
+}

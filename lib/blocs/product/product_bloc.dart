@@ -421,33 +421,41 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
     Emitter<ProductState> emit,
   ) async {
     try {
-      // تعيين حالة التحميل
-      if (state is! HomeProductsLoaded) {
-        emit(HomeProductsLoaded(isLoadingBestSellers: true));
+      // التحقق من وجود البيانات مسبقاً لتجنب الوميض
+      if (state is HomeProductsLoaded) {
+        final currentState = state as HomeProductsLoaded;
+        if (currentState.bestSellers.isNotEmpty && !currentState.isLoadingBestSellers) {
+          // البيانات موجودة بالفعل، لا حاجة لإعادة التحميل
+          return;
+        }
+        // تحديث حالة التحميل فقط
+        emit(currentState.copyWith(isLoadingBestSellers: true));
       } else {
-        emit(
-          (state as HomeProductsLoaded).copyWith(isLoadingBestSellers: true),
-        );
+        emit(ProductsLoading());
       }
 
-      _bestSellers = await _firebaseService.getBestSellers(limit: event.limit);
+      final products = await _firebaseService.getBestSellers(limit: event.limit);
+      _bestSellers = products;
 
-      // الحفاظ على البيانات الموجودة
-      final currentState = state is HomeProductsLoaded
-          ? state as HomeProductsLoaded
-          : null;
-      emit(
-        HomeProductsLoaded(
-          specialOffers: currentState?.specialOffers ?? _specialOffers,
-          bestSellers: _bestSellers,
-          recommendedProducts:
-              currentState?.recommendedProducts ?? _recommendedProducts,
+      if (state is HomeProductsLoaded) {
+        final currentState = state as HomeProductsLoaded;
+        emit(currentState.copyWith(
+          bestSellers: products,
           isLoadingBestSellers: false,
-          isLoadingSpecialOffers: currentState?.isLoadingSpecialOffers ?? false,
-          isLoadingRecommended: currentState?.isLoadingRecommended ?? false,
-        ),
-      );
+        ));
+      } else {
+        emit(HomeProductsLoaded(
+          specialOffers: _specialOffers,
+          bestSellers: products,
+          recommendedProducts: _recommendedProducts,
+          isLoadingBestSellers: false,
+        ));
+      }
     } catch (e) {
+      if (state is HomeProductsLoaded) {
+        final currentState = state as HomeProductsLoaded;
+        emit(currentState.copyWith(isLoadingBestSellers: false));
+      }
       emit(ProductsError('Failed to fetch best sellers: ${e.toString()}'));
     }
   }
@@ -457,35 +465,41 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
     Emitter<ProductState> emit,
   ) async {
     try {
-      // تعيين حالة التحميل
-      if (state is! HomeProductsLoaded) {
-        emit(HomeProductsLoaded(isLoadingSpecialOffers: true));
+      // التحقق من وجود البيانات مسبقاً لتجنب الوميض
+      if (state is HomeProductsLoaded) {
+        final currentState = state as HomeProductsLoaded;
+        if (currentState.specialOffers.isNotEmpty && !currentState.isLoadingSpecialOffers) {
+          // البيانات موجودة بالفعل، لا حاجة لإعادة التحميل
+          return;
+        }
+        // تحديث حالة التحميل فقط
+        emit(currentState.copyWith(isLoadingSpecialOffers: true));
       } else {
-        emit(
-          (state as HomeProductsLoaded).copyWith(isLoadingSpecialOffers: true),
-        );
+        emit(ProductsLoading());
       }
 
-      _specialOffers = await _firebaseService.getSpecialOffers(
-        limit: event.limit,
-      );
+      final products = await _firebaseService.getSpecialOffers(limit: event.limit);
+      _specialOffers = products;
 
-      // الحفاظ على البيانات الموجودة
-      final currentState = state is HomeProductsLoaded
-          ? state as HomeProductsLoaded
-          : null;
-      emit(
-        HomeProductsLoaded(
-          specialOffers: _specialOffers,
-          bestSellers: currentState?.bestSellers ?? _bestSellers,
-          recommendedProducts:
-              currentState?.recommendedProducts ?? _recommendedProducts,
+      if (state is HomeProductsLoaded) {
+        final currentState = state as HomeProductsLoaded;
+        emit(currentState.copyWith(
+          specialOffers: products,
           isLoadingSpecialOffers: false,
-          isLoadingBestSellers: currentState?.isLoadingBestSellers ?? false,
-          isLoadingRecommended: currentState?.isLoadingRecommended ?? false,
-        ),
-      );
+        ));
+      } else {
+        emit(HomeProductsLoaded(
+          specialOffers: products,
+          bestSellers: _bestSellers,
+          recommendedProducts: _recommendedProducts,
+          isLoadingSpecialOffers: false,
+        ));
+      }
     } catch (e) {
+      if (state is HomeProductsLoaded) {
+        final currentState = state as HomeProductsLoaded;
+        emit(currentState.copyWith(isLoadingSpecialOffers: false));
+      }
       emit(ProductsError('Failed to fetch special offers: ${e.toString()}'));
     }
   }
@@ -495,37 +509,42 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
     Emitter<ProductState> emit,
   ) async {
     try {
-      // تعيين حالة التحميل
-      if (state is! HomeProductsLoaded) {
-        emit(HomeProductsLoaded(isLoadingRecommended: true));
+      // التحقق من وجود البيانات مسبقاً لتجنب الوميض
+      if (state is HomeProductsLoaded) {
+        final currentState = state as HomeProductsLoaded;
+        if (currentState.recommendedProducts.isNotEmpty && !currentState.isLoadingRecommended) {
+          // البيانات موجودة بالفعل، لا حاجة لإعادة التحميل
+          return;
+        }
+        // تحديث حالة التحميل فقط
+        emit(currentState.copyWith(isLoadingRecommended: true));
       } else {
-        emit(
-          (state as HomeProductsLoaded).copyWith(isLoadingRecommended: true),
-        );
+        emit(ProductsLoading());
       }
 
-      _recommendedProducts = await _firebaseService.getRecommendedProducts(
-        limit: event.limit,
-      );
+      final products = await _firebaseService.getRecommendedProducts(limit: event.limit);
+      _recommendedProducts = products;
 
-      // الحفاظ على البيانات الموجودة
-      final currentState = state is HomeProductsLoaded
-          ? state as HomeProductsLoaded
-          : null;
-      emit(
-        HomeProductsLoaded(
-          specialOffers: currentState?.specialOffers ?? _specialOffers,
-          bestSellers: currentState?.bestSellers ?? _bestSellers,
-          recommendedProducts: _recommendedProducts,
+      if (state is HomeProductsLoaded) {
+        final currentState = state as HomeProductsLoaded;
+        emit(currentState.copyWith(
+          recommendedProducts: products,
           isLoadingRecommended: false,
-          isLoadingSpecialOffers: currentState?.isLoadingSpecialOffers ?? false,
-          isLoadingBestSellers: currentState?.isLoadingBestSellers ?? false,
-        ),
-      );
+        ));
+      } else {
+        emit(HomeProductsLoaded(
+          specialOffers: _specialOffers,
+          bestSellers: _bestSellers,
+          recommendedProducts: products,
+          isLoadingRecommended: false,
+        ));
+      }
     } catch (e) {
-      emit(
-        ProductsError('Failed to fetch recommended products: ${e.toString()}'),
-      );
+      if (state is HomeProductsLoaded) {
+        final currentState = state as HomeProductsLoaded;
+        emit(currentState.copyWith(isLoadingRecommended: false));
+      }
+      emit(ProductsError('Failed to fetch recommended products: ${e.toString()}'));
     }
   }
 

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../../blocs/promo_code/index.dart';
 import '../../blocs/auth/index.dart';
 import '../../models/promo_code_model.dart';
@@ -28,8 +27,8 @@ class _PromoCodesScreenState extends State<PromoCodesScreen> {
   Widget build(BuildContext context) {
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, authState) {
-        if (authState is! Authenticated || 
-            authState.userProfile == null || 
+        if (authState is! Authenticated ||
+            authState.userProfile == null ||
             authState.userProfile!.role != 'admin') {
           return _buildUnauthorizedScreen();
         }
@@ -104,7 +103,10 @@ class _PromoCodesScreenState extends State<PromoCodesScreen> {
                     } else if (statsState is PromoCodeStatsError) {
                       return Padding(
                         padding: const EdgeInsets.all(16),
-                        child: Text(statsState.message, style: TextStyle(color: Colors.red)),
+                        child: Text(
+                          statsState.message,
+                          style: TextStyle(color: Colors.red),
+                        ),
                       );
                     }
                     return const SizedBox.shrink();
@@ -139,14 +141,17 @@ class _PromoCodesScreenState extends State<PromoCodesScreen> {
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.orangeColor.withOpacity(0.1),
+        color: AppColors.orangeColor.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.orangeColor.withOpacity(0.3)),
+        border: Border.all(color: AppColors.orangeColor.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
           Expanded(
-            child: _buildStatItem('إجمالي الأكواد', stats['totalCodes'].toString()),
+            child: _buildStatItem(
+              'إجمالي الأكواد',
+              stats['totalCodes'].toString(),
+            ),
           ),
           Expanded(
             child: _buildStatItem('مفعلة', stats['activeCodes'].toString()),
@@ -155,7 +160,10 @@ class _PromoCodesScreenState extends State<PromoCodesScreen> {
             child: _buildStatItem('منتهية', stats['expiredCodes'].toString()),
           ),
           Expanded(
-            child: _buildStatItem('الاستخدامات', stats['totalUsage'].toString()),
+            child: _buildStatItem(
+              'الاستخدامات',
+              stats['totalUsage'].toString(),
+            ),
           ),
         ],
       ),
@@ -173,13 +181,7 @@ class _PromoCodesScreenState extends State<PromoCodesScreen> {
             color: AppColors.orangeColor,
           ),
         ),
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 12,
-            color: Colors.grey,
-          ),
-        ),
+        Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
       ],
     );
   }
@@ -189,26 +191,16 @@ class _PromoCodesScreenState extends State<PromoCodesScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.discount_outlined,
-            size: 80,
-            color: Colors.grey[400],
-          ),
+          Icon(Icons.discount_outlined, size: 80, color: Colors.grey[400]),
           const SizedBox(height: 16),
           Text(
             'لا توجد أكواد خصم',
-            style: TextStyle(
-              fontSize: 18,
-              color: Colors.grey[600],
-            ),
+            style: TextStyle(fontSize: 18, color: Colors.grey[600]),
           ),
           const SizedBox(height: 8),
           Text(
             'اضغط على + لإضافة كود خصم جديد',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey[500],
-            ),
+            style: TextStyle(fontSize: 14, color: Colors.grey[500]),
           ),
         ],
       ),
@@ -220,26 +212,16 @@ class _PromoCodesScreenState extends State<PromoCodesScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.error_outline,
-            size: 80,
-            color: Colors.red[400],
-          ),
+          Icon(Icons.error_outline, size: 80, color: Colors.red[400]),
           const SizedBox(height: 16),
           Text(
             'حدث خطأ',
-            style: TextStyle(
-              fontSize: 18,
-              color: Colors.red[600],
-            ),
+            style: TextStyle(fontSize: 18, color: Colors.red[600]),
           ),
           const SizedBox(height: 8),
           Text(
             message,
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey[600],
-            ),
+            style: TextStyle(fontSize: 14, color: Colors.grey[600]),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 16),
@@ -264,7 +246,10 @@ class _PromoCodesScreenState extends State<PromoCodesScreen> {
         itemCount: promoCodes.length,
         itemBuilder: (context, index) {
           final promoCode = promoCodes[index];
-          return _buildPromoCodeCard(promoCode, key: ValueKey(promoCode.id)); // مرر key هنا
+          return _buildPromoCodeCard(
+            promoCode,
+            key: ValueKey(promoCode.id),
+          ); // مرر key هنا
         },
       ),
     );
@@ -272,167 +257,252 @@ class _PromoCodesScreenState extends State<PromoCodesScreen> {
 
   Widget _buildPromoCodeCard(PromoCodeModel promoCode, {Key? key}) {
     return Card(
-      key: key, // استخدم key هنا
-      margin: const EdgeInsets.only(bottom: 12),
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: promoCode.isValid ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: promoCode.isValid ? Colors.green : Colors.red,
+      key: key,
+      elevation: 3,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          gradient: LinearGradient(
+            colors: [
+              Colors.white,
+              Colors.grey.shade50,
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header row with code and status
+              Row(
+                children: [
+                  Expanded(
+                    flex: 3,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color: promoCode.isValid
+                                ? Colors.green.withValues(alpha: 0.15)
+                                : Colors.red.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: promoCode.isValid ? Colors.green : Colors.red,
+                              width: 1.5,
+                            ),
+                          ),
+                          child: Text(
+                            promoCode.code,
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: promoCode.isValid ? Colors.green.shade700 : Colors.red.shade700,
+                              letterSpacing: 1.2,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.orangeColor.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: AppColors.orangeColor.withValues(alpha: 0.3),
+                            ),
+                          ),
+                          child: Text(
+                            promoCode.fixedAmount != null && promoCode.fixedAmount! > 0
+                                ? 'خصم ثابت: ${promoCode.fixedAmount!.toStringAsFixed(0)} جنيه'
+                                : 'خصم: ${promoCode.discountPercentage.toStringAsFixed(0)}%',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.orangeColor,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
+                  const SizedBox(width: 12),
+                  Column(
                     children: [
-                      Text(
-                        promoCode.code,
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: promoCode.isValid ? Colors.green : Colors.red,
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: promoCode.isActive
+                              ? Colors.green.withValues(alpha: 0.1)
+                              : Colors.grey.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(
+                          promoCode.isActive ? Icons.check_circle : Icons.cancel,
+                          color: promoCode.isActive ? Colors.green : Colors.grey,
+                          size: 24,
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      Text(
-                        promoCode.fixedAmount != null && promoCode.fixedAmount! > 0
-                          ? '(${promoCode.fixedAmount!.toStringAsFixed(2)} جنيه خصم ثابت)'
-                          : '(${promoCode.discountPercentage.toStringAsFixed(2)}% خصم)',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[700],
-                        ),
+                      const SizedBox(height: 8),
+                      Switch(
+                        value: promoCode.isActive,
+                        onChanged: (value) {
+                          _togglePromoCodeStatus(promoCode.id, value);
+                        },
+                        activeColor: AppColors.orangeColor,
+                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
                     ],
                   ),
-                ),
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: AppColors.orangeColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    '${promoCode.discountPercentage.toStringAsFixed(0)}%',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.orangeColor,
-                    ),
-                  ),
-                ),
-                const Spacer(),
-                Switch(
-                  value: promoCode.isActive,
-                  onChanged: (value) {
-                    _togglePromoCodeStatus(promoCode.id, value);
-                  },
-                  activeColor: AppColors.orangeColor,
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(
-              promoCode.description,
-              style: const TextStyle(
-                fontSize: 14,
-                color: Colors.black87,
+                ],
               ),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Icon(
-                  Icons.calendar_today,
-                  size: 16,
-                  color: Colors.grey[600],
+
+              const SizedBox(height: 16),
+
+              // Description
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.blue.shade200),
                 ),
-                const SizedBox(width: 4),
-                Text(
-                  'ينتهي في: ${_formatDate(promoCode.expiryDate)}',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
+                child: Text(
+                  promoCode.description,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    color: Colors.black87,
+                    fontWeight: FontWeight.w500,
+                    height: 1.4,
                   ),
                 ),
-                const Spacer(),
-                Icon(
-                  Icons.people,
-                  size: 16,
-                  color: Colors.grey[600],
+              ),
+
+              const SizedBox(height: 16),
+
+              // Info row
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                const SizedBox(width: 4),
-                Text(
-                  '${promoCode.currentUsageCount}/${promoCode.maxUsageCount}',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                  ),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.calendar_today, size: 18, color: Colors.grey[700]),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'ينتهي في: ${_formatDate(promoCode.expiryDate)}',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey[700],
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.shade100,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.people, size: 16, color: Colors.blue.shade700),
+                              const SizedBox(width: 4),
+                              Text(
+                                '${promoCode.currentUsageCount}/${promoCode.maxUsageCount}',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.blue.shade700,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (promoCode.minOrderAmount != null) ...[
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Icon(Icons.shopping_cart, size: 18, color: Colors.grey[700]),
+                          const SizedBox(width: 8),
+                          Text(
+                            'الحد الأدنى للطلب: ${promoCode.minOrderAmount!.toStringAsFixed(0)} جنيه',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey[700],
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
                 ),
-              ],
-            ),
-            if (promoCode.minOrderAmount != null) ...[
-              const SizedBox(height: 4),
+              ),
+
+              const SizedBox(height: 16),
+
+              // Action buttons
               Row(
                 children: [
-                  Icon(
-                    Icons.shopping_cart,
-                    size: 16,
-                    color: Colors.grey[600],
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () => _navigateToEditPromoCode(promoCode),
+                      icon: const Icon(Icons.edit, size: 18),
+                      label: const Text('تعديل', style: TextStyle(fontWeight: FontWeight.bold)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.orangeColor,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        elevation: 2,
+                      ),
+                    ),
                   ),
-                  const SizedBox(width: 4),
-                  Text(
-                    'الحد الأدنى: ${promoCode.minOrderAmount!.toStringAsFixed(2)} جنيه',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[600],
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () => _deletePromoCode(promoCode),
+                      icon: const Icon(Icons.delete, size: 18),
+                      label: const Text('حذف', style: TextStyle(fontWeight: FontWeight.bold)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red.shade50,
+                        foregroundColor: Colors.red.shade700,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          side: BorderSide(color: Colors.red.shade300),
+                        ),
+                        elevation: 1,
+                      ),
                     ),
                   ),
                 ],
               ),
             ],
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () => _navigateToEditPromoCode(promoCode),
-                    icon: const Icon(Icons.edit, size: 16),
-                    label: const Text('تعديل'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.orangeColor,
-                      side: BorderSide(color: AppColors.orangeColor),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () => _deletePromoCode(promoCode),
-                    icon: const Icon(Icons.delete, size: 16),
-                    label: const Text('حذف'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.red,
-                      side: const BorderSide(color: Colors.red),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -469,7 +539,7 @@ class _PromoCodesScreenState extends State<PromoCodesScreen> {
             Icon(
               Icons.admin_panel_settings,
               size: 80,
-              color: AppColors.orangeColor.withOpacity(0.3),
+              color: AppColors.orangeColor.withValues(alpha: 0.3),
             ),
             const SizedBox(height: 20),
             const Text(
@@ -491,7 +561,10 @@ class _PromoCodesScreenState extends State<PromoCodesScreen> {
               onPressed: () => Navigator.pop(context),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.orangeColor,
-                padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 30,
+                  vertical: 12,
+                ),
               ),
               child: const Text(
                 'العودة',
@@ -507,9 +580,7 @@ class _PromoCodesScreenState extends State<PromoCodesScreen> {
   void _navigateToAddPromoCode() async {
     final result = await Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => const AddEditPromoCodeScreen(),
-      ),
+      MaterialPageRoute(builder: (context) => const AddEditPromoCodeScreen()),
     );
     if (result == true) {
       context.read<PromoCodeBloc>().add(LoadPromoCodes());
@@ -531,7 +602,9 @@ class _PromoCodesScreenState extends State<PromoCodesScreen> {
   }
 
   void _togglePromoCodeStatus(String promoCodeId, bool isActive) {
-    context.read<PromoCodeBloc>().add(TogglePromoCodeStatus(promoCodeId, isActive));
+    context.read<PromoCodeBloc>().add(
+      TogglePromoCodeStatus(promoCodeId, isActive),
+    );
     context.read<PromoCodeStatsBloc>().add(LoadPromoCodeStats());
   }
 
@@ -550,7 +623,9 @@ class _PromoCodesScreenState extends State<PromoCodesScreen> {
             onPressed: () async {
               Navigator.pop(context);
               try {
-                context.read<PromoCodeBloc>().add(DeletePromoCode(promoCode.id));
+                context.read<PromoCodeBloc>().add(
+                  DeletePromoCode(promoCode.id),
+                );
                 context.read<PromoCodeStatsBloc>().add(LoadPromoCodeStats());
               } catch (e) {
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -568,4 +643,4 @@ class _PromoCodesScreenState extends State<PromoCodesScreen> {
       ),
     );
   }
-} 
+}

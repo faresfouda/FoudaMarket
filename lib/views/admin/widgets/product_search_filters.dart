@@ -18,13 +18,13 @@ class ProductSearchFilters extends StatelessWidget {
   final String categoryId;
 
   const ProductSearchFilters({
-    Key? key,
+    super.key,
     required this.searchQuery,
     required this.selectedFilter,
     required this.onSearchChanged,
     required this.onFilterChanged,
     required this.categoryId,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

@@ -5,19 +5,29 @@ class SectionHeader extends StatelessWidget {
   final String title;
   final VoidCallback onTap;
 
-  const SectionHeader({required this.title, required this.onTap});
+  const SectionHeader({super.key, required this.title, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(title, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.blackColor)),
+        Text(
+          title,
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: AppColors.blackColor,
+          ),
+        ),
         GestureDetector(
           onTap: onTap,
-          child: Text('عرض الكل', style: TextStyle(fontSize: 16, color: AppColors.orangeColor)),
+          child: Text(
+            'عرض الكل',
+            style: TextStyle(fontSize: 16, color: AppColors.orangeColor),
+          ),
         ),
       ],
     );
   }
-} 
+}

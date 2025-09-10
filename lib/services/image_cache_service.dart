@@ -1,8 +1,8 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:crypto/crypto.dart';
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
 
 class ImageCacheService {
   static final ImageCacheService _instance = ImageCacheService._internal();
@@ -18,6 +18,12 @@ class ImageCacheService {
 
   /// تهيئة مجلد التخزين المؤقت
   Future<void> initialize() async {
+    // تجاهل التهيئة للويب لأنه يستخدم ذاكرة التخزين المؤقت للمتصفح
+    if (kIsWeb) {
+      debugPrint('ImageCacheService: Web platform detected, using browser cache');
+      return;
+    }
+
     try {
       final appDir = await getApplicationDocumentsDirectory();
       _cacheDir = Directory('${appDir.path}/$_cacheDirName');
@@ -40,6 +46,8 @@ class ImageCacheService {
 
   /// تحميل timestamps من ملف
   Future<void> _loadCacheTimestamps() async {
+    if (kIsWeb) return;
+
     try {
       final timestampsFile = File('${_cacheDir!.path}/timestamps.json');
       if (await timestampsFile.exists()) {
@@ -57,6 +65,8 @@ class ImageCacheService {
 
   /// حفظ timestamps إلى ملف
   Future<void> _saveCacheTimestamps() async {
+    if (kIsWeb) return;
+
     try {
       final timestampsFile = File('${_cacheDir!.path}/timestamps.json');
       final Map<String, String> data = {};
@@ -78,11 +88,18 @@ class ImageCacheService {
 
   /// الحصول على مسار الملف في التخزين المؤقت
   String _getCacheFilePath(String cacheKey) {
+    if (kIsWeb) return '';
     return '${_cacheDir!.path}/$cacheKey.jpg';
   }
 
   /// حفظ صورة في التخزين المؤقت
   Future<String?> cacheImage(String url, Uint8List imageData) async {
+    // للويب: لا نحتاج تخزين مؤقت لأن المتصفح يتولى ذلك
+    if (kIsWeb) {
+      debugPrint('ImageCacheService: Web platform uses browser cache for $url');
+      return null;
+    }
+
     try {
       if (_cacheDir == null) await initialize();
       
@@ -100,7 +117,7 @@ class ImageCacheService {
       // التحقق من حجم التخزين المؤقت
       await _checkCacheSize();
       
-      debugPrint('Image cached successfully: $url');
+      debugPrint('Image cached successfully: $cachePath');
       return cachePath;
     } catch (e) {
       debugPrint('Error caching image: $e');
@@ -110,6 +127,11 @@ class ImageCacheService {
 
   /// الحصول على صورة من التخزين المؤقت
   Future<File?> getCachedImage(String url) async {
+    // للويب: إرجاع null لأن المتصفح يتولى التخزين المؤقت
+    if (kIsWeb) {
+      return null;
+    }
+
     try {
       if (_cacheDir == null) await initialize();
       
@@ -122,24 +144,23 @@ class ImageCacheService {
         final timestamp = _cacheTimestamps[cacheKey];
         if (timestamp != null) {
           final age = DateTime.now().difference(timestamp).inMilliseconds;
-          if (age < _maxCacheAge) {
-            debugPrint('Image found in cache: $url');
-            return file;
-          } else {
-            // حذف الملف القديم
+          if (age > _maxCacheAge) {
+            // الملف قديم، احذفه
             await file.delete();
             _cacheTimestamps.remove(cacheKey);
             await _saveCacheTimestamps();
-            debugPrint('Cached image expired: $url');
+            return null;
           }
         }
+
+        debugPrint('Found cached image: $cachePath');
+        return file;
       }
-      
-      return null;
     } catch (e) {
       debugPrint('Error getting cached image: $e');
-      return null;
     }
+
+    return null;
   }
 
   /// التحقق من وجود صورة في التخزين المؤقت
@@ -218,83 +239,78 @@ class ImageCacheService {
 
   /// تنظيف التخزين المؤقت القديم
   Future<void> _cleanupOldCache() async {
+    if (kIsWeb) return;
+
     try {
+      if (_cacheDir == null) return;
+
       final now = DateTime.now();
-      final keysToRemove = <String>[];
-      
-      _cacheTimestamps.forEach((key, timestamp) {
+      final filesToDelete = <String>[];
+
+      _cacheTimestamps.forEach((cacheKey, timestamp) {
         final age = now.difference(timestamp).inMilliseconds;
-        if (age >= _maxCacheAge) {
-          keysToRemove.add(key);
+        if (age > _maxCacheAge) {
+          filesToDelete.add(cacheKey);
         }
       });
       
-      for (final key in keysToRemove) {
-        final file = File(_getCacheFilePath(key));
+      for (final cacheKey in filesToDelete) {
+        final cachePath = _getCacheFilePath(cacheKey);
+        final file = File(cachePath);
         if (await file.exists()) {
           await file.delete();
         }
-        _cacheTimestamps.remove(key);
+        _cacheTimestamps.remove(cacheKey);
       }
       
-      if (keysToRemove.isNotEmpty) {
+      if (filesToDelete.isNotEmpty) {
         await _saveCacheTimestamps();
-        debugPrint('Cleaned up ${keysToRemove.length} old cached images');
+        debugPrint('Cleaned up ${filesToDelete.length} old cached images');
       }
     } catch (e) {
-      debugPrint('Error cleaning up old cache: $e');
+      debugPrint('Error cleaning up cache: $e');
     }
   }
 
   /// التحقق من حجم التخزين المؤقت
   Future<void> _checkCacheSize() async {
+    if (kIsWeb) return;
+
     try {
-      final cacheInfo = await getCacheInfo();
-      
-      if (cacheInfo.totalSize > _maxCacheSize) {
-        // حذف أقدم الملفات
-        await _removeOldestFiles();
+      if (_cacheDir == null) return;
+
+      int totalSize = 0;
+      final files = await _cacheDir!.list().toList();
+
+      for (final file in files) {
+        if (file is File) {
+          final stat = await file.stat();
+          totalSize += stat.size;
+        }
+      }
+
+      if (totalSize > _maxCacheSize) {
+        debugPrint('Cache size exceeded, cleaning up...');
+        await _cleanupOldCache();
       }
     } catch (e) {
       debugPrint('Error checking cache size: $e');
     }
   }
 
-  /// حذف أقدم الملفات
-  Future<void> _removeOldestFiles() async {
-    try {
-      // ترتيب الملفات حسب التاريخ
-      final sortedEntries = _cacheTimestamps.entries.toList()
-        ..sort((a, b) => a.value.compareTo(b.value));
-      
-      int removedSize = 0;
-      final targetRemoval = _maxCacheSize * 0.3; // حذف 30% من المساحة
-      
-      for (final entry in sortedEntries) {
-        if (removedSize >= targetRemoval) break;
-        
-        final file = File(_getCacheFilePath(entry.key));
-        if (await file.exists()) {
-          final size = await file.length();
-          await file.delete();
-          removedSize += size;
-          _cacheTimestamps.remove(entry.key);
-        }
-      }
-      
-      await _saveCacheTimestamps();
-      debugPrint('Removed ${removedSize ~/ 1024} KB from cache');
-    } catch (e) {
-      debugPrint('Error removing oldest files: $e');
-    }
-  }
-
-  /// مسح التخزين المؤقت بالكامل
+  /// مسح جميع الصور المخزنة مؤقتاً
   Future<void> clearCache() async {
+    if (kIsWeb) {
+      debugPrint('ImageCacheService: Cannot clear browser cache programmatically');
+      return;
+    }
+
     try {
-      if (_cacheDir != null && await _cacheDir!.exists()) {
+      if (_cacheDir == null) return;
+
+      if (await _cacheDir!.exists()) {
         await _cacheDir!.delete(recursive: true);
-        await _cacheDir!.create();
+        await _cacheDir!.create(recursive: true);
       }
       
       _cacheTimestamps.clear();
@@ -306,27 +322,27 @@ class ImageCacheService {
     }
   }
 
-  /// حذف صورة محددة من التخزين المؤقت
-  Future<bool> removeCachedImage(String url) async {
+  /// الحصول على حجم التخزين المؤقت
+  Future<int> getCacheSize() async {
+    if (kIsWeb) return 0;
+
     try {
-      if (_cacheDir == null) await initialize();
-      
-      final cacheKey = _generateCacheKey(url);
-      final cachePath = _getCacheFilePath(cacheKey);
-      final file = File(cachePath);
-      
-      if (await file.exists()) {
-        await file.delete();
-        _cacheTimestamps.remove(cacheKey);
-        await _saveCacheTimestamps();
-        debugPrint('Cached image removed: $url');
-        return true;
+      if (_cacheDir == null) return 0;
+
+      int totalSize = 0;
+      final files = await _cacheDir!.list().toList();
+
+      for (final file in files) {
+        if (file is File) {
+          final stat = await file.stat();
+          totalSize += stat.size;
+        }
       }
       
-      return false;
+      return totalSize;
     } catch (e) {
-      debugPrint('Error removing cached image: $e');
-      return false;
+      debugPrint('Error getting cache size: $e');
+      return 0;
     }
   }
 }
@@ -365,4 +381,4 @@ class CacheInfo {
            'fileCount: $fileCount, validFiles: $validFiles, '
            'usagePercentage: ${usagePercentage.toStringAsFixed(1)}%)';
   }
-} 
+}

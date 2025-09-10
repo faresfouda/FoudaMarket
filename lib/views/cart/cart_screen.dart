@@ -15,7 +15,6 @@ import '../../routes.dart';
 import 'package:fouda_market/components/loading_indicator.dart';
 import 'package:fouda_market/components/error_view.dart';
 
-
 class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
 
@@ -64,8 +63,6 @@ class _CartScreenState extends State<CartScreen> with RouteAware {
     }
   }
 
-
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -113,7 +110,11 @@ class _CartScreenState extends State<CartScreen> with RouteAware {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.shopping_cart_outlined, size: 80, color: Colors.grey),
+                  Icon(
+                    Icons.shopping_cart_outlined,
+                    size: 80,
+                    color: Colors.grey,
+                  ),
                   SizedBox(height: 16),
                   Text(
                     'عربة التسوق فارغة',
@@ -142,7 +143,11 @@ class _CartScreenState extends State<CartScreen> with RouteAware {
                         cartItem: cartItem,
                         onQuantityChanged: (quantity) {
                           context.read<CartBloc>().add(
-                            UpdateCartItem(cartItem.id, quantity, currentUserId!),
+                            UpdateCartItem(
+                              cartItem.id,
+                              quantity,
+                              currentUserId!,
+                            ),
                           );
                         },
                         onRemove: () {
@@ -163,8 +168,6 @@ class _CartScreenState extends State<CartScreen> with RouteAware {
       ),
     );
   }
-
-
 
   Widget _buildDeliveryAddressSection() {
     return BlocBuilder<AddressBloc, AddressState>(
@@ -189,10 +192,7 @@ class _CartScreenState extends State<CartScreen> with RouteAware {
                     children: [
                       Text(
                         'عنوان التوصيل',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey[600],
-                        ),
+                        style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                       ),
                       const SizedBox(height: 4),
                       Text(
@@ -204,10 +204,7 @@ class _CartScreenState extends State<CartScreen> with RouteAware {
                       ),
                       Text(
                         address.address,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey[600],
-                        ),
+                        style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -215,14 +212,23 @@ class _CartScreenState extends State<CartScreen> with RouteAware {
                   ),
                 ),
                 IconButton(
-                  icon: Icon(Icons.edit, color: AppColors.orangeColor, size: 20),
+                  icon: Icon(
+                    Icons.edit,
+                    color: AppColors.orangeColor,
+                    size: 20,
+                  ),
                   onPressed: () async {
                     // الانتقال لشاشة العناوين
-                    final result = await Navigator.pushNamed(context, '/delivery-address');
+                    final result = await Navigator.pushNamed(
+                      context,
+                      '/delivery-address',
+                    );
                     // بعد العودة من شاشة العناوين، أعد تحميل العنوان الافتراضي دائماً
                     final user = FirebaseAuth.instance.currentUser;
                     if (user != null && mounted) {
-                      context.read<AddressBloc>().add(LoadDefaultAddress(user.uid));
+                      context.read<AddressBloc>().add(
+                        LoadDefaultAddress(user.uid),
+                      );
                     }
                   },
                 ),
@@ -256,11 +262,16 @@ class _CartScreenState extends State<CartScreen> with RouteAware {
                   icon: Icon(Icons.add, color: AppColors.orangeColor, size: 20),
                   onPressed: () async {
                     // الانتقال لشاشة العناوين
-                    final result = await Navigator.pushNamed(context, '/delivery-address');
+                    final result = await Navigator.pushNamed(
+                      context,
+                      '/delivery-address',
+                    );
                     // بعد العودة من شاشة العناوين، أعد تحميل العنوان الافتراضي دائماً
                     final user = FirebaseAuth.instance.currentUser;
                     if (user != null && mounted) {
-                      context.read<AddressBloc>().add(LoadDefaultAddress(user.uid));
+                      context.read<AddressBloc>().add(
+                        LoadDefaultAddress(user.uid),
+                      );
                     }
                   },
                 ),
@@ -313,10 +324,38 @@ class _CartScreenState extends State<CartScreen> with RouteAware {
   }
 
   void _navigateToCheckout() {
-    Navigator.pushNamed(context, '/checkout');
+    // التحقق من وجود عناصر في السلة قبل التنقل
+    final cartState = context.read<CartBloc>().state;
+    if (cartState is! CartLoaded || cartState.cartItems.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('السلة فارغة'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // التحقق من تسجيل الدخول
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('يرجى تسجيل الدخول لإتمام الطلب'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // التنقل إلى شاشة إتمام الطلب
+    Navigator.pushNamed(context, AppRoutes.checkout);
   }
 
-  Future<void> _createOrder(AddressModel defaultAddress, double finalTotal) async {
+  Future<void> _createOrder(
+    AddressModel defaultAddress,
+    double finalTotal,
+  ) async {
     try {
       // عرض مؤشر التحميل
       showDialog(
@@ -330,20 +369,27 @@ class _CartScreenState extends State<CartScreen> with RouteAware {
       if (cartState is! CartLoaded || cartState.cartItems.isEmpty) {
         Navigator.pop(context); // إغلاق مؤشر التحميل
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('السلة فارغة'), backgroundColor: Colors.red),
+          const SnackBar(
+            content: Text('السلة فارغة'),
+            backgroundColor: Colors.red,
+          ),
         );
         return;
       }
 
       // إنشاء عناصر الطلب
-      final orderItems = cartState.cartItems.map((cartItem) => OrderItemModel(
-        productId: cartItem.productId,
-        productName: cartItem.productName,
-        productImage: cartItem.productImage,
-        price: cartItem.price,
-        quantity: cartItem.quantity,
-        total: cartItem.total,
-      )).toList();
+      final orderItems = cartState.cartItems
+          .map(
+            (cartItem) => OrderItemModel(
+              productId: cartItem.productId,
+              productName: cartItem.productName,
+              productImage: cartItem.productImage,
+              price: cartItem.price,
+              quantity: cartItem.quantity,
+              total: cartItem.total,
+            ),
+          )
+          .toList();
 
       // إنشاء الطلب
       final order = OrderModel(
@@ -373,12 +419,11 @@ class _CartScreenState extends State<CartScreen> with RouteAware {
       Navigator.pop(context);
 
       // الانتقال لشاشة نجاح الطلب
-      Navigator.pushReplacementNamed(context, AppRoutes.orders + '/accepted');
-
+      Navigator.pushReplacementNamed(context, '/order-accepted');
     } catch (e) {
       // إغلاق مؤشر التحميل
       Navigator.pop(context);
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('فشل في إنشاء الطلب: $e'),

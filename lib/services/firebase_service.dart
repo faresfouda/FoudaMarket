@@ -65,7 +65,10 @@ class FirebaseService {
     return await _authService.getUserProfile(userId);
   }
 
-  Future<void> updateUserProfile(String userId, Map<String, dynamic> data) async {
+  Future<void> updateUserProfile(
+    String userId,
+    Map<String, dynamic> data,
+  ) async {
     await _authService.updateUserProfile(userId, data);
   }
 
@@ -82,7 +85,10 @@ class FirebaseService {
     await _productService.addProduct(product);
   }
 
-  Future<void> updateProduct(String productId, Map<String, dynamic> data) async {
+  Future<void> updateProduct(
+    String productId,
+    Map<String, dynamic> data,
+  ) async {
     await _productService.updateProduct(productId, data);
   }
 
@@ -94,7 +100,9 @@ class FirebaseService {
     return await _productService.getProductsForCategory(categoryId);
   }
 
-  Future<List<ProductModel>> getAllProductsForCategory(String categoryId) async {
+  Future<List<ProductModel>> getAllProductsForCategory(
+    String categoryId,
+  ) async {
     return await _productService.getAllProductsForCategory(categoryId);
   }
 
@@ -130,16 +138,34 @@ class FirebaseService {
     return await _productService.getAllProductCountForCategory(categoryId);
   }
 
-  Future<List<ProductModel>> getProductsPaginated({int limit = 20, ProductModel? lastProduct}) async {
-    return await _productService.getProductsPaginated(limit: limit, lastProduct: lastProduct);
+  Future<List<ProductModel>> getProductsPaginated({
+    int limit = 20,
+    ProductModel? lastProduct,
+  }) async {
+    return await _productService.getProductsPaginated(
+      limit: limit,
+      lastProduct: lastProduct,
+    );
   }
 
-  Future<List<ProductModel>> getBestSellers({int limit = 10, ProductModel? lastProduct}) async {
-    return await _productService.getBestSellers(limit: limit, lastProduct: lastProduct);
+  Future<List<ProductModel>> getBestSellers({
+    int limit = 10,
+    ProductModel? lastProduct,
+  }) async {
+    return await _productService.getBestSellers(
+      limit: limit,
+      lastProduct: lastProduct,
+    );
   }
 
-  Future<List<ProductModel>> getSpecialOffers({int limit = 10, ProductModel? lastProduct}) async {
-    return await _productService.getSpecialOffers(limit: limit, lastProduct: lastProduct);
+  Future<List<ProductModel>> getSpecialOffers({
+    int limit = 10,
+    ProductModel? lastProduct,
+  }) async {
+    return await _productService.getSpecialOffers(
+      limit: limit,
+      lastProduct: lastProduct,
+    );
   }
 
   Future<List<ProductModel>> getRecommendedProducts({int limit = 10}) async {
@@ -155,11 +181,20 @@ class FirebaseService {
     await _categoryService.addCategory(category);
   }
 
-  Future<List<CategoryModel>> getCategoriesPaginated({int limit = 20, CategoryModel? lastCategory}) async {
-    return await _categoryService.getCategoriesPaginated(limit: limit, lastCategory: lastCategory);
+  Future<List<CategoryModel>> getCategoriesPaginated({
+    int limit = 20,
+    CategoryModel? lastCategory,
+  }) async {
+    return await _categoryService.getCategoriesPaginated(
+      limit: limit,
+      lastCategory: lastCategory,
+    );
   }
 
-  Future<void> updateCategory(String categoryId, Map<String, dynamic> data) async {
+  Future<void> updateCategory(
+    String categoryId,
+    Map<String, dynamic> data,
+  ) async {
     await _categoryService.updateCategory(categoryId, data);
   }
 
@@ -182,16 +217,35 @@ class FirebaseService {
     return await _searchService.searchProducts(query);
   }
 
-  Future<List<ProductModel>> searchVisibleProducts(String query, {List<String>? categories, double? minPrice, double? maxPrice}) async {
-    return await _searchService.searchVisibleProducts(query, categories: categories, minPrice: minPrice, maxPrice: maxPrice);
+  Future<List<ProductModel>> searchVisibleProducts(
+    String query, {
+    List<String>? categories,
+    double? minPrice,
+    double? maxPrice,
+  }) async {
+    return await _searchService.searchVisibleProducts(
+      query,
+      categories: categories,
+      minPrice: minPrice,
+      maxPrice: maxPrice,
+    );
   }
 
-  Future<List<ProductModel>> searchProductsInCategory(String categoryId, String query) async {
+  Future<List<ProductModel>> searchProductsInCategory(
+    String categoryId,
+    String query,
+  ) async {
     return await _searchService.searchProductsInCategory(categoryId, query);
   }
 
-  Future<List<ProductModel>> searchVisibleProductsInCategory(String categoryId, String query) async {
-    return await _searchService.searchVisibleProductsInCategory(categoryId, query);
+  Future<List<ProductModel>> searchVisibleProductsInCategory(
+    String categoryId,
+    String query,
+  ) async {
+    return await _searchService.searchVisibleProductsInCategory(
+      categoryId,
+      query,
+    );
   }
 
   Future<List<CategoryModel>> searchCategories(String query) async {
@@ -240,7 +294,10 @@ class FirebaseService {
     await _cartService.addToCart(cartItem);
   }
 
-  Future<void> updateCartItem(String cartItemId, Map<String, dynamic> data) async {
+  Future<void> updateCartItem(
+    String cartItemId,
+    Map<String, dynamic> data,
+  ) async {
     await _cartService.updateCartItem(cartItemId, data);
   }
 
@@ -273,11 +330,24 @@ class FirebaseService {
     return await _orderService.getAllOrders();
   }
 
-  Future<void> updateOrderStatus(String orderId, String status) async {
-    await _orderService.updateOrderStatus(orderId, status);
+  Future<void> updateOrderStatus(
+    String orderId,
+    String status, {
+    required String adminId,
+    String? adminName,
+  }) async {
+    await _orderService.updateOrderStatus(
+      orderId,
+      status,
+      adminId: adminId,
+      adminName: adminName,
+    );
   }
 
-  Future<Map<String, dynamic>> getSalesReport(DateTime startDate, DateTime endDate) async {
+  Future<Map<String, dynamic>> getSalesReport(
+    DateTime startDate,
+    DateTime endDate,
+  ) async {
     return await _orderService.getSalesReport(startDate, endDate);
   }
-} 
+}

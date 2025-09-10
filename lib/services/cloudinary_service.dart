@@ -12,7 +12,7 @@ class CloudinaryService {
   Future<String?> uploadImage(String filePath) async {
     try {
       debugPrint('بدء رفع الصورة: $filePath');
-      
+
       final imageFile = File(filePath);
       if (!await imageFile.exists()) {
         debugPrint('الملف غير موجود: $filePath');
@@ -122,4 +122,4 @@ class CloudinaryService {
   Future<void> cleanupTempFiles() async {
     await _compressionService.cleanupTempFiles();
   }
-} 
+}

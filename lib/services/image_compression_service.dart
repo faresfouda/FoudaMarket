@@ -1,160 +1,165 @@
 import 'dart:io';
 import 'dart:typed_data';
-import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:flutter/foundation.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:path/path.dart' as path;
+import 'package:image_picker/image_picker.dart';
 
+// استيراد شرطي للتنفيذات المختلفة
+import 'image_compression_service_mobile.dart' if (dart.library.html) 'image_compression_service_web.dart';
+
+/// خدمة ضغط الصور مع دعم متعدد المنصات
 class ImageCompressionService {
   static final ImageCompressionService _instance = ImageCompressionService._internal();
   factory ImageCompressionService() => _instance;
   ImageCompressionService._internal();
 
-  /// ضغط صورة من ملف (ضغط الحجم فقط)
-  Future<File?> compressImageFile(File imageFile, {
+  ImageCompressionImplementation? _implementation;
+
+  /// تهيئة الخدمة
+  void _initializeImplementation() {
+    if (kIsWeb) {
+      // تنفيذ الويب
+      try {
+        _implementation = createWebImageCompressionImplementation();
+      } catch (e) {
+        debugPrint('فشل في تهيئة تنفيذ الويب: $e');
+        _implementation = _FallbackImplementation();
+      }
+    } else {
+      // تنفيذ الأجهزة المحمولة
+      try {
+        _implementation = createMobileImageCompressionImplementation();
+      } catch (e) {
+        debugPrint('فشل في تهيئة تنفيذ الأجهزة المحمولة: $e');
+        _implementation = _FallbackImplementation();
+      }
+    }
+  }
+
+  /// الحصول على التنفيذ المناسب
+  ImageCompressionImplementation get _impl {
+    if (_implementation == null) {
+      _initializeImplementation();
+    }
+    return _implementation!;
+  }
+
+  /// ضغط صورة من XFile (يدعم الويب والمنصات الأخرى)
+  Future<File?> compressImageFromXFile(
+    XFile xFile, {
+    int quality = 75,
+    bool keepExif = false,
+  }) async {
+    try {
+      debugPrint('بدء ضغط الصورة من XFile: ${xFile.path}');
+      return await _impl.compressImageFromXFile(xFile, quality: quality, keepExif: keepExif);
+    } catch (e) {
+      debugPrint('خطأ في ضغط الصورة من XFile: $e');
+      // في حالة الخطأ، إرجاع ملف من المسار الأصلي
+      return File(xFile.path);
+    }
+  }
+
+  /// ضغط صورة من ملف
+  Future<File?> compressImageFile(
+    File imageFile, {
     int quality = 75,
     bool keepExif = false,
   }) async {
     try {
       debugPrint('بدء ضغط الصورة: ${imageFile.path}');
-
-      Uint8List? compressedBytes = await FlutterImageCompress.compressWithFile(
-        imageFile.path,
-        quality: quality,
-        keepExif: keepExif,
-        format: CompressFormat.jpeg,
-        numberOfRetries: 3,
-        autoCorrectionAngle: true,
-      );
-
-      if (compressedBytes == null) {
-        debugPrint('compressWithFile فشل، سيتم تجربة compressWithList');
-        final bytes = await imageFile.readAsBytes();
-        compressedBytes = await FlutterImageCompress.compressWithList(
-          bytes,
-          quality: quality,
-          keepExif: keepExif,
-        );
-      }
-
-      final tempDir = await getTemporaryDirectory();
-      final fileName = 'compressed_${DateTime.now().millisecondsSinceEpoch}.jpg';
-      final compressedFile = File(path.join(tempDir.path, fileName));
-      await compressedFile.writeAsBytes(compressedBytes);
-
-      final originalSize = await imageFile.length();
-      final compressedSize = await compressedFile.length();
-      final compressionRatio = ((originalSize - compressedSize) / originalSize * 100);
-
-      debugPrint('تم ضغط الصورة بنجاح:');
-      debugPrint('- الحجم الأصلي: ${(originalSize / 1024).toStringAsFixed(2)} KB');
-      debugPrint('- الحجم المضغوط: ${(compressedSize / 1024).toStringAsFixed(2)} KB');
-      debugPrint('- نسبة الضغط: ${compressionRatio.toStringAsFixed(1)}%');
-
-      return compressedFile;
+      return await _impl.compressImageFile(imageFile, quality: quality, keepExif: keepExif);
     } catch (e) {
       debugPrint('خطأ في ضغط الصورة: $e');
-      return null;
+      return imageFile;
     }
   }
 
   /// ضغط صورة من مسار
-  Future<File?> compressImageFromPath(String imagePath, {
+  Future<File?> compressImageFromPath(
+    String imagePath, {
     int quality = 75,
     bool keepExif = false,
   }) async {
-    final imageFile = File(imagePath);
-    if (!await imageFile.exists()) {
-      debugPrint('الملف غير موجود: $imagePath');
+    try {
+      final imageFile = File(imagePath);
+      return await compressImageFile(imageFile, quality: quality, keepExif: keepExif);
+    } catch (e) {
+      debugPrint('خطأ في ضغط الصورة من المسار: $e');
       return null;
     }
-
-    return await compressImageFile(
-      imageFile,
-      quality: quality,
-      keepExif: keepExif,
-    );
   }
 
   /// ضغط صورة من Bytes
-  Future<Uint8List?> compressImageBytes(Uint8List imageBytes, {
+  Future<Uint8List?> compressImageBytes(
+    Uint8List imageBytes, {
     int quality = 75,
     bool keepExif = false,
   }) async {
     try {
       debugPrint('بدء ضغط الصورة من bytes');
-
-      final compressedBytes = await FlutterImageCompress.compressWithList(
-        imageBytes,
-        quality: quality,
-        keepExif: keepExif,
-      );
-
-      final compressionRatio = ((imageBytes.length - compressedBytes.length) / imageBytes.length * 100);
-      debugPrint('تم ضغط الصورة من bytes:');
-      debugPrint('- الحجم الأصلي: ${(imageBytes.length / 1024).toStringAsFixed(2)} KB');
-      debugPrint('- الحجم المضغوط: ${(compressedBytes.length / 1024).toStringAsFixed(2)} KB');
-      debugPrint('- نسبة الضغط: ${compressionRatio.toStringAsFixed(1)}%');
-
-      return compressedBytes;
+      return await _impl.compressImageBytes(imageBytes, quality: quality, keepExif: keepExif);
     } catch (e) {
       debugPrint('خطأ في ضغط الصورة من bytes: $e');
-      return null;
+      return imageBytes;
     }
   }
 
   /// ضغط صورة مع إعدادات ذكية حسب الحجم
   Future<File?> compressImageSmart(File imageFile) async {
     try {
-      final fileSize = await imageFile.length();
-      final sizeInMB = fileSize / (1024 * 1024);
-      
+      final fileInfo = await getFileInfo(imageFile);
+      final sizeInMB = fileInfo['sizeInMB'] as double;
+
       // إعدادات ضغط ذكية حسب حجم الملف
       int quality;
-      int maxWidth;
-      int maxHeight;
-      
       if (sizeInMB > 5) {
-        // ملف كبير جداً - ضغط قوي
-        quality = 70;
-        maxWidth = 800;
-        maxHeight = 800;
+        quality = 70; // ضغط قوي للملفات الكبيرة جداً
       } else if (sizeInMB > 2) {
-        // ملف كبير - ضغط متوسط
-        quality = 80;
-        maxWidth = 1024;
-        maxHeight = 1024;
+        quality = 80; // ضغط متوسط للملفات الكبيرة
       } else if (sizeInMB > 1) {
-        // ملف متوسط - ضغط خفيف
-        quality = 85;
-        maxWidth = 1200;
-        maxHeight = 1200;
+        quality = 85; // ضغط خفيف للملفات المتوسطة
       } else {
-        // ملف صغير - ضغط خفيف جداً
-        quality = 90;
-        maxWidth = 1500;
-        maxHeight = 1500;
+        quality = 90; // ضغط خفيف جداً للملفات الصغيرة
       }
-      
+
       debugPrint('ضغط ذكي للصورة:');
       debugPrint('- الحجم: ${sizeInMB.toStringAsFixed(2)} MB');
-      debugPrint('- الجودة: $quality%');
-      debugPrint('- الأبعاد القصوى: ${maxWidth}x$maxHeight');
-      
-      return await compressImageFile(imageFile, 
-        quality: quality,
-      );
+      debugPrint('- الجودة المختارة: $quality%');
+
+      return await compressImageFile(imageFile, quality: quality);
     } catch (e) {
       debugPrint('خطأ في الضغط الذكي: $e');
-      return null;
+      return imageFile;
+    }
+  }
+
+  /// ضغط مع تحديد الأبعاد
+  Future<File?> compressImageWithDimensions(
+    File imageFile, {
+    int quality = 85,
+    int maxWidth = 1200,
+    int maxHeight = 1200,
+    bool keepExif = false,
+  }) async {
+    try {
+      return await _impl.compressImageWithDimensions(
+        imageFile,
+        quality: quality,
+        maxWidth: maxWidth,
+        maxHeight: maxHeight,
+        keepExif: keepExif,
+      );
+    } catch (e) {
+      debugPrint('خطأ في ضغط الصورة مع الأبعاد: $e');
+      return imageFile;
     }
   }
 
   /// التحقق من حجم الملف
   Future<bool> isFileTooLarge(File file, {int maxSizeMB = 10}) async {
     try {
-      final size = await file.length();
-      final sizeInMB = size / (1024 * 1024);
+      final info = await getFileInfo(file);
+      final sizeInMB = info['sizeInMB'] as double;
       return sizeInMB > maxSizeMB;
     } catch (e) {
       debugPrint('خطأ في التحقق من حجم الملف: $e');
@@ -165,45 +170,113 @@ class ImageCompressionService {
   /// الحصول على معلومات الملف
   Future<Map<String, dynamic>> getFileInfo(File file) async {
     try {
-      final size = await file.length();
-      final sizeInMB = size / (1024 * 1024);
-      final sizeInKB = size / 1024;
-      
-      return {
-        'size': size,
-        'sizeInMB': sizeInMB,
-        'sizeInKB': sizeInKB,
-        'path': file.path,
-        'exists': await file.exists(),
-      };
+      return await _impl.getFileInfo(file);
     } catch (e) {
       debugPrint('خطأ في الحصول على معلومات الملف: $e');
-      return {};
+      return {
+        'size': 0,
+        'sizeInMB': 0.0,
+        'sizeInKB': 0.0,
+        'path': file.path,
+        'exists': false,
+      };
+    }
+  }
+
+  /// الحصول على بيانات الملف للويب
+  Uint8List? getWebFileData(String fileName) {
+    try {
+      return _impl.getWebFileData(fileName);
+    } catch (e) {
+      debugPrint('خطأ في الحصول على بيانات الملف للويب: $e');
+      return null;
     }
   }
 
   /// تنظيف الملفات المؤقتة
   Future<void> cleanupTempFiles() async {
     try {
-      final tempDir = await getTemporaryDirectory();
-      final files = tempDir.listSync();
-      
-      int deletedCount = 0;
-      for (final file in files) {
-        if (file is File && file.path.contains('compressed_')) {
-          final age = DateTime.now().difference(file.statSync().modified).inHours;
-          if (age > 24) { // حذف الملفات الأقدم من 24 ساعة
-            await file.delete();
-            deletedCount++;
-          }
-        }
-      }
-      
-      if (deletedCount > 0) {
-        debugPrint('تم حذف $deletedCount ملف مؤقت');
-      }
+      await _impl.cleanupTempFiles();
+      debugPrint('تم تنظيف الملفات المؤقتة');
     } catch (e) {
       debugPrint('خطأ في تنظيف الملفات المؤقتة: $e');
     }
   }
-} 
+
+  /// حساب نسبة الضغط
+  double calculateCompressionRatio(int originalSize, int compressedSize) {
+    if (originalSize == 0) return 0;
+    return ((originalSize - compressedSize) / originalSize * 100);
+  }
+
+  /// تحديد لون التحذير حسب حجم الملف
+  String getWarningColor(double sizeInMB) {
+    if (sizeInMB > 5) return 'red'; // ملف كبير جداً
+    if (sizeInMB > 2) return 'orange'; // ملف كبير
+    if (sizeInMB > 1) return 'yellow'; // ملف متوسط
+    return 'green'; // حجم مناسب
+  }
+
+  /// الحصول على رسالة التحذير
+  String getWarningMessage(double sizeInMB) {
+    if (sizeInMB > 5) return 'ملف كبير جداً - يوصى بالضغط بقوة';
+    if (sizeInMB > 2) return 'ملف كبير - يوصى بالضغط';
+    if (sizeInMB > 1) return 'ملف متوسط - ضغط اختياري';
+    return 'حجم مناسب';
+  }
+}
+
+/// واجهة التنفيذ المشتركة
+abstract class ImageCompressionImplementation {
+  Future<File?> compressImageFromXFile(XFile xFile, {int quality = 75, bool keepExif = false});
+  Future<File?> compressImageFile(File imageFile, {int quality = 75, bool keepExif = false});
+  Future<Uint8List?> compressImageBytes(Uint8List imageBytes, {int quality = 75, bool keepExif = false});
+  Future<File?> compressImageWithDimensions(File imageFile, {int quality = 85, int maxWidth = 1200, int maxHeight = 1200, bool keepExif = false});
+  Future<Map<String, dynamic>> getFileInfo(File file);
+  Future<void> cleanupTempFiles();
+  Uint8List? getWebFileData(String fileName);
+}
+
+/// تنفيذ احتياطي في حالة الفشل في تحميل التنفيذ المناسب
+class _FallbackImplementation implements ImageCompressionImplementation {
+  @override
+  Future<File?> compressImageFromXFile(XFile xFile, {int quality = 75, bool keepExif = false}) async {
+    return File(xFile.path);
+  }
+
+  @override
+  Future<File?> compressImageFile(File imageFile, {int quality = 75, bool keepExif = false}) async {
+    return imageFile;
+  }
+
+  @override
+  Future<Uint8List?> compressImageBytes(Uint8List imageBytes, {int quality = 75, bool keepExif = false}) async {
+    return imageBytes;
+  }
+
+  @override
+  Future<File?> compressImageWithDimensions(File imageFile, {int quality = 85, int maxWidth = 1200, int maxHeight = 1200, bool keepExif = false}) async {
+    return imageFile;
+  }
+
+  @override
+  Future<Map<String, dynamic>> getFileInfo(File file) async {
+    return {
+      'size': 0,
+      'sizeInMB': 0.0,
+      'sizeInKB': 0.0,
+      'path': file.path,
+      'exists': false,
+    };
+  }
+
+  @override
+  Future<void> cleanupTempFiles() async {
+    // لا شيء للقيام به في التنفيذ الاحتياطي
+  }
+
+  @override
+  Uint8List? getWebFileData(String fileName) {
+    return null;
+  }
+}

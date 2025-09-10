@@ -10,16 +10,33 @@ Future<void> seedFakeCategoriesAndProducts() async {
 
   // بيانات افتراضية للفئات
   final categoryNames = [
-    'مشروبات', 'حلويات', 'مخبوزات', 'خضروات', 'فواكه',
-    'ألبان', 'لحوم', 'أسماك', 'معلبات', 'تسالي',
-    'منتجات تنظيف', 'منتجات عناية', 'مكسرات', 'بهارات', 'زيوت',
-    'أرز ومكرونة', 'منتجات أطفال', 'معلبات عصائر', 'منتجات مجمدة', 'منتجات عضوية',
+    'مشروبات',
+    'حلويات',
+    'مخبوزات',
+    'خضروات',
+    'فواكه',
+    'ألبان',
+    'لحوم',
+    'أسماك',
+    'معلبات',
+    'تسالي',
+    'منتجات تنظيف',
+    'منتجات عناية',
+    'مكسرات',
+    'بهارات',
+    'زيوت',
+    'أرز ومكرونة',
+    'منتجات أطفال',
+    'معلبات عصائر',
+    'منتجات مجمدة',
+    'منتجات عضوية',
   ];
 
   for (int i = 0; i < 20; i++) {
     final catId = 'cat${i + 1}';
     final catName = categoryNames[i % categoryNames.length];
-    final catColor = '#${random.nextInt(0xFFFFFF).toRadixString(16).padLeft(6, '0')}';
+    final catColor =
+        '#${random.nextInt(0xFFFFFF).toRadixString(16).padLeft(6, '0')}';
     final catImage = 'https://picsum.photos/seed/category$i/200/200';
     final now = DateTime.now();
 
@@ -35,25 +52,29 @@ Future<void> seedFakeCategoriesAndProducts() async {
     );
 
     // إضافة الفئة باستخدام toJson() لضمان التنسيق الصحيح
-    await firestore.collection('categories').doc(catId).set(categoryModel.toJson());
+    await firestore
+        .collection('categories')
+        .doc(catId)
+        .set(categoryModel.toJson());
 
     // إضافة 20 منتج لكل فئة
     for (int j = 0; j < 20; j++) {
       final prodId = 'prod_${catId}_$j';
-      final prodName = '${catName} منتج ${j + 1}';
+      final prodName = '$catName منتج ${j + 1}';
       final prodImage = 'https://picsum.photos/seed/${catId}_$j/400/400';
       final price = 10 + random.nextInt(90); // من 10 إلى 100
       final stock = 10 + random.nextInt(90);
       final isOffer = random.nextBool();
       final isBestSeller = random.nextBool();
       final unit = ['قطعة', 'علبة', 'كجم', 'لتر'][random.nextInt(4)];
-      
+
       // إضافة سعر أصلي للعروض
       double? originalPrice;
       if (isOffer) {
-        originalPrice = price.toDouble() + (10 + random.nextInt(20)); // سعر أعلى من 10-30
+        originalPrice =
+            price.toDouble() + (10 + random.nextInt(20)); // سعر أعلى من 10-30
       }
-      
+
       // إنشاء نموذج المنتج باستخدام ProductModel
       final productModel = ProductModel(
         id: prodId,
@@ -73,7 +94,10 @@ Future<void> seedFakeCategoriesAndProducts() async {
       );
 
       // إضافة المنتج باستخدام toJson() لضمان التنسيق الصحيح
-      await firestore.collection('products').doc(prodId).set(productModel.toJson());
+      await firestore
+          .collection('products')
+          .doc(prodId)
+          .set(productModel.toJson());
     }
   }
   print('تم إضافة 20 فئة وكل فئة بها 20 منتج بنجاح!');
@@ -181,7 +205,7 @@ Future<void> seedRealOffersAndBestSellers() async {
   for (int i = 0; i < specialOffers.length; i++) {
     final offer = specialOffers[i];
     final prodId = 'special_offer_$i';
-    
+
     final productModel = ProductModel(
       id: prodId,
       name: offer['name'] as String,
@@ -199,14 +223,17 @@ Future<void> seedRealOffersAndBestSellers() async {
       updatedAt: now,
     );
 
-    await firestore.collection('products').doc(prodId).set(productModel.toJson());
+    await firestore
+        .collection('products')
+        .doc(prodId)
+        .set(productModel.toJson());
   }
 
   // إضافة الأكثر مبيعاً
   for (int i = 0; i < bestSellers.length; i++) {
     final seller = bestSellers[i];
     final prodId = 'best_seller_$i';
-    
+
     final productModel = ProductModel(
       id: prodId,
       name: seller['name'] as String,
@@ -223,7 +250,10 @@ Future<void> seedRealOffersAndBestSellers() async {
       updatedAt: now,
     );
 
-    await firestore.collection('products').doc(prodId).set(productModel.toJson());
+    await firestore
+        .collection('products')
+        .doc(prodId)
+        .set(productModel.toJson());
   }
 
   print('تم إضافة 5 عروض خاصة و 5 منتجات من الأكثر مبيعاً بنجاح!');
@@ -278,7 +308,7 @@ Future<void> seedTestProductsWithPrices() async {
   for (int i = 0; i < testProducts.length; i++) {
     final product = testProducts[i];
     final prodId = 'test_price_product_$i';
-    
+
     final productModel = ProductModel(
       id: prodId,
       name: product['name'] as String,
@@ -296,7 +326,10 @@ Future<void> seedTestProductsWithPrices() async {
       updatedAt: now,
     );
 
-    await firestore.collection('products').doc(prodId).set(productModel.toJson());
+    await firestore
+        .collection('products')
+        .doc(prodId)
+        .set(productModel.toJson());
   }
 
   print('تم إضافة 4 منتجات تجريبية مع أسعار مختلفة بنجاح!');
@@ -308,25 +341,45 @@ Future<void> deleteAllProductsAndReseed() async {
   final now = DateTime.now();
 
   print('بدء حذف جميع المنتجات...');
-  
+
   // حذف جميع المنتجات الموجودة
   final productsSnapshot = await firestore.collection('products').get();
   final batch = firestore.batch();
-  
+
   for (var doc in productsSnapshot.docs) {
     batch.delete(doc.reference);
   }
-  
+
   await batch.commit();
   print('تم حذف ${productsSnapshot.docs.length} منتج');
 
   // إعادة إضافة فئات جديدة مع منتجات تحتوي على أسعار أصلية
   final categories = [
-    {'name': 'فواكه طازجة', 'color': '#FF6B6B', 'image': 'https://picsum.photos/seed/fruits/400/400'},
-    {'name': 'خضروات عضوية', 'color': '#4ECDC4', 'image': 'https://picsum.photos/seed/vegetables/400/400'},
-    {'name': 'ألبان ومنتجات', 'color': '#45B7D1', 'image': 'https://picsum.photos/seed/dairy/400/400'},
-    {'name': 'لحوم طازجة', 'color': '#96CEB4', 'image': 'https://picsum.photos/seed/meat/400/400'},
-    {'name': 'أسماك طازجة', 'color': '#FFEAA7', 'image': 'https://picsum.photos/seed/fish/400/400'},
+    {
+      'name': 'فواكه طازجة',
+      'color': '#FF6B6B',
+      'image': 'https://picsum.photos/seed/fruits/400/400',
+    },
+    {
+      'name': 'خضروات عضوية',
+      'color': '#4ECDC4',
+      'image': 'https://picsum.photos/seed/vegetables/400/400',
+    },
+    {
+      'name': 'ألبان ومنتجات',
+      'color': '#45B7D1',
+      'image': 'https://picsum.photos/seed/dairy/400/400',
+    },
+    {
+      'name': 'لحوم طازجة',
+      'color': '#96CEB4',
+      'image': 'https://picsum.photos/seed/meat/400/400',
+    },
+    {
+      'name': 'أسماك طازجة',
+      'color': '#FFEAA7',
+      'image': 'https://picsum.photos/seed/fish/400/400',
+    },
   ];
 
   // إضافة الفئات
@@ -347,28 +400,33 @@ Future<void> deleteAllProductsAndReseed() async {
       updatedAt: now,
     );
 
-    await firestore.collection('categories').doc(catId).set(categoryModel.toJson());
+    await firestore
+        .collection('categories')
+        .doc(catId)
+        .set(categoryModel.toJson());
 
     // إضافة 10 منتجات لكل فئة مع أسعار أصلية
     for (int j = 0; j < 10; j++) {
       final prodId = 'prod_${catId}_$j';
-      final prodName = '${catName} منتج ${j + 1}';
+      final prodName = '$catName منتج ${j + 1}';
       final prodImage = 'https://picsum.photos/seed/${catId}_$j/400/400';
       final price = 15 + random.nextInt(85); // من 15 إلى 100
       final stock = 20 + random.nextInt(80);
       final isOffer = random.nextBool();
       final isBestSeller = random.nextBool();
       final unit = ['قطعة', 'علبة', 'كجم', 'لتر'][random.nextInt(4)];
-      
+
       // إضافة سعر أصلي للعروض (أعلى من السعر الحالي)
       double? originalPrice;
       if (isOffer) {
-        originalPrice = price.toDouble() + (15 + random.nextInt(25)); // سعر أعلى من 15-40
+        originalPrice =
+            price.toDouble() + (15 + random.nextInt(25)); // سعر أعلى من 15-40
       } else if (random.nextBool() && random.nextBool()) {
         // إضافة أسعار أصلية لبعض المنتجات العادية أيضاً (25% من المنتجات)
-        originalPrice = price.toDouble() + (5 + random.nextInt(15)); // سعر أعلى من 5-20
+        originalPrice =
+            price.toDouble() + (5 + random.nextInt(15)); // سعر أعلى من 5-20
       }
-      
+
       final productModel = ProductModel(
         id: prodId,
         name: prodName,
@@ -386,7 +444,10 @@ Future<void> deleteAllProductsAndReseed() async {
         updatedAt: now,
       );
 
-      await firestore.collection('products').doc(prodId).set(productModel.toJson());
+      await firestore
+          .collection('products')
+          .doc(prodId)
+          .set(productModel.toJson());
     }
   }
 
@@ -399,7 +460,8 @@ Future<void> deleteAllProductsAndReseed() async {
       'originalPrice': 35.0,
       'unit': '١ كجم',
       'categoryId': 'cat_1',
-      'image': 'https://images.unsplash.com/photo-1619566636858-adf3ef46400b?auto=format&fit=crop&w=400&q=80',
+      'image':
+          'https://images.unsplash.com/photo-1619566636858-adf3ef46400b?auto=format&fit=crop&w=400&q=80',
     },
     {
       'name': 'تفاح أحمر مستورد',
@@ -408,7 +470,8 @@ Future<void> deleteAllProductsAndReseed() async {
       'originalPrice': 60.0,
       'unit': '٢ كجم',
       'categoryId': 'cat_1',
-      'image': 'https://images.unsplash.com/photo-1567306226416-28f0efdc88ce?auto=format&fit=crop&w=400&q=80',
+      'image':
+          'https://images.unsplash.com/photo-1567306226416-28f0efdc88ce?auto=format&fit=crop&w=400&q=80',
     },
     {
       'name': 'طماطم بلدي طازجة',
@@ -417,7 +480,8 @@ Future<void> deleteAllProductsAndReseed() async {
       'originalPrice': 28.0,
       'unit': '١ كجم',
       'categoryId': 'cat_2',
-      'image': 'https://images.unsplash.com/photo-1546094096-0df4bcaaa337?auto=format&fit=crop&w=400&q=80',
+      'image':
+          'https://images.unsplash.com/photo-1546094096-0df4bcaaa337?auto=format&fit=crop&w=400&q=80',
     },
     {
       'name': 'خيار طازج عضوي',
@@ -426,7 +490,8 @@ Future<void> deleteAllProductsAndReseed() async {
       'originalPrice': 22.0,
       'unit': '٥٠٠ جرام',
       'categoryId': 'cat_2',
-      'image': 'https://images.unsplash.com/photo-1449300079323-02e209d9d3a6?auto=format&fit=crop&w=400&q=80',
+      'image':
+          'https://images.unsplash.com/photo-1449300079323-02e209d9d3a6?auto=format&fit=crop&w=400&q=80',
     },
   ];
 
@@ -434,7 +499,7 @@ Future<void> deleteAllProductsAndReseed() async {
   for (int i = 0; i < specialOffers.length; i++) {
     final offer = specialOffers[i];
     final prodId = 'special_offer_new_$i';
-    
+
     final productModel = ProductModel(
       id: prodId,
       name: offer['name'] as String,
@@ -452,7 +517,10 @@ Future<void> deleteAllProductsAndReseed() async {
       updatedAt: now,
     );
 
-    await firestore.collection('products').doc(prodId).set(productModel.toJson());
+    await firestore
+        .collection('products')
+        .doc(prodId)
+        .set(productModel.toJson());
   }
 
   // إضافة منتجات من الأكثر مبيعاً
@@ -463,7 +531,8 @@ Future<void> deleteAllProductsAndReseed() async {
       'price': 85.0,
       'unit': '٢ كجم',
       'categoryId': 'cat_3',
-      'image': 'https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&w=400&q=80',
+      'image':
+          'https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&w=400&q=80',
     },
     {
       'name': 'زيت زيتون بكر ممتاز',
@@ -471,7 +540,8 @@ Future<void> deleteAllProductsAndReseed() async {
       'price': 120.0,
       'unit': 'لتر',
       'categoryId': 'cat_3',
-      'image': 'https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?auto=format&fit=crop&w=400&q=80',
+      'image':
+          'https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?auto=format&fit=crop&w=400&q=80',
     },
     {
       'name': 'جبنة شيدر قوية',
@@ -479,7 +549,8 @@ Future<void> deleteAllProductsAndReseed() async {
       'price': 65.0,
       'unit': '٢٥٠ جرام',
       'categoryId': 'cat_3',
-      'image': 'https://images.unsplash.com/photo-1486297678162-eb2a19b0a32d?auto=format&fit=crop&w=400&q=80',
+      'image':
+          'https://images.unsplash.com/photo-1486297678162-eb2a19b0a32d?auto=format&fit=crop&w=400&q=80',
     },
   ];
 
@@ -487,7 +558,7 @@ Future<void> deleteAllProductsAndReseed() async {
   for (int i = 0; i < bestSellers.length; i++) {
     final seller = bestSellers[i];
     final prodId = 'best_seller_new_$i';
-    
+
     final productModel = ProductModel(
       id: prodId,
       name: seller['name'] as String,
@@ -504,7 +575,10 @@ Future<void> deleteAllProductsAndReseed() async {
       updatedAt: now,
     );
 
-    await firestore.collection('products').doc(prodId).set(productModel.toJson());
+    await firestore
+        .collection('products')
+        .doc(prodId)
+        .set(productModel.toJson());
   }
 
   print('تم حذف وإعادة إضافة جميع المنتجات مع أسعار أصلية بنجاح!');
@@ -516,38 +590,66 @@ Future<void> deleteAllCategoriesAndProducts() async {
   final now = DateTime.now();
 
   print('بدء حذف جميع الفئات والمنتجات...');
-  
+
   // حذف جميع المنتجات الموجودة
   final productsSnapshot = await firestore.collection('products').get();
   final productsBatch = firestore.batch();
-  
+
   for (var doc in productsSnapshot.docs) {
     productsBatch.delete(doc.reference);
   }
-  
+
   await productsBatch.commit();
   print('تم حذف ${productsSnapshot.docs.length} منتج');
 
   // حذف جميع الفئات الموجودة
   final categoriesSnapshot = await firestore.collection('categories').get();
   final categoriesBatch = firestore.batch();
-  
+
   for (var doc in categoriesSnapshot.docs) {
     categoriesBatch.delete(doc.reference);
   }
-  
+
   await categoriesBatch.commit();
   print('تم حذف ${categoriesSnapshot.docs.length} فئة');
 
   // إعادة إضافة فئات جديدة مع منتجات تحتوي على أسعار أصلية
   final categories = [
-    {'name': 'فواكه طازجة', 'color': '#FF6B6B', 'image': 'https://picsum.photos/seed/fruits/400/400'},
-    {'name': 'خضروات عضوية', 'color': '#4ECDC4', 'image': 'https://picsum.photos/seed/vegetables/400/400'},
-    {'name': 'ألبان ومنتجات', 'color': '#45B7D1', 'image': 'https://picsum.photos/seed/dairy/400/400'},
-    {'name': 'لحوم طازجة', 'color': '#96CEB4', 'image': 'https://picsum.photos/seed/meat/400/400'},
-    {'name': 'أسماك طازجة', 'color': '#FFEAA7', 'image': 'https://picsum.photos/seed/fish/400/400'},
-    {'name': 'أرز ومكرونة', 'color': '#DDA0DD', 'image': 'https://picsum.photos/seed/rice/400/400'},
-    {'name': 'زيوت وبهارات', 'color': '#98D8C8', 'image': 'https://picsum.photos/seed/oils/400/400'},
+    {
+      'name': 'فواكه طازجة',
+      'color': '#FF6B6B',
+      'image': 'https://picsum.photos/seed/fruits/400/400',
+    },
+    {
+      'name': 'خضروات عضوية',
+      'color': '#4ECDC4',
+      'image': 'https://picsum.photos/seed/vegetables/400/400',
+    },
+    {
+      'name': 'ألبان ومنتجات',
+      'color': '#45B7D1',
+      'image': 'https://picsum.photos/seed/dairy/400/400',
+    },
+    {
+      'name': 'لحوم طازجة',
+      'color': '#96CEB4',
+      'image': 'https://picsum.photos/seed/meat/400/400',
+    },
+    {
+      'name': 'أسماك طازجة',
+      'color': '#FFEAA7',
+      'image': 'https://picsum.photos/seed/fish/400/400',
+    },
+    {
+      'name': 'أرز ومكرونة',
+      'color': '#DDA0DD',
+      'image': 'https://picsum.photos/seed/rice/400/400',
+    },
+    {
+      'name': 'زيوت وبهارات',
+      'color': '#98D8C8',
+      'image': 'https://picsum.photos/seed/oils/400/400',
+    },
   ];
 
   // إضافة الفئات
@@ -568,25 +670,29 @@ Future<void> deleteAllCategoriesAndProducts() async {
       updatedAt: now,
     );
 
-    await firestore.collection('categories').doc(catId).set(categoryModel.toJson());
+    await firestore
+        .collection('categories')
+        .doc(catId)
+        .set(categoryModel.toJson());
 
     // إضافة 8 منتجات لكل فئة مع أسعار أصلية
     for (int j = 0; j < 8; j++) {
       final prodId = 'prod_${catId}_$j';
-      final prodName = '${catName} منتج ${j + 1}';
+      final prodName = '$catName منتج ${j + 1}';
       final prodImage = 'https://picsum.photos/seed/${catId}_$j/400/400';
       final price = 15 + random.nextInt(85); // من 15 إلى 100
       final stock = 20 + random.nextInt(80);
       final isOffer = random.nextBool();
       final isBestSeller = random.nextBool();
       final unit = ['قطعة', 'علبة', 'كجم', 'لتر'][random.nextInt(4)];
-      
+
       // إضافة سعر أصلي للعروض (أعلى من السعر الحالي)
       double? originalPrice;
       if (isOffer) {
-        originalPrice = price.toDouble() + (15 + random.nextInt(25)); // سعر أعلى من 15-40
+        originalPrice =
+            price.toDouble() + (15 + random.nextInt(25)); // سعر أعلى من 15-40
       }
-      
+
       final productModel = ProductModel(
         id: prodId,
         name: prodName,
@@ -604,7 +710,10 @@ Future<void> deleteAllCategoriesAndProducts() async {
         updatedAt: now,
       );
 
-      await firestore.collection('products').doc(prodId).set(productModel.toJson());
+      await firestore
+          .collection('products')
+          .doc(prodId)
+          .set(productModel.toJson());
     }
   }
 
@@ -661,7 +770,7 @@ Future<void> deleteAllCategoriesAndProducts() async {
   for (int i = 0; i < specialOffers.length; i++) {
     final offer = specialOffers[i];
     final prodId = 'special_offer_clean_$i';
-    
+
     final productModel = ProductModel(
       id: prodId,
       name: offer['name'] as String,
@@ -679,7 +788,10 @@ Future<void> deleteAllCategoriesAndProducts() async {
       updatedAt: now,
     );
 
-    await firestore.collection('products').doc(prodId).set(productModel.toJson());
+    await firestore
+        .collection('products')
+        .doc(prodId)
+        .set(productModel.toJson());
   }
 
   // إضافة منتجات من الأكثر مبيعاً
@@ -722,7 +834,7 @@ Future<void> deleteAllCategoriesAndProducts() async {
   for (int i = 0; i < bestSellers.length; i++) {
     final seller = bestSellers[i];
     final prodId = 'best_seller_clean_$i';
-    
+
     final productModel = ProductModel(
       id: prodId,
       name: seller['name'] as String,
@@ -739,11 +851,14 @@ Future<void> deleteAllCategoriesAndProducts() async {
       updatedAt: now,
     );
 
-    await firestore.collection('products').doc(prodId).set(productModel.toJson());
+    await firestore
+        .collection('products')
+        .doc(prodId)
+        .set(productModel.toJson());
   }
 
   print('تم حذف وإعادة إضافة جميع الفئات والمنتجات مع أسعار أصلية بنجاح!');
-} 
+}
 
 Future<void> seedCategoriesWithLocalImages() async {
   final firestore = FirebaseFirestore.instance;
@@ -758,60 +873,60 @@ Future<void> seedCategoriesWithLocalImages() async {
       'name': 'فواكه طازجة',
       'color': '#FF6B6B',
       'image': 'https://picsum.photos/seed/local_fruits/400/400',
-      'description': 'فواكه طازجة من أفضل المزارع المحلية'
+      'description': 'فواكه طازجة من أفضل المزارع المحلية',
     },
     {
       'name': 'خضروات عضوية',
       'color': '#4ECDC4',
       'image': 'https://picsum.photos/seed/local_vegetables/400/400',
-      'description': 'خضروات عضوية طازجة من المزارع المحلية'
+      'description': 'خضروات عضوية طازجة من المزارع المحلية',
     },
     {
       'name': 'ألبان ومنتجات',
       'color': '#45B7D1',
       'image': 'https://picsum.photos/seed/local_dairy/400/400',
-      'description': 'ألبان ومنتجات طازجة عالية الجودة'
+      'description': 'ألبان ومنتجات طازجة عالية الجودة',
     },
     {
       'name': 'لحوم طازجة',
       'color': '#96CEB4',
       'image': 'https://picsum.photos/seed/local_meat/400/400',
-      'description': 'لحوم طازجة من أفضل الجزارين المحليين'
+      'description': 'لحوم طازجة من أفضل الجزارين المحليين',
     },
     {
       'name': 'أسماك طازجة',
       'color': '#FFEAA7',
       'image': 'https://picsum.photos/seed/local_fish/400/400',
-      'description': 'أسماك طازجة من البحيرات والأنهار المحلية'
+      'description': 'أسماك طازجة من البحيرات والأنهار المحلية',
     },
     {
       'name': 'أرز ومكرونة',
       'color': '#DDA0DD',
       'image': 'https://picsum.photos/seed/local_grains/400/400',
-      'description': 'أرز ومكرونة عالية الجودة من أفضل الموردين'
+      'description': 'أرز ومكرونة عالية الجودة من أفضل الموردين',
     },
     {
       'name': 'زيوت وبهارات',
       'color': '#98D8C8',
       'image': 'https://picsum.photos/seed/local_oils/400/400',
-      'description': 'زيوت وبهارات طبيعية من أفضل المزارع'
+      'description': 'زيوت وبهارات طبيعية من أفضل المزارع',
     },
     {
       'name': 'مشروبات طازجة',
       'color': '#FFB6C1',
       'image': 'https://picsum.photos/seed/local_drinks/400/400',
-      'description': 'مشروبات طازجة وعصائر طبيعية'
+      'description': 'مشروبات طازجة وعصائر طبيعية',
     },
   ];
 
   // حذف الفئات الموجودة أولاً
   final categoriesSnapshot = await firestore.collection('categories').get();
   final categoriesBatch = firestore.batch();
-  
+
   for (var doc in categoriesSnapshot.docs) {
     categoriesBatch.delete(doc.reference);
   }
-  
+
   await categoriesBatch.commit();
   print('تم حذف ${categoriesSnapshot.docs.length} فئة موجودة');
 
@@ -834,29 +949,33 @@ Future<void> seedCategoriesWithLocalImages() async {
       updatedAt: now,
     );
 
-    await firestore.collection('categories').doc(catId).set(categoryModel.toJson());
+    await firestore
+        .collection('categories')
+        .doc(catId)
+        .set(categoryModel.toJson());
 
     // إضافة 6 منتجات لكل فئة مع صور محلية
     for (int j = 0; j < 6; j++) {
       final prodId = 'local_prod_${catId}_$j';
-      final prodName = '${catName} منتج ${j + 1}';
+      final prodName = '$catName منتج ${j + 1}';
       final prodImage = 'https://picsum.photos/seed/local_${catId}_$j/400/400';
       final price = 20 + random.nextInt(80); // من 20 إلى 100
       final stock = 25 + random.nextInt(75);
       final isOffer = random.nextBool();
       final isBestSeller = random.nextBool();
       final unit = ['قطعة', 'علبة', 'كجم', 'لتر', 'عبوة'][random.nextInt(5)];
-      
+
       // إضافة سعر أصلي للعروض
       double? originalPrice;
       if (isOffer) {
-        originalPrice = price.toDouble() + (15 + random.nextInt(25)); // سعر أعلى من 15-40
+        originalPrice =
+            price.toDouble() + (15 + random.nextInt(25)); // سعر أعلى من 15-40
       }
-      
+
       final productModel = ProductModel(
         id: prodId,
         name: prodName,
-        description: '${catDescription} - منتج طازج وعالي الجودة',
+        description: '$catDescription - منتج طازج وعالي الجودة',
         images: [prodImage],
         price: price.toDouble(),
         originalPrice: originalPrice,
@@ -870,12 +989,17 @@ Future<void> seedCategoriesWithLocalImages() async {
         updatedAt: now,
       );
 
-      await firestore.collection('products').doc(prodId).set(productModel.toJson());
+      await firestore
+          .collection('products')
+          .doc(prodId)
+          .set(productModel.toJson());
     }
   }
 
-  print('تم إنشاء ${categories.length} فئة مع صور محلية و ${categories.length * 6} منتج بنجاح!');
-} 
+  print(
+    'تم إنشاء ${categories.length} فئة مع صور محلية و ${categories.length * 6} منتج بنجاح!',
+  );
+}
 
 Future<void> seedProductsWithMultipleUnits(int unitCount) async {
   final firestore = FirebaseFirestore.instance;
@@ -885,43 +1009,51 @@ Future<void> seedProductsWithMultipleUnits(int unitCount) async {
   print('بدء إنشاء منتجات ب $unitCount وحدات...');
 
   // فئات موجودة
-  final categoriesSnapshot = await firestore.collection('categories').limit(5).get();
+  final categoriesSnapshot = await firestore
+      .collection('categories')
+      .limit(5)
+      .get();
   if (categoriesSnapshot.docs.isEmpty) {
     throw Exception('لا توجد فئات متاحة. يرجى إنشاء فئات أولاً.');
   }
 
   final categories = categoriesSnapshot.docs;
-  
+
   // إنشاء منتجات ب وحدات متعددة
-  for (int i = 0; i < 10; i++) { // 10 منتجات
+  for (int i = 0; i < 10; i++) {
+    // 10 منتجات
     final categoryDoc = categories[i % categories.length];
     final categoryId = categoryDoc.id;
     final categoryName = categoryDoc.data()['name'] as String;
-    
+
     final prodId = 'multi_unit_prod_$i';
     final prodName = '$categoryName منتج متعدد الوحدات ${i + 1}';
     final prodImage = 'https://picsum.photos/seed/multi_$i/400/400';
     final basePrice = 20 + random.nextInt(80); // من 20 إلى 100
-    
+
     // إنشاء وحدات متعددة
     final units = <ProductUnit>[];
     for (int j = 0; j < unitCount; j++) {
       final unitName = _getUnitName(j, unitCount);
       final unitPrice = basePrice + (j * 10) + random.nextInt(20);
       final hasDiscount = random.nextBool();
-      final originalPrice = hasDiscount ? unitPrice + (10 + random.nextInt(20)) : null;
-      
-      units.add(ProductUnit(
-        id: 'unit_${prodId}_$j',
-        name: unitName,
-        price: unitPrice.toDouble(),
-        originalPrice: originalPrice?.toDouble(),
-        isSpecialOffer: hasDiscount,
-        stockQuantity: 20 + random.nextInt(80),
-        isActive: true,
-      ));
+      final originalPrice = hasDiscount
+          ? unitPrice + (10 + random.nextInt(20))
+          : null;
+
+      units.add(
+        ProductUnit(
+          id: 'unit_${prodId}_$j',
+          name: unitName,
+          price: unitPrice.toDouble(),
+          originalPrice: originalPrice?.toDouble(),
+          isSpecialOffer: hasDiscount,
+          stockQuantity: 20 + random.nextInt(80),
+          isActive: true,
+        ),
+      );
     }
-    
+
     // إنشاء المنتج
     final productModel = ProductModel(
       id: prodId,
@@ -941,7 +1073,10 @@ Future<void> seedProductsWithMultipleUnits(int unitCount) async {
       updatedAt: now,
     );
 
-    await firestore.collection('products').doc(prodId).set(productModel.toJson());
+    await firestore
+        .collection('products')
+        .doc(prodId)
+        .set(productModel.toJson());
   }
 
   print('تم إنشاء 10 منتجات ب $unitCount وحدات لكل منتج بنجاح!');
@@ -953,32 +1088,47 @@ String _getUnitName(int index, int totalUnits) {
       return index == 0 ? 'قطعة صغيرة' : 'قطعة كبيرة';
     case 3:
       switch (index) {
-        case 0: return 'قطعة صغيرة';
-        case 1: return 'قطعة متوسطة';
-        case 2: return 'قطعة كبيرة';
-        default: return 'قطعة ${index + 1}';
+        case 0:
+          return 'قطعة صغيرة';
+        case 1:
+          return 'قطعة متوسطة';
+        case 2:
+          return 'قطعة كبيرة';
+        default:
+          return 'قطعة ${index + 1}';
       }
     case 4:
       switch (index) {
-        case 0: return 'قطعة صغيرة';
-        case 1: return 'قطعة متوسطة';
-        case 2: return 'قطعة كبيرة';
-        case 3: return 'قطعة عملاقة';
-        default: return 'قطعة ${index + 1}';
+        case 0:
+          return 'قطعة صغيرة';
+        case 1:
+          return 'قطعة متوسطة';
+        case 2:
+          return 'قطعة كبيرة';
+        case 3:
+          return 'قطعة عملاقة';
+        default:
+          return 'قطعة ${index + 1}';
       }
     case 5:
       switch (index) {
-        case 0: return 'قطعة صغيرة جداً';
-        case 1: return 'قطعة صغيرة';
-        case 2: return 'قطعة متوسطة';
-        case 3: return 'قطعة كبيرة';
-        case 4: return 'قطعة عملاقة';
-        default: return 'قطعة ${index + 1}';
+        case 0:
+          return 'قطعة صغيرة جداً';
+        case 1:
+          return 'قطعة صغيرة';
+        case 2:
+          return 'قطعة متوسطة';
+        case 3:
+          return 'قطعة كبيرة';
+        case 4:
+          return 'قطعة عملاقة';
+        default:
+          return 'قطعة ${index + 1}';
       }
     default:
       return 'قطعة ${index + 1}';
   }
-} 
+}
 
 Future<void> seedFakeOrders() async {
   final firestore = FirebaseFirestore.instance;
@@ -1000,11 +1150,21 @@ Future<void> seedFakeOrders() async {
   ];
 
   // حالات الطلبات
-  final orderStatuses = ['pending', 'accepted', 'preparing', 'delivering', 'delivered', 'cancelled'];
+  final orderStatuses = [
+    'pending',
+    'accepted',
+    'preparing',
+    'delivering',
+    'delivered',
+    'cancelled',
+  ];
   final statusWeights = [0.3, 0.2, 0.2, 0.15, 0.1, 0.05]; // احتمالات الحالات
 
   // جلب بعض المنتجات لإنشاء طلبات واقعية
-  final productsSnapshot = await firestore.collection('products').limit(50).get();
+  final productsSnapshot = await firestore
+      .collection('products')
+      .limit(50)
+      .get();
   final products = productsSnapshot.docs.map((doc) {
     final data = doc.data();
     return {
@@ -1024,8 +1184,10 @@ Future<void> seedFakeOrders() async {
   for (int i = 0; i < 50; i++) {
     final orderId = 'order_${DateTime.now().millisecondsSinceEpoch}_$i';
     final customerName = customerNames[random.nextInt(customerNames.length)];
-    final orderDate = now.subtract(Duration(days: random.nextInt(30), hours: random.nextInt(24)));
-    
+    final orderDate = now.subtract(
+      Duration(days: random.nextInt(30), hours: random.nextInt(24)),
+    );
+
     // اختيار حالة عشوائية مع الأوزان
     final randomValue = random.nextDouble();
     double cumulativeWeight = 0;
@@ -1049,14 +1211,16 @@ Future<void> seedFakeOrders() async {
       final itemTotal = product['price'] * quantity;
       subtotal += itemTotal;
 
-      orderItems.add(OrderItemModel(
-        productId: product['id'],
-        productName: product['name'],
-        productImage: product['image'],
-        price: product['price'],
-        quantity: quantity,
-        total: itemTotal,
-      ));
+      orderItems.add(
+        OrderItemModel(
+          productId: product['id'],
+          productName: product['name'],
+          productImage: product['image'],
+          price: product['price'],
+          quantity: quantity,
+          total: itemTotal,
+        ),
+      );
     }
 
     // إضافة خصم عشوائي (10% من الطلبات)
@@ -1080,11 +1244,15 @@ Future<void> seedFakeOrders() async {
       discountAmount: discountAmount,
       total: total,
       status: selectedStatus,
-      deliveryAddress: 'عنوان التوصيل ${random.nextInt(100)}، شارع ${random.nextInt(50)}',
+      deliveryAddress:
+          'عنوان التوصيل ${random.nextInt(100)}، شارع ${random.nextInt(50)}',
       deliveryAddressName: customerName,
-      deliveryPhone: '01${random.nextInt(90000000) + 10000000}', // رقم هاتف مصري
+      deliveryPhone:
+          '01${random.nextInt(90000000) + 10000000}', // رقم هاتف مصري
       deliveryNotes: random.nextBool() ? 'ملاحظات خاصة للطلب' : null,
-      estimatedDeliveryTime: orderDate.add(Duration(hours: 2 + random.nextInt(4))),
+      estimatedDeliveryTime: orderDate.add(
+        Duration(hours: 2 + random.nextInt(4)),
+      ),
       createdAt: orderDate,
       updatedAt: orderDate,
       promoCodeId: promoCodeId,
@@ -1098,4 +1266,4 @@ Future<void> seedFakeOrders() async {
   }
 
   print('تم إنشاء 50 طلب افتراضي بنجاح!');
-} 
+}

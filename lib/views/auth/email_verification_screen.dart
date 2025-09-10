@@ -5,7 +5,7 @@ import 'package:fouda_market/components/Button.dart';
 
 class EmailVerificationScreen extends StatefulWidget {
   final String email;
-  const EmailVerificationScreen({Key? key, required this.email}) : super(key: key);
+  const EmailVerificationScreen({super.key, required this.email});
 
   @override
   State<EmailVerificationScreen> createState() => _EmailVerificationScreenState();

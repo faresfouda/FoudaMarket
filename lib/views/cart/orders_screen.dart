@@ -36,7 +36,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
       }
 
       final orders = await OrderService().getUserOrders(currentUser.uid);
-      
+
       if (mounted) {
         setState(() {
           _orders = orders;
@@ -63,19 +63,16 @@ class _OrdersScreenState extends State<OrdersScreen> {
           backgroundColor: AppColors.orangeColor,
           foregroundColor: Colors.white,
           actions: [
-            IconButton(
-              icon: const Icon(Icons.refresh),
-              onPressed: _loadOrders,
-            ),
+            IconButton(icon: const Icon(Icons.refresh), onPressed: _loadOrders),
           ],
         ),
         body: _isLoading
             ? const Center(child: CircularProgressIndicator())
             : _error != null
-                ? _buildErrorState()
-                : _orders.isEmpty
-                    ? _buildEmptyState()
-                    : _buildOrdersList(),
+            ? _buildErrorState()
+            : _orders.isEmpty
+            ? _buildEmptyState()
+            : _buildOrdersList(),
       ),
     );
   }
@@ -184,7 +181,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                 ],
               ),
               const SizedBox(height: 12),
-              
+
               // معلومات الطلب
               Row(
                 children: [
@@ -207,7 +204,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                 ],
               ),
               const SizedBox(height: 8),
-              
+
               // السعر
               Row(
                 children: [
@@ -218,7 +215,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                   const Spacer(),
                   Text(
                     '${order.total.toStringAsFixed(2)} جنيه',
-                    style:  TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                       color: AppColors.orangeColor,
@@ -226,10 +223,10 @@ class _OrdersScreenState extends State<OrdersScreen> {
                   ),
                 ],
               ),
-              
+
               // زر عرض التفاصيل
               const SizedBox(height: 12),
-              Container(
+              SizedBox(
                 width: double.infinity,
                 height: 36,
                 child: OutlinedButton(
@@ -307,4 +304,4 @@ class _OrdersScreenState extends State<OrdersScreen> {
   String _formatDate(DateTime date) {
     return '${date.year}/${date.month.toString().padLeft(2, '0')}/${date.day.toString().padLeft(2, '0')}';
   }
-} 
+}

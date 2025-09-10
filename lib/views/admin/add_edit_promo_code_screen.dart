@@ -9,7 +9,7 @@ import '../../components/CustomTextField.dart';
 
 class AddEditPromoCodeScreen extends StatefulWidget {
   final PromoCodeModel? promoCode;
-  
+
   const AddEditPromoCodeScreen({super.key, this.promoCode});
 
   @override
@@ -25,7 +25,7 @@ class _AddEditPromoCodeScreenState extends State<AddEditPromoCodeScreen> {
   final _maxDiscountAmountController = TextEditingController();
   final _minOrderAmountController = TextEditingController();
   final _maxUsageCountController = TextEditingController();
-  
+
   DateTime _selectedExpiryDate = DateTime.now().add(const Duration(days: 30));
   bool _isActive = true;
   bool _hasMaxDiscount = false;
@@ -49,7 +49,8 @@ class _AddEditPromoCodeScreenState extends State<AddEditPromoCodeScreen> {
     final promoCode = widget.promoCode!;
     _codeController.text = promoCode.code;
     _descriptionController.text = promoCode.description;
-    _discountPercentageController.text = promoCode.discountPercentage.toString();
+    _discountPercentageController.text = promoCode.discountPercentage
+        .toString();
     _fixedAmountController.text = promoCode.fixedAmount?.toString() ?? '';
     _maxUsageCountController.text = promoCode.maxUsageCount.toString();
     _selectedExpiryDate = promoCode.expiryDate;
@@ -62,7 +63,8 @@ class _AddEditPromoCodeScreenState extends State<AddEditPromoCodeScreen> {
     }
     if (promoCode.maxDiscountAmount != null) {
       _hasMaxDiscount = true;
-      _maxDiscountAmountController.text = promoCode.maxDiscountAmount!.toString();
+      _maxDiscountAmountController.text = promoCode.maxDiscountAmount!
+          .toString();
     }
     if (promoCode.minOrderAmount != null) {
       _hasMinOrderAmount = true;
@@ -87,8 +89,8 @@ class _AddEditPromoCodeScreenState extends State<AddEditPromoCodeScreen> {
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, authState) {
         // التحقق من أن المستخدم مدير
-        if (authState is! Authenticated || 
-            authState.userProfile == null || 
+        if (authState is! Authenticated ||
+            authState.userProfile == null ||
             authState.userProfile!.role != 'admin') {
           return _buildUnauthorizedScreen();
         }
@@ -101,7 +103,9 @@ class _AddEditPromoCodeScreenState extends State<AddEditPromoCodeScreen> {
               backgroundColor: Colors.white,
               elevation: 0,
               title: Text(
-                widget.promoCode == null ? 'إضافة كود خصم جديد' : 'تعديل كود الخصم',
+                widget.promoCode == null
+                    ? 'إضافة كود خصم جديد'
+                    : 'تعديل كود الخصم',
                 style: const TextStyle(
                   color: Colors.black,
                   fontSize: 20,
@@ -188,7 +192,8 @@ class _AddEditPromoCodeScreenState extends State<AddEditPromoCodeScreen> {
                           button: null,
                           keyboardType: TextInputType.number,
                           validator: (value) {
-                            if (_hasMaxDiscount && (value == null || value.trim().isEmpty)) {
+                            if (_hasMaxDiscount &&
+                                (value == null || value.trim().isEmpty)) {
                               return 'يرجى إدخال الحد الأقصى للخصم';
                             }
                             if (value != null && value.trim().isNotEmpty) {
@@ -229,7 +234,8 @@ class _AddEditPromoCodeScreenState extends State<AddEditPromoCodeScreen> {
                           button: null,
                           keyboardType: TextInputType.number,
                           validator: (value) {
-                            if (_hasMinOrderAmount && (value == null || value.trim().isEmpty)) {
+                            if (_hasMinOrderAmount &&
+                                (value == null || value.trim().isEmpty)) {
                               return 'يرجى إدخال الحد الأدنى للطلب';
                             }
                             if (value != null && value.trim().isNotEmpty) {
@@ -278,14 +284,20 @@ class _AddEditPromoCodeScreenState extends State<AddEditPromoCodeScreen> {
                       InkWell(
                         onTap: () => _selectExpiryDate(),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
                           decoration: BoxDecoration(
                             border: Border.all(color: AppColors.blackColor),
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Row(
                             children: [
-                              Icon(Icons.calendar_today, color: AppColors.blackColor),
+                              Icon(
+                                Icons.calendar_today,
+                                color: AppColors.blackColor,
+                              ),
                               const SizedBox(width: 8),
                               Text(
                                 _selectedExpiryDate != null
@@ -305,7 +317,10 @@ class _AddEditPromoCodeScreenState extends State<AddEditPromoCodeScreen> {
                         const SizedBox(height: 4),
                         Text(
                           _expiryDateError!,
-                          style: const TextStyle(color: Colors.red, fontSize: 12),
+                          style: const TextStyle(
+                            color: Colors.red,
+                            fontSize: 12,
+                          ),
                         ),
                       ],
                       const SizedBox(height: 24),
@@ -345,11 +360,15 @@ class _AddEditPromoCodeScreenState extends State<AddEditPromoCodeScreen> {
                                   width: 20,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white,
+                                    ),
                                   ),
                                 )
                               : Text(
-                                  widget.promoCode == null ? 'إنشاء كود الخصم' : 'تحديث كود الخصم',
+                                  widget.promoCode == null
+                                      ? 'إنشاء كود الخصم'
+                                      : 'تحديث كود الخصم',
                                   style: const TextStyle(
                                     color: Colors.white,
                                     fontSize: 16,
@@ -375,7 +394,9 @@ class _AddEditPromoCodeScreenState extends State<AddEditPromoCodeScreen> {
       children: [
         Card(
           elevation: 2,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           margin: const EdgeInsets.only(bottom: 20),
           child: Padding(
             padding: const EdgeInsets.all(16),
@@ -384,7 +405,11 @@ class _AddEditPromoCodeScreenState extends State<AddEditPromoCodeScreen> {
               children: [
                 Row(
                   children: [
-                    Icon(Icons.confirmation_number, color: AppColors.orangeColor, size: 20),
+                    Icon(
+                      Icons.confirmation_number,
+                      color: AppColors.orangeColor,
+                      size: 20,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: CustomTextField(
@@ -408,7 +433,11 @@ class _AddEditPromoCodeScreenState extends State<AddEditPromoCodeScreen> {
                 const SizedBox(height: 12),
                 Row(
                   children: [
-                    Icon(Icons.description, color: AppColors.orangeColor, size: 20),
+                    Icon(
+                      Icons.description,
+                      color: AppColors.orangeColor,
+                      size: 20,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: CustomTextField(
@@ -427,17 +456,28 @@ class _AddEditPromoCodeScreenState extends State<AddEditPromoCodeScreen> {
                   ],
                 ),
                 const SizedBox(height: 16),
-                Text('نوع الخصم:', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.orangeColor)),
+                Text(
+                  'نوع الخصم:',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.orangeColor,
+                  ),
+                ),
                 Row(
                   children: [
                     Expanded(
                       child: RadioListTile<int>(
                         value: 0,
                         groupValue: _discountType,
-                        onChanged: (val) => setState(() => _discountType = val!),
+                        onChanged: (val) =>
+                            setState(() => _discountType = val!),
                         title: Row(
                           children: [
-                            Icon(Icons.percent, color: AppColors.orangeColor, size: 18),
+                            Icon(
+                              Icons.percent,
+                              color: AppColors.orangeColor,
+                              size: 18,
+                            ),
                             const SizedBox(width: 4),
                             Flexible(
                               child: Text(
@@ -448,17 +488,25 @@ class _AddEditPromoCodeScreenState extends State<AddEditPromoCodeScreen> {
                             ),
                           ],
                         ),
-                        subtitle: const Text('مثال: 10% من قيمة الطلب', style: TextStyle(color: Colors.grey)),
+                        subtitle: const Text(
+                          'مثال: 10% من قيمة الطلب',
+                          style: TextStyle(color: Colors.grey),
+                        ),
                       ),
                     ),
                     Expanded(
                       child: RadioListTile<int>(
                         value: 1,
                         groupValue: _discountType,
-                        onChanged: (val) => setState(() => _discountType = val!),
+                        onChanged: (val) =>
+                            setState(() => _discountType = val!),
                         title: Row(
                           children: [
-                            Icon(Icons.attach_money, color: AppColors.orangeColor, size: 18),
+                            Icon(
+                              Icons.attach_money,
+                              color: AppColors.orangeColor,
+                              size: 18,
+                            ),
                             const SizedBox(width: 4),
                             Flexible(
                               child: Text(
@@ -469,7 +517,10 @@ class _AddEditPromoCodeScreenState extends State<AddEditPromoCodeScreen> {
                             ),
                           ],
                         ),
-                        subtitle: const Text('مثال: 50 جنيه خصم مباشر', style: TextStyle(color: Colors.grey)),
+                        subtitle: const Text(
+                          'مثال: 50 جنيه خصم مباشر',
+                          style: TextStyle(color: Colors.grey),
+                        ),
                       ),
                     ),
                   ],
@@ -478,7 +529,11 @@ class _AddEditPromoCodeScreenState extends State<AddEditPromoCodeScreen> {
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      Icon(Icons.percent, color: AppColors.orangeColor, size: 18),
+                      Icon(
+                        Icons.percent,
+                        color: AppColors.orangeColor,
+                        size: 18,
+                      ),
                       const SizedBox(width: 4),
                       Expanded(
                         child: CustomTextField(
@@ -486,13 +541,17 @@ class _AddEditPromoCodeScreenState extends State<AddEditPromoCodeScreen> {
                           title: 'نسبة الخصم (%)',
                           hinttext: 'مثال: 10',
                           button: null,
-                          keyboardType: TextInputType.numberWithOptions(decimal: true),
+                          keyboardType: TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
                           validator: (value) {
                             if (value == null || value.trim().isEmpty) {
                               return 'يرجى إدخال نسبة الخصم';
                             }
                             final percentage = double.tryParse(value);
-                            if (percentage == null || percentage <= 0 || percentage > 100) {
+                            if (percentage == null ||
+                                percentage <= 0 ||
+                                percentage > 100) {
                               return 'نسبة الخصم يجب أن تكون بين 1 و 100';
                             }
                             return null;
@@ -503,14 +562,21 @@ class _AddEditPromoCodeScreenState extends State<AddEditPromoCodeScreen> {
                   ),
                   const Padding(
                     padding: EdgeInsets.only(top: 4, right: 32),
-                    child: Text('أدخل نسبة مئوية فقط إذا كان الخصم نسبي', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                    child: Text(
+                      'أدخل نسبة مئوية فقط إذا كان الخصم نسبي',
+                      style: TextStyle(color: Colors.grey, fontSize: 12),
+                    ),
                   ),
                 ],
                 if (_discountType == 1) ...[
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      Icon(Icons.attach_money, color: AppColors.orangeColor, size: 18),
+                      Icon(
+                        Icons.attach_money,
+                        color: AppColors.orangeColor,
+                        size: 18,
+                      ),
                       const SizedBox(width: 4),
                       Expanded(
                         child: CustomTextField(
@@ -518,7 +584,9 @@ class _AddEditPromoCodeScreenState extends State<AddEditPromoCodeScreen> {
                           title: 'مبلغ خصم ثابت (جنيه)',
                           hinttext: 'مثال: 50',
                           button: null,
-                          keyboardType: TextInputType.numberWithOptions(decimal: true),
+                          keyboardType: TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
                           validator: (value) {
                             if (value == null || value.trim().isEmpty) {
                               return 'يرجى إدخال مبلغ الخصم الثابت';
@@ -535,7 +603,10 @@ class _AddEditPromoCodeScreenState extends State<AddEditPromoCodeScreen> {
                   ),
                   const Padding(
                     padding: EdgeInsets.only(top: 4, right: 32),
-                    child: Text('أدخل مبلغًا فقط إذا كان الخصم ثابتًا', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                    child: Text(
+                      'أدخل مبلغًا فقط إذا كان الخصم ثابتًا',
+                      style: TextStyle(color: Colors.grey, fontSize: 12),
+                    ),
                   ),
                 ],
               ],
@@ -583,29 +654,39 @@ class _AddEditPromoCodeScreenState extends State<AddEditPromoCodeScreen> {
 
       double? discountValue;
       if (_discountType == 0) {
-        discountValue = double.tryParse(_discountPercentageController.text.trim());
+        discountValue = double.tryParse(
+          _discountPercentageController.text.trim(),
+        );
         if (discountValue == null || discountValue == 0) {
-          setState(() { _error = 'يرجى إدخال نسبة الخصم'; });
+          setState(() {
+            _error = 'يرجى إدخال نسبة الخصم';
+          });
           return;
         }
       } else {
         discountValue = double.tryParse(_fixedAmountController.text.trim());
         if (discountValue == null || discountValue == 0) {
-          setState(() { _error = 'يرجى إدخال مبلغ الخصم الثابت'; });
+          setState(() {
+            _error = 'يرجى إدخال مبلغ الخصم الثابت';
+          });
           return;
         }
       }
 
       final promoCode = PromoCodeModel(
-        id: widget.promoCode?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
+        id:
+            widget.promoCode?.id ??
+            DateTime.now().millisecondsSinceEpoch.toString(),
         code: _codeController.text.trim().toUpperCase(),
         description: _descriptionController.text.trim(),
-        discountPercentage: _discountType == 0 ? discountValue! : 0.0,
-        fixedAmount: _discountType == 1 ? discountValue! : null,
-        maxDiscountAmount: _hasMaxDiscount && _maxDiscountAmountController.text.isNotEmpty
+        discountPercentage: _discountType == 0 ? discountValue : 0.0,
+        fixedAmount: _discountType == 1 ? discountValue : null,
+        maxDiscountAmount:
+            _hasMaxDiscount && _maxDiscountAmountController.text.isNotEmpty
             ? double.parse(_maxDiscountAmountController.text)
             : null,
-        minOrderAmount: _hasMinOrderAmount && _minOrderAmountController.text.isNotEmpty
+        minOrderAmount:
+            _hasMinOrderAmount && _minOrderAmountController.text.isNotEmpty
             ? double.parse(_minOrderAmountController.text)
             : null,
         maxUsageCount: int.parse(_maxUsageCountController.text),
@@ -620,17 +701,13 @@ class _AddEditPromoCodeScreenState extends State<AddEditPromoCodeScreen> {
       if (widget.promoCode == null) {
         context.read<PromoCodeBloc>().add(CreatePromoCode(promoCode));
       } else {
-        context.read<PromoCodeBloc>().add(UpdatePromoCode(
-          promoCode.id,
-          promoCode.toJson(),
-        ));
+        context.read<PromoCodeBloc>().add(
+          UpdatePromoCode(promoCode.id, promoCode.toJson()),
+        );
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('خطأ: $e'),
-          backgroundColor: Colors.red,
-        ),
+        SnackBar(content: Text('خطأ: $e'), backgroundColor: Colors.red),
       );
     } finally {
       setState(() {
@@ -688,7 +765,10 @@ class _AddEditPromoCodeScreenState extends State<AddEditPromoCodeScreen> {
               onPressed: () => Navigator.pop(context),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.orangeColor,
-                padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 30,
+                  vertical: 12,
+                ),
               ),
               child: const Text(
                 'العودة',
@@ -700,4 +780,4 @@ class _AddEditPromoCodeScreenState extends State<AddEditPromoCodeScreen> {
       ),
     );
   }
-} 
+}

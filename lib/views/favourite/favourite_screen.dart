@@ -8,12 +8,8 @@ import '../../blocs/product/product_state.dart';
 import '../../blocs/cart/index.dart';
 import '../../models/product_model.dart';
 import '../../models/cart_item_model.dart';
-import '../../components/item_container.dart';
 import '../../views/product/product_screen.dart';
-import 'widgets/product_favourite.dart';
 import '../../services/firebase_service.dart';
-import 'package:fouda_market/components/loading_indicator.dart';
-import 'package:fouda_market/components/error_view.dart';
 
 class FavouriteScreen extends StatefulWidget {
   const FavouriteScreen({super.key});
@@ -31,12 +27,16 @@ class _FavouriteScreenState extends State<FavouriteScreen> {
   void initState() {
     super.initState();
     _loadFavoriteProducts();
-    context.read<ProductBloc>().favoritesNotifier.addListener(_loadFavoriteProducts);
+    context.read<ProductBloc>().favoritesNotifier.addListener(
+      _loadFavoriteProducts,
+    );
   }
 
   @override
   void dispose() {
-    context.read<ProductBloc>().favoritesNotifier.removeListener(_loadFavoriteProducts);
+    context.read<ProductBloc>().favoritesNotifier.removeListener(
+      _loadFavoriteProducts,
+    );
     super.dispose();
   }
 
@@ -56,7 +56,9 @@ class _FavouriteScreenState extends State<FavouriteScreen> {
     }
     for (final productId in favoriteIds) {
       // البحث في الكاش أولاً
-      final cachedList = cachedProducts.where((p) => p.id == productId).toList();
+      final cachedList = cachedProducts
+          .where((p) => p.id == productId)
+          .toList();
       if (cachedList.isNotEmpty && cachedList.first.isVisible) {
         products.add(cachedList.first);
       } else {
@@ -127,7 +129,9 @@ class _FavouriteScreenState extends State<FavouriteScreen> {
             userId: user.uid,
             productId: product.id,
             productName: product.name,
-            productImage: product.images.isNotEmpty ? product.images.first : null,
+            productImage: product.images.isNotEmpty
+                ? product.images.first
+                : null,
             price: selectedPrice,
             quantity: 1,
             unit: selectedUnit,
@@ -204,10 +208,7 @@ class _FavouriteScreenState extends State<FavouriteScreen> {
                   const SizedBox(height: 8),
                   Text(
                     'أضف منتجات إلى المفضلة لتظهر هنا',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[500],
-                    ),
+                    style: TextStyle(fontSize: 14, color: Colors.grey[500]),
                   ),
                 ],
               ),
@@ -221,7 +222,10 @@ class _FavouriteScreenState extends State<FavouriteScreen> {
                   itemBuilder: (context, index) {
                     final product = favoriteProducts[index];
                     return Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 8.0,
+                        horizontal: 16.0,
+                      ),
                       child: SizedBox(
                         height: 100,
                         child: Stack(
@@ -230,10 +234,15 @@ class _FavouriteScreenState extends State<FavouriteScreen> {
                               decoration: BoxDecoration(
                                 color: Colors.white,
                                 borderRadius: BorderRadius.circular(18),
-                                border: Border.all(color: Colors.grey.shade200, width: 1),
+                                border: Border.all(
+                                  color: Colors.grey.shade200,
+                                  width: 1,
+                                ),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: AppColors.orangeColor.withValues(alpha: 0.08),
+                                    color: AppColors.orangeColor.withValues(
+                                      alpha: 0.08,
+                                    ),
                                     blurRadius: 8,
                                     offset: const Offset(0, 2),
                                   ),
@@ -244,31 +253,51 @@ class _FavouriteScreenState extends State<FavouriteScreen> {
                                 children: [
                                   // Selection checkbox and favorite button
                                   Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12.0,
+                                    ),
                                     child: Row(
                                       children: [
                                         Checkbox(
                                           value: selected.contains(product.id),
-                                          onChanged: _isAddingToCart ? null : (val) {
-                                            _toggleSelection(product.id);
-                                          },
-                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                                          onChanged: _isAddingToCart
+                                              ? null
+                                              : (val) {
+                                                  _toggleSelection(product.id);
+                                                },
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              6,
+                                            ),
+                                          ),
                                           activeColor: AppColors.orangeColor,
-                                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                          materialTapTargetSize:
+                                              MaterialTapTargetSize.shrinkWrap,
                                         ),
                                         const SizedBox(width: 10),
                                         Material(
                                           color: Colors.transparent,
                                           child: InkWell(
-                                            borderRadius: BorderRadius.circular(16),
-                                            onTap: _isAddingToCart ? null : () {
-                                              final user = FirebaseAuth.instance.currentUser;
-                                              if (user != null) {
-                                                context.read<ProductBloc>().add(
-                                                  RemoveFromFavorites(user.uid, product.id),
-                                                );
-                                              }
-                                            },
+                                            borderRadius: BorderRadius.circular(
+                                              16,
+                                            ),
+                                            onTap: _isAddingToCart
+                                                ? null
+                                                : () {
+                                                    final user = FirebaseAuth
+                                                        .instance
+                                                        .currentUser;
+                                                    if (user != null) {
+                                                      context
+                                                          .read<ProductBloc>()
+                                                          .add(
+                                                            RemoveFromFavorites(
+                                                              user.uid,
+                                                              product.id,
+                                                            ),
+                                                          );
+                                                    }
+                                                  },
                                             child: Container(
                                               width: 32,
                                               height: 32,
@@ -277,12 +306,19 @@ class _FavouriteScreenState extends State<FavouriteScreen> {
                                                 shape: BoxShape.circle,
                                                 boxShadow: [
                                                   BoxShadow(
-                                                    color: Colors.black.withValues(alpha: 0.07),
+                                                    color: Colors.black
+                                                        .withValues(
+                                                          alpha: 0.07,
+                                                        ),
                                                     blurRadius: 4,
                                                   ),
                                                 ],
                                               ),
-                                              child: const Icon(Icons.favorite, color: Colors.red, size: 22),
+                                              child: const Icon(
+                                                Icons.favorite,
+                                                color: Colors.red,
+                                                size: 22,
+                                              ),
                                             ),
                                           ),
                                         ),
@@ -292,17 +328,24 @@ class _FavouriteScreenState extends State<FavouriteScreen> {
                                   // Product info
                                   Expanded(
                                     child: InkWell(
-                                      onTap: _isAddingToCart ? null : () {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) => ProductDetailScreen(product: product),
-                                          ),
-                                        );
-                                      },
+                                      onTap: _isAddingToCart
+                                          ? null
+                                          : () {
+                                              Navigator.push(
+                                                context,
+                                                MaterialPageRoute(
+                                                  builder: (context) =>
+                                                      ProductDetailScreen(
+                                                        product: product,
+                                                      ),
+                                                ),
+                                              );
+                                            },
                                       child: Column(
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        crossAxisAlignment: CrossAxisAlignment.end,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.end,
                                         children: [
                                           Text(
                                             product.name,
@@ -325,23 +368,31 @@ class _FavouriteScreenState extends State<FavouriteScreen> {
                                           ),
                                           const SizedBox(height: 8),
                                           Row(
-                                            mainAxisAlignment: MainAxisAlignment.end,
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.end,
                                             children: [
-                                              if (product.originalPrice != null && product.originalPrice! > product.price)
+                                              if (product.originalPrice !=
+                                                      null &&
+                                                  product.originalPrice! >
+                                                      product.price)
                                                 Text(
                                                   '${product.originalPrice!.toStringAsFixed(2)} ج.م',
                                                   style: TextStyle(
-                                                    fontSize: 12,
+                                                    fontSize: 10,
                                                     color: Colors.grey[500],
-                                                    decoration: TextDecoration.lineThrough,
+                                                    decoration: TextDecoration
+                                                        .lineThrough,
                                                   ),
                                                 ),
-                                              if (product.originalPrice != null && product.originalPrice! > product.price)
+                                              if (product.originalPrice !=
+                                                      null &&
+                                                  product.originalPrice! >
+                                                      product.price)
                                                 const SizedBox(width: 8),
                                               Text(
                                                 '${product.price.toStringAsFixed(2)} ج.م',
                                                 style: TextStyle(
-                                                  fontSize: 16,
+                                                  fontSize: 14,
                                                   fontWeight: FontWeight.bold,
                                                   color: AppColors.orangeColor,
                                                 ),
@@ -354,7 +405,9 @@ class _FavouriteScreenState extends State<FavouriteScreen> {
                                   ),
                                   // Product image
                                   Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12.0,
+                                    ),
                                     child: ClipRRect(
                                       borderRadius: BorderRadius.circular(12),
                                       child: product.images.isNotEmpty
@@ -363,20 +416,27 @@ class _FavouriteScreenState extends State<FavouriteScreen> {
                                               width: 60,
                                               height: 60,
                                               fit: BoxFit.cover,
-                                              errorBuilder: (context, error, stackTrace) {
-                                                return Container(
-                                                  width: 60,
-                                                  height: 60,
-                                                  color: Colors.grey[300],
-                                                  child: const Icon(Icons.image, color: Colors.grey),
-                                                );
-                                              },
+                                              errorBuilder:
+                                                  (context, error, stackTrace) {
+                                                    return Container(
+                                                      width: 60,
+                                                      height: 60,
+                                                      color: Colors.grey[300],
+                                                      child: const Icon(
+                                                        Icons.image,
+                                                        color: Colors.grey,
+                                                      ),
+                                                    );
+                                                  },
                                             )
                                           : Container(
                                               width: 60,
                                               height: 60,
                                               color: Colors.grey[300],
-                                              child: const Icon(Icons.image, color: Colors.grey),
+                                              child: const Icon(
+                                                Icons.image,
+                                                color: Colors.grey,
+                                              ),
                                             ),
                                     ),
                                   ),
@@ -404,12 +464,12 @@ class _FavouriteScreenState extends State<FavouriteScreen> {
       builder: (context, child) {
         final bloc = context.read<ProductBloc>();
         final favorites = bloc.favoritesNotifier.favoriteProductIds;
-        
+
         // إذا لم تكن هناك منتجات مفضلة، لا تعرض الزر
         if (favorites.isEmpty) {
           return const SizedBox.shrink();
         }
-        
+
         return StatefulBuilder(
           builder: (context, setState) {
             return Padding(
@@ -417,13 +477,17 @@ class _FavouriteScreenState extends State<FavouriteScreen> {
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.orangeColor,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
-                onPressed: (selected.isEmpty || _isAddingToCart) ? null : () {
-                  _addSelectedToCart();
-                  setState(() {}); // تحديث النص
-                },
+                onPressed: (selected.isEmpty || _isAddingToCart)
+                    ? null
+                    : () {
+                        _addSelectedToCart();
+                        setState(() {}); // تحديث النص
+                      },
                 child: _isAddingToCart
                     ? Row(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -433,21 +497,31 @@ class _FavouriteScreenState extends State<FavouriteScreen> {
                             height: 20,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
                             ),
                           ),
                           const SizedBox(width: 12),
                           const Text(
                             'جاري الإضافة...',
-                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
                           ),
                         ],
                       )
                     : Text(
-                        selected.isEmpty 
-                            ? 'إضافة المحدد إلى السلة' 
+                        selected.isEmpty
+                            ? 'إضافة المحدد إلى السلة'
                             : 'إضافة ${selected.length} منتج إلى السلة',
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
                       ),
               ),
             );

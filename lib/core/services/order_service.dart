@@ -2,7 +2,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import '../../models/order_model.dart';
-import '../../models/promo_code_model.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
@@ -19,24 +18,34 @@ class OrderService {
       // إنشاء معرف فريد للطلب
       final orderId = DateTime.now().millisecondsSinceEpoch.toString();
       final orderWithId = order.copyWith(id: orderId);
-      
+
       // حفظ الطلب في Firestore
-      await _firestore.collection('orders').doc(orderId).set(orderWithId.toJson());
-      
+      await _firestore
+          .collection('orders')
+          .doc(orderId)
+          .set(orderWithId.toJson());
+
       // إذا كان هناك كود خصم، تحديث عدد مرات الاستخدام
       if (order.promoCodeId != null) {
         await _updatePromoCodeUsage(order.promoCodeId!);
       }
-      
+
       // إشعار المديرين ومدخلي البيانات بعد إنشاء الطلب
       await notifyAdminsAndDataEntryOnNewOrder(orderWithId);
-      
+
       // إضافة إشعار للأدمن عند إنشاء طلب جديد
-      final adminsQuery = await _firestore.collection('users').where('role', whereIn: ['admin', 'data_entry']).get();
+      final adminsQuery = await _firestore
+          .collection('users')
+          .where('role', whereIn: ['admin', 'data_entry'])
+          .get();
       // بناء نص مفصل للإشعار
-      String userName = order.deliveryAddressName ?? order.userId;
+      String userName =
+          order.customerName ?? order.deliveryAddressName ?? order.userId;
       try {
-        final userDoc = await _firestore.collection('users').doc(order.userId).get();
+        final userDoc = await _firestore
+            .collection('users')
+            .doc(order.userId)
+            .get();
         if (userDoc.exists && userDoc.data()?['name'] != null) {
           userName = userDoc.data()!['name'];
         }
@@ -44,16 +53,21 @@ class OrderService {
       final itemsCount = order.items.length;
       final total = order.total.toStringAsFixed(2);
       final address = order.deliveryAddressName ?? order.deliveryAddress ?? '';
-      final adminBody = 'طلب جديد من: $userName\nعدد المنتجات: $itemsCount\nالإجمالي: $total جنيه\nالعنوان: $address';
+      final adminBody =
+          'طلب جديد من: $userName\nعدد المنتجات: $itemsCount\nالإجمالي: $total جنيه\nالعنوان: $address';
       for (var adminDoc in adminsQuery.docs) {
-        await _firestore.collection('users').doc(adminDoc.id).collection('notifications').add({
-          'title': 'طلب جديد',
-          'body': adminBody,
-          'orderId': orderId,
-          'timestamp': FieldValue.serverTimestamp(),
-        });
+        await _firestore
+            .collection('users')
+            .doc(adminDoc.id)
+            .collection('notifications')
+            .add({
+              'title': 'طلب جديد',
+              'body': adminBody,
+              'orderId': orderId,
+              'timestamp': FieldValue.serverTimestamp(),
+            });
       }
-      
+
       print('[DEBUG] Order created successfully: $orderId');
       return orderId;
     } catch (e) {
@@ -67,9 +81,10 @@ class OrderService {
     try {
       print('[NOTIFY] >>> دخلنا دالة إشعار المديرين ومدخلي البيانات');
       // جلب كل المستخدمين الذين لديهم دور admin أو data_entry
-      final usersQuery = await _firestore.collection('users')
-        .where('role', whereIn: ['admin', 'data_entry'])
-        .get();
+      final usersQuery = await _firestore
+          .collection('users')
+          .where('role', whereIn: ['admin', 'data_entry'])
+          .get();
       final tokens = <String>[];
       final adminTokens = <String>[];
       final dataEntryTokens = <String>[];
@@ -95,9 +110,12 @@ class OrderService {
         return;
       }
       // جلب اسم المستخدم
-      String userName = order.userId;
+      String userName = order.customerName ?? order.userId;
       try {
-        final userDoc = await _firestore.collection('users').doc(order.userId).get();
+        final userDoc = await _firestore
+            .collection('users')
+            .doc(order.userId)
+            .get();
         if (userDoc.exists && userDoc.data()?['name'] != null) {
           userName = userDoc.data()!['name'];
         }
@@ -108,9 +126,11 @@ class OrderService {
       final address = order.deliveryAddressName ?? order.deliveryAddress ?? '';
       // نصوص الإشعار
       final adminTitle = 'طلب جديد';
-      final adminBody = 'طلب جديد من: $userName\nعدد المنتجات: $itemsCount\nالإجمالي: $total جنيه\nالعنوان: $address';
+      final adminBody =
+          'طلب جديد من: $userName\nعدد المنتجات: $itemsCount\nالإجمالي: $total جنيه\nالعنوان: $address';
       final dataEntryTitle = 'طلب جديد بحاجة للمراجعة';
-      final dataEntryBody = 'طلب جديد من: $userName\nعدد المنتجات: $itemsCount\nالإجمالي: $total جنيه\nالعنوان: $address';
+      final dataEntryBody =
+          'طلب جديد من: $userName\nعدد المنتجات: $itemsCount\nالإجمالي: $total جنيه\nالعنوان: $address';
       final endpoint = 'https://fcm-api-seven.vercel.app/api/send-fcm';
       // إشعار المديرين
       if (adminTokens.isNotEmpty) {
@@ -190,7 +210,9 @@ class OrderService {
   Future<void> _updatePromoCodeUsage(String promoCodeId) async {
     try {
       print('[DEBUG] محاولة تحديث عداد كود الخصم: $promoCodeId');
-      final promoCodeRef = _firestore.collection('promo_codes').doc(promoCodeId);
+      final promoCodeRef = _firestore
+          .collection('promo_codes')
+          .doc(promoCodeId);
       await promoCodeRef.update({
         'current_usage_count': FieldValue.increment(1),
         'updated_at': FieldValue.serverTimestamp(),
@@ -209,13 +231,13 @@ class OrderService {
           .where('userId', isEqualTo: userId)
           .orderBy('created_at', descending: true)
           .get();
-      
+
       final orders = querySnapshot.docs.map((doc) {
         final data = doc.data();
         data['id'] = doc.id;
         return OrderModel.fromJson(data);
       }).toList();
-      
+
       print('[DEBUG] Found ${orders.length} orders for user: $userId');
       return orders;
     } catch (e) {
@@ -231,13 +253,13 @@ class OrderService {
           .collection('orders')
           .orderBy('created_at', descending: true)
           .get();
-      
+
       final orders = querySnapshot.docs.map((doc) {
         final data = doc.data();
         data['id'] = doc.id;
         return OrderModel.fromJson(data);
       }).toList();
-      
+
       print('[DEBUG] Found ${orders.length} total orders');
       return orders;
     } catch (e) {
@@ -247,7 +269,10 @@ class OrderService {
   }
 
   /// جلب جميع الطلبات (للمدير) مع pagination
-  Future<List<OrderModel>> getAllOrdersPaginated({int limit = 20, OrderModel? lastOrder}) async {
+  Future<List<OrderModel>> getAllOrdersPaginated({
+    int limit = 20,
+    OrderModel? lastOrder,
+  }) async {
     try {
       var query = _firestore
           .collection('orders')
@@ -277,7 +302,11 @@ class OrderService {
   }
 
   /// جلب طلبات المستخدم مع pagination
-  Future<List<OrderModel>> getUserOrdersPaginated(String userId, {int limit = 20, OrderModel? lastOrder}) async {
+  Future<List<OrderModel>> getUserOrdersPaginated(
+    String userId, {
+    int limit = 20,
+    OrderModel? lastOrder,
+  }) async {
     try {
       var query = _firestore
           .collection('orders')
@@ -326,28 +355,25 @@ class OrderService {
     try {
       // استخدام Firebase Cloud Messaging HTTP v1 API مباشرة
       final projectId = 'fouda-market';
-      final url = 'https://fcm.googleapis.com/v1/projects/$projectId/messages:send';
-      
+      final url =
+          'https://fcm.googleapis.com/v1/projects/$projectId/messages:send';
+
       // ملاحظة: في التطبيق الحقيقي، يجب استخدام Server Key أو Service Account
       // هذا مثال للتوضيح فقط
       final message = {
         'message': {
           'token': fcmToken,
-          'notification': {
-            'title': title,
-            'body': body,
-          },
+          'notification': {'title': title, 'body': body},
           'data': data ?? {},
         },
       };
 
       print('[FCM] محاولة إرسال إشعار مباشر إلى: $fcmToken');
       print('[FCM] الرسالة: $message');
-      
+
       // ملاحظة: هذا يتطلب Server Key من Firebase Console
       // أو استخدام Service Account للـ authentication
       print('[FCM] تحذير: هذا يتطلب إعداد Server Key أو Service Account');
-      
     } catch (e) {
       print('[FCM] خطأ في إرسال الإشعار المباشر: $e');
     }
@@ -365,9 +391,9 @@ class OrderService {
               .collection('users')
               .doc(user.uid)
               .update({
-            'fcmToken': currentToken,
-            'updatedAt': FieldValue.serverTimestamp(),
-          });
+                'fcmToken': currentToken,
+                'updatedAt': FieldValue.serverTimestamp(),
+              });
           print('[FCM] ✅ تم تحديث FCM Token في Firestore');
         }
       }
@@ -382,9 +408,9 @@ class OrderService {
   Future<bool> testVercelApiConnection() async {
     try {
       print('[FCM] 🔍 اختبار الاتصال بـ Vercel API...');
-      
+
       final endpoint = 'https://fcm-api-seven.vercel.app/api/send-fcm';
-      
+
       // إرسال طلب اختبار بسيط
       final testData = {
         'fcmToken': 'test_token',
@@ -392,26 +418,29 @@ class OrderService {
         'body': 'هذا اختبار للاتصال',
         'data': {'test': 'true'},
       };
-      
-      final response = await http.post(
-        Uri.parse(endpoint),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode(testData),
-      ).timeout(Duration(seconds: 5));
-      
+
+      final response = await http
+          .post(
+            Uri.parse(endpoint),
+            headers: {'Content-Type': 'application/json'},
+            body: json.encode(testData),
+          )
+          .timeout(Duration(seconds: 5));
+
       print('[FCM] استجابة اختبار الاتصال: ${response.statusCode}');
-      
+
       if (response.statusCode == 200) {
         print('[FCM] ✅ الاتصال بـ Vercel API يعمل بشكل صحيح');
         return true;
       } else if (response.statusCode == 404) {
-        print('[FCM] ⚠️ Vercel API متاح لكن FCM Token غير صالح (هذا طبيعي في الاختبار)');
+        print(
+          '[FCM] ⚠️ Vercel API متاح لكن FCM Token غير صالح (هذا طبيعي في الاختبار)',
+        );
         return true;
       } else {
         print('[FCM] ❌ مشكلة في Vercel API: ${response.statusCode}');
         return false;
       }
-      
     } catch (e) {
       print('[FCM] ❌ فشل في الاتصال بـ Vercel API: $e');
       return false;
@@ -425,7 +454,9 @@ class OrderService {
       if (userDoc.exists) {
         final userData = userDoc.data();
         final fcmToken = userData?['fcmToken'];
-        print('[FCM] FCM Token للمستخدم $userId: ${fcmToken != null ? '${fcmToken.substring(0, 20)}...' : 'غير موجود'}');
+        print(
+          '[FCM] FCM Token للمستخدم $userId: ${fcmToken != null ? '${fcmToken.substring(0, 20)}...' : 'غير موجود'}',
+        );
         return fcmToken;
       }
       print('[FCM] المستخدم $userId غير موجود في Firestore');
@@ -443,15 +474,17 @@ class OrderService {
     required String status,
   }) async {
     try {
-      final statusText = {
-        'pending': 'قيد الانتظار',
-        'accepted': 'تم قبول الطلب',
-        'preparing': 'جاري التحضير',
-        'delivering': 'جاري التوصيل',
-        'delivered': 'تم التوصيل',
-        'cancelled': 'تم إلغاء الطلب',
-        'failed': 'فشل الطلب',
-      }[status] ?? status;
+      final statusText =
+          {
+            'pending': 'قيد الانتظار',
+            'accepted': 'تم قبول الطلب',
+            'preparing': 'جاري التحضير',
+            'delivering': 'جاري التوصيل',
+            'delivered': 'تم التوصيل',
+            'cancelled': 'تم إلغاء الطلب',
+            'failed': 'فشل الطلب',
+          }[status] ??
+          status;
 
       // استخدم فقط fcmToken القادم من Firestore
       String tokenToUse = fcmToken;
@@ -479,21 +512,25 @@ class OrderService {
             .collection('orders')
             .doc(orderId)
             .update({
-          'status': status,
-          'updatedAt': FieldValue.serverTimestamp(),
-        });
+              'status': status,
+              'updatedAt': FieldValue.serverTimestamp(),
+            });
         print('[FCM] ✅ تم تحديث حالة الطلب في Firestore');
 
         // إرسال الإشعار عبر Vercel API
         final endpoint = 'https://fcm-api-seven.vercel.app/api/send-fcm';
         print('[FCM] 🌐 إرسال طلب إلى: $endpoint');
-        final response = await http.post(
-          Uri.parse(endpoint),
-          headers: {'Content-Type': 'application/json'},
-          body: json.encode(notificationData),
-        ).timeout(Duration(seconds: 10));
+        final response = await http
+            .post(
+              Uri.parse(endpoint),
+              headers: {'Content-Type': 'application/json'},
+              body: json.encode(notificationData),
+            )
+            .timeout(Duration(seconds: 10));
 
-        print('[FCM] استجابة الخادم: ${response.statusCode} - ${response.body}');
+        print(
+          '[FCM] استجابة الخادم: ${response.statusCode} - ${response.body}',
+        );
         if (response.statusCode == 200) {
           final responseData = json.decode(response.body);
           print('[FCM] ✅ تم إرسال الإشعار بنجاح عبر Vercel API');
@@ -535,62 +572,80 @@ class OrderService {
         print('[FCM] لا يوجد fcmToken للمستخدم $userId');
         return;
       }
-      
-      // نص الإشعار حسب الحالة الجديدة
-      final statusText = {
-        'pending': 'قيد الانتظار',
-        'accepted': 'تم قبول الطلب',
-        'preparing': 'جاري التحضير',
-        'delivering': 'جاري التوصيل',
-        'delivered': 'تم التوصيل',
-        'cancelled': 'تم إلغاء الطلب',
-        'failed': 'فشل الطلب',
-      }[status] ?? status;
 
-      print('[FCM] سيتم إرسال إشعار للمستخدم $userId لحالة الطلب $orderId: $statusText');
-      print('[FCM] Firebase Function ستتعامل مع إرسال الإشعار تلقائياً عند تحديث الحالة');
-      
+      // نص الإشعار حسب الحالة الجديدة
+      final statusText =
+          {
+            'pending': 'قيد الانتظار',
+            'accepted': 'تم قبول الطلب',
+            'preparing': 'جاري التحضير',
+            'delivering': 'جاري التوصيل',
+            'delivered': 'تم التوصيل',
+            'cancelled': 'تم إلغاء الطلب',
+            'failed': 'فشل الطلب',
+          }[status] ??
+          status;
+
+      print(
+        '[FCM] سيتم إرسال إشعار للمستخدم $userId لحالة الطلب $orderId: $statusText',
+      );
+      print(
+        '[FCM] Firebase Function ستتعامل مع إرسال الإشعار تلقائياً عند تحديث الحالة',
+      );
     } catch (e) {
       print('[FCM] خطأ في إعداد إشعار حالة الطلب: $e');
     }
   }
 
   /// تحديث حالة الطلب
-  Future<void> updateOrderStatus(String orderId, String status) async {
+  Future<void> updateOrderStatus(
+    String orderId,
+    String status, {
+    required String adminId,
+    String? adminName,
+  }) async {
     try {
       final orderRef = _firestore.collection('orders').doc(orderId);
       await orderRef.update({
         'status': status,
         'updated_at': FieldValue.serverTimestamp(),
+        'updated_by': adminName ?? adminId,
+        'admin_id': adminId,
       });
-      
+
       // جلب الطلب لمعرفة userId
       final orderDoc = await orderRef.get();
       final orderData = orderDoc.data();
       final userId = orderData != null ? orderData['userId'] : null;
-      
+
       if (userId != null) {
         // إضافة إشعار للمستخدم عند تغيير حالة الطلب
-        final statusText = {
-          'pending': 'قيد الانتظار',
-          'accepted': 'تم قبول الطلب',
-          'preparing': 'جاري التحضير',
-          'delivering': 'جاري التوصيل',
-          'delivered': 'تم التوصيل',
-          'cancelled': 'تم إلغاء الطلب',
-          'failed': 'فشل الطلب',
-        }[status] ?? status;
-        await _firestore.collection('users').doc(userId).collection('notifications').add({
-          'title': 'تحديث حالة الطلب',
-          'body': 'تم تحديث حالة طلبك إلى: $statusText',
-          'orderId': orderId,
-          'timestamp': FieldValue.serverTimestamp(),
-        });
+        final statusText =
+            {
+              'pending': 'قيد الانتظار',
+              'accepted': 'تم قبول الطلب',
+              'preparing': 'جاري التحضير',
+              'delivering': 'جاري التوصيل',
+              'delivered': 'تم التوصيل',
+              'cancelled': 'تم إلغاء الطلب',
+              'failed': 'فشل الطلب',
+            }[status] ??
+            status;
+        await _firestore
+            .collection('users')
+            .doc(userId)
+            .collection('notifications')
+            .add({
+              'title': 'تحديث حالة الطلب',
+              'body': 'تم تحديث حالة طلبك إلى: $statusText',
+              'orderId': orderId,
+              'timestamp': FieldValue.serverTimestamp(),
+            });
         // جلب fcmToken من Firestore
         final userDoc = await _firestore.collection('users').doc(userId).get();
         final userData = userDoc.data();
         final fcmToken = userData != null ? userData['fcmToken'] : null;
-        
+
         if (fcmToken != null && fcmToken.isNotEmpty) {
           // اختبار إرسال الإشعار باستخدام HTTP API
           await testNotification(
@@ -601,11 +656,15 @@ class OrderService {
         } else {
           print('[FCM] لا يوجد fcmToken للمستخدم $userId');
         }
-        
+
         // أيضاً استدعاء الدالة الأصلية للـ Firebase Functions
-        await sendOrderStatusNotification(userId: userId, orderId: orderId, status: status);
+        await sendOrderStatusNotification(
+          userId: userId,
+          orderId: orderId,
+          status: status,
+        );
       }
-      
+
       print('[DEBUG] Order status updated: $orderId -> $status');
     } catch (e) {
       print('[ERROR] Failed to update order status: $e');
@@ -621,13 +680,13 @@ class OrderService {
           .where('status', isEqualTo: status)
           .orderBy('created_at', descending: true)
           .get();
-      
+
       final orders = querySnapshot.docs.map((doc) {
         final data = doc.data();
         data['id'] = doc.id;
         return OrderModel.fromJson(data);
       }).toList();
-      
+
       print('[DEBUG] Found ${orders.length} orders with status: $status');
       return orders;
     } catch (e) {
@@ -637,11 +696,17 @@ class OrderService {
   }
 
   /// إحصائيات المبيعات والتقارير
-  Future<Map<String, dynamic>> getSalesReport(DateTime startDate, DateTime endDate) async {
+  Future<Map<String, dynamic>> getSalesReport(
+    DateTime startDate,
+    DateTime endDate,
+  ) async {
     try {
       final querySnapshot = await _firestore
           .collection('orders')
-          .where('created_at', isGreaterThanOrEqualTo: Timestamp.fromDate(startDate))
+          .where(
+            'created_at',
+            isGreaterThanOrEqualTo: Timestamp.fromDate(startDate),
+          )
           .where('created_at', isLessThanOrEqualTo: Timestamp.fromDate(endDate))
           .where('status', whereIn: ['delivered', 'completed'])
           .get();
@@ -655,7 +720,7 @@ class OrderService {
         final orderData = doc.data();
         totalSales += (orderData['total'] ?? 0).toDouble();
         totalDiscounts += (orderData['discount_amount'] ?? 0).toDouble();
-        
+
         if (orderData['promo_code_id'] != null) {
           ordersWithPromoCode++;
         }
@@ -691,9 +756,10 @@ class OrderService {
         final promoCodeId = orderData['promo_code_id'];
         final promoCode = orderData['promo_code'];
         final discountAmount = (orderData['discount_amount'] ?? 0).toDouble();
-        
+
         if (promoCodeId != null) {
-          promoCodeUsage[promoCode ?? promoCodeId] = (promoCodeUsage[promoCode ?? promoCodeId] ?? 0) + 1;
+          promoCodeUsage[promoCode ?? promoCodeId] =
+              (promoCodeUsage[promoCode ?? promoCodeId] ?? 0) + 1;
           totalPromoCodeDiscounts += discountAmount;
         }
       }
@@ -708,4 +774,4 @@ class OrderService {
       throw Exception('فشل في جلب إحصائيات كود الخصم: $e');
     }
   }
-} 
+}

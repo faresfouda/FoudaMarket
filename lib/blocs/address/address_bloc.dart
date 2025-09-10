@@ -18,10 +18,11 @@ class AddressBloc extends Bloc<AddressEvent, AddressState> {
     });
 
     on<LoadDefaultAddress>((event, emit) async {
-      emit(DefaultAddressLoading());
       try {
         final defaultAddress = await _addressService.getDefaultAddress(event.userId);
-        emit(DefaultAddressLoaded(defaultAddress));
+        if (defaultAddress != null) {
+          emit(DefaultAddressLoaded(defaultAddress));
+        }
       } catch (e) {
         print('AddressBloc LoadDefaultAddress error: $e');
         emit(DefaultAddressError('فشل في تحميل العنوان الافتراضي'));
@@ -32,12 +33,6 @@ class AddressBloc extends Bloc<AddressEvent, AddressState> {
       try {
         await _addressService.addAddress(event.address);
         emit(AddressOperationSuccess());
-        // إعادة تحميل العناوين بعد الإضافة
-        final addresses = await _addressService.getUserAddresses(event.address.userId);
-        emit(AddressesLoaded(addresses));
-        // تحميل العنوان الافتراضي بعد الإضافة
-        final defaultAddress = await _addressService.getDefaultAddress(event.address.userId);
-        emit(DefaultAddressLoaded(defaultAddress));
       } catch (e) {
         emit(AddressesError('فشل في إضافة العنوان'));
       }
@@ -47,13 +42,8 @@ class AddressBloc extends Bloc<AddressEvent, AddressState> {
       try {
         await _addressService.updateAddress(event.address);
         emit(AddressOperationSuccess());
-        // إعادة تحميل العناوين بعد التحديث
-        final addresses = await _addressService.getUserAddresses(event.address.userId);
-        emit(AddressesLoaded(addresses));
-        // تحميل العنوان الافتراضي بعد التحديث
-        final defaultAddress = await _addressService.getDefaultAddress(event.address.userId);
-        emit(DefaultAddressLoaded(defaultAddress));
       } catch (e) {
+        print('UpdateAddress error: $e');
         emit(AddressesError('فشل في تحديث العنوان'));
       }
     });
@@ -62,12 +52,6 @@ class AddressBloc extends Bloc<AddressEvent, AddressState> {
       try {
         await _addressService.deleteAddress(event.addressId);
         emit(AddressOperationSuccess());
-        // إعادة تحميل العناوين بعد الحذف
-        final addresses = await _addressService.getUserAddresses(event.userId);
-        emit(AddressesLoaded(addresses));
-        // تحميل العنوان الافتراضي بعد الحذف
-        final defaultAddress = await _addressService.getDefaultAddress(event.userId);
-        emit(DefaultAddressLoaded(defaultAddress));
       } catch (e) {
         emit(AddressesError('فشل في حذف العنوان'));
       }
@@ -77,18 +61,10 @@ class AddressBloc extends Bloc<AddressEvent, AddressState> {
       try {
         await _addressService.setDefaultAddress(event.userId, event.addressId);
         emit(AddressOperationSuccess());
-        // إعادة تحميل العناوين بعد تعيين العنوان الافتراضي
-        final addresses = await _addressService.getUserAddresses(event.userId);
-        emit(AddressesLoaded(addresses));
-        // تحميل العنوان الافتراضي بعد التعيين
-        final defaultAddress = await _addressService.getDefaultAddress(event.userId);
-        emit(DefaultAddressLoaded(defaultAddress));
-        // أعد تحميل العناوين مرة أخرى لضمان تحديث القائمة
-        final addressesAfter = await _addressService.getUserAddresses(event.userId);
-        emit(AddressesLoaded(addressesAfter));
       } catch (e) {
+        print('SetDefaultAddress error: $e');
         emit(AddressesError('فشل في تعيين العنوان الافتراضي'));
       }
     });
   }
-} 
+}

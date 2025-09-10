@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:fouda_market/models/order_model.dart';
 import 'package:fouda_market/core/services/order_service.dart';
 import 'package:fouda_market/theme/appcolors.dart';
-import 'package:fouda_market/views/profile/orders_screen.dart';
 import '../../routes.dart';
 
 class OrderDetailsScreen extends StatefulWidget {
@@ -34,7 +32,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
       });
 
       final order = await OrderService().getOrderById(widget.orderId);
-      
+
       if (mounted) {
         setState(() {
           _order = order;
@@ -62,23 +60,16 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
           foregroundColor: Colors.white,
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
-            onPressed: () {
-              // التحقق من وجود صفحات سابقة في الـ navigation stack
-              if (Navigator.of(context).canPop()) {
-                Navigator.of(context).pop();
-              } else {
-                Navigator.of(context).pushReplacementNamed(AppRoutes.orders);
-              }
-            },
+            onPressed: () {},
           ),
         ),
         body: _isLoading
             ? const Center(child: CircularProgressIndicator())
             : _error != null
-                ? _buildErrorState()
-                : _order != null
-                    ? _buildOrderDetails()
-                    : _buildNotFoundState(),
+            ? _buildErrorState()
+            : _order != null
+            ? _buildOrderDetails()
+            : _buildNotFoundState(),
       ),
     );
   }
@@ -133,7 +124,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
 
   Widget _buildOrderDetails() {
     final order = _order!;
-    
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -142,23 +133,23 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
           // معلومات الطلب الأساسية
           _buildOrderHeader(order),
           const SizedBox(height: 16),
-          
+
           // حالة الطلب
           _buildOrderStatus(order),
           const SizedBox(height: 16),
-          
+
           // معلومات التوصيل
           _buildDeliveryInfo(order),
           const SizedBox(height: 16),
-          
+
           // عناصر الطلب
           _buildOrderItems(order),
           const SizedBox(height: 16),
-          
+
           // ملخص السعر
           _buildPriceSummary(order),
           const SizedBox(height: 16),
-          
+
           // معلومات كود الخصم
           if (order.promoCode != null) ...[
             _buildPromoCodeInfo(order),
@@ -190,6 +181,10 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
             ),
             const SizedBox(height: 12),
             _buildInfoRow('رقم الطلب', order.id),
+            if (order.customerName != null)
+              _buildInfoRow('اسم العميل', order.customerName!),
+            if (order.customerPhone != null)
+              _buildInfoRow('هاتف العميل', order.customerPhone!),
             _buildInfoRow('تاريخ الطلب', _formatDate(order.createdAt)),
             _buildInfoRow('وقت الطلب', _formatTime(order.createdAt)),
           ],
@@ -238,10 +233,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
               ),
               child: Text(
                 text,
-                style: TextStyle(
-                  color: color,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(color: color, fontWeight: FontWeight.bold),
               ),
             ),
             const Spacer(),
@@ -279,7 +271,10 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
             if (order.deliveryAddress != null)
               _buildInfoRow('العنوان', order.deliveryAddress!),
             if (order.estimatedDeliveryTime != null)
-              _buildInfoRow('وقت التوصيل المتوقع', _formatDateTime(order.estimatedDeliveryTime!)),
+              _buildInfoRow(
+                'وقت التوصيل المتوقع',
+                _formatDateTime(order.estimatedDeliveryTime!),
+              ),
           ],
         ),
       ),
@@ -419,11 +414,20 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
             const SizedBox(height: 12),
             _buildInfoRow('الكود', order.promoCode!),
             if (order.promoCodeDiscountPercentage != null)
-              _buildInfoRow('نسبة الخصم', '${order.promoCodeDiscountPercentage!.toStringAsFixed(0)}%'),
+              _buildInfoRow(
+                'نسبة الخصم',
+                '${order.promoCodeDiscountPercentage!.toStringAsFixed(0)}%',
+              ),
             if (order.promoCodeMaxDiscount != null)
-              _buildInfoRow('الحد الأقصى للخصم', '${order.promoCodeMaxDiscount!.toStringAsFixed(2)} جنيه'),
+              _buildInfoRow(
+                'الحد الأقصى للخصم',
+                '${order.promoCodeMaxDiscount!.toStringAsFixed(2)} جنيه',
+              ),
             if (order.discountAmount != null)
-              _buildInfoRow('قيمة الخصم المطبقة', '${order.discountAmount!.toStringAsFixed(2)} جنيه'),
+              _buildInfoRow(
+                'قيمة الخصم المطبقة',
+                '${order.discountAmount!.toStringAsFixed(2)} جنيه',
+              ),
           ],
         ),
       ),
@@ -457,7 +461,12 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
     );
   }
 
-  Widget _buildPriceRow(String label, double amount, {bool isDiscount = false, bool isTotal = false}) {
+  Widget _buildPriceRow(
+    String label,
+    double amount, {
+    bool isDiscount = false,
+    bool isTotal = false,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -475,7 +484,9 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
             style: TextStyle(
               fontSize: isTotal ? 16 : 14,
               fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
-              color: isTotal ? AppColors.orangeColor : (isDiscount ? Colors.green : null),
+              color: isTotal
+                  ? AppColors.orangeColor
+                  : (isDiscount ? Colors.green : null),
             ),
           ),
         ],
@@ -494,4 +505,4 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
   String _formatDateTime(DateTime date) {
     return '${_formatDate(date)} ${_formatTime(date)}';
   }
-} 
+}

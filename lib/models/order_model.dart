@@ -7,7 +7,8 @@ class OrderModel {
   final double subtotal;
   final double? discountAmount;
   final double total;
-  final String status; // 'pending', 'accepted', 'preparing', 'delivering', 'delivered', 'cancelled', 'failed'
+  final String
+  status; // 'pending', 'accepted', 'preparing', 'delivering', 'delivered', 'cancelled', 'failed'
   final String? deliveryAddress;
   final String? deliveryAddressName;
   final String? deliveryPhone;
@@ -19,6 +20,8 @@ class OrderModel {
   final String? promoCode; // كود الخصم المستخدم
   final double? promoCodeDiscountPercentage; // نسبة الخصم من كود الخصم
   final double? promoCodeMaxDiscount; // الحد الأقصى للخصم من كود الخصم
+  final String? customerName; // اسم العميل
+  final String? customerPhone; // رقم هاتف العميل
 
   OrderModel({
     required this.id,
@@ -39,18 +42,22 @@ class OrderModel {
     this.promoCode,
     this.promoCodeDiscountPercentage,
     this.promoCodeMaxDiscount,
+    this.customerName,
+    this.customerPhone,
   });
 
   factory OrderModel.fromJson(Map<String, dynamic> json) {
     return OrderModel(
       id: json['id'] ?? '',
       userId: json['userId'] ?? '',
-      items: (json['items'] as List<dynamic>?)
-          ?.map((item) => OrderItemModel.fromJson(item))
-          .toList() ?? [],
+      items:
+          (json['items'] as List<dynamic>?)
+              ?.map((item) => OrderItemModel.fromJson(item))
+              .toList() ??
+          [],
       subtotal: (json['subtotal'] as num?)?.toDouble() ?? 0.0,
-      discountAmount: json['discount_amount'] != null 
-          ? (json['discount_amount'] as num).toDouble() 
+      discountAmount: json['discount_amount'] != null
+          ? (json['discount_amount'] as num).toDouble()
           : null,
       total: (json['total'] as num?)?.toDouble() ?? 0.0,
       status: json['status'] ?? 'pending',
@@ -58,19 +65,22 @@ class OrderModel {
       deliveryAddressName: json['delivery_address_name'],
       deliveryPhone: json['delivery_phone'],
       deliveryNotes: json['delivery_notes'],
-      estimatedDeliveryTime: json['estimated_delivery_time'] != null 
+      estimatedDeliveryTime: json['estimated_delivery_time'] != null
           ? _parseTimestamp(json['estimated_delivery_time'])
           : null,
       createdAt: _parseTimestamp(json['created_at']) ?? DateTime.now(),
       updatedAt: _parseTimestamp(json['updated_at']) ?? DateTime.now(),
       promoCodeId: json['promo_code_id'],
       promoCode: json['promo_code'],
-      promoCodeDiscountPercentage: json['promo_code_discount_percentage'] != null 
-          ? (json['promo_code_discount_percentage'] as num).toDouble() 
+      promoCodeDiscountPercentage:
+          json['promo_code_discount_percentage'] != null
+          ? (json['promo_code_discount_percentage'] as num).toDouble()
           : null,
-      promoCodeMaxDiscount: json['promo_code_max_discount'] != null 
-          ? (json['promo_code_max_discount'] as num).toDouble() 
+      promoCodeMaxDiscount: json['promo_code_max_discount'] != null
+          ? (json['promo_code_max_discount'] as num).toDouble()
           : null,
+      customerName: json['customer_name'],
+      customerPhone: json['customer_phone'],
     );
   }
 
@@ -106,6 +116,8 @@ class OrderModel {
       'promo_code': promoCode,
       'promo_code_discount_percentage': promoCodeDiscountPercentage,
       'promo_code_max_discount': promoCodeMaxDiscount,
+      'customer_name': customerName,
+      'customer_phone': customerPhone,
     };
   }
 
@@ -128,6 +140,8 @@ class OrderModel {
     String? promoCode,
     double? promoCodeDiscountPercentage,
     double? promoCodeMaxDiscount,
+    String? customerName,
+    String? customerPhone,
   }) {
     return OrderModel(
       id: id ?? this.id,
@@ -141,13 +155,17 @@ class OrderModel {
       deliveryAddressName: deliveryAddressName ?? this.deliveryAddressName,
       deliveryPhone: deliveryPhone ?? this.deliveryPhone,
       deliveryNotes: deliveryNotes ?? this.deliveryNotes,
-      estimatedDeliveryTime: estimatedDeliveryTime ?? this.estimatedDeliveryTime,
+      estimatedDeliveryTime:
+          estimatedDeliveryTime ?? this.estimatedDeliveryTime,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       promoCodeId: promoCodeId ?? this.promoCodeId,
       promoCode: promoCode ?? this.promoCode,
-      promoCodeDiscountPercentage: promoCodeDiscountPercentage ?? this.promoCodeDiscountPercentage,
+      promoCodeDiscountPercentage:
+          promoCodeDiscountPercentage ?? this.promoCodeDiscountPercentage,
       promoCodeMaxDiscount: promoCodeMaxDiscount ?? this.promoCodeMaxDiscount,
+      customerName: customerName ?? this.customerName,
+      customerPhone: customerPhone ?? this.customerPhone,
     );
   }
 }
@@ -190,4 +208,4 @@ class OrderItemModel {
       'total': total,
     };
   }
-} 
+}

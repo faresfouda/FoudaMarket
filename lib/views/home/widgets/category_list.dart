@@ -9,6 +9,8 @@ import 'package:fouda_market/components/category_card.dart';
 import 'package:fouda_market/theme/appcolors.dart';
 
 class CategoryListWidget extends StatelessWidget {
+  const CategoryListWidget({super.key});
+
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<CategoryBloc, CategoryState>(
@@ -17,7 +19,10 @@ class CategoryListWidget extends StatelessWidget {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('الأقسام', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+              Text(
+                'الأقسام',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+              ),
               const SizedBox(height: 10),
               _buildLoadingIndicator(90),
             ],
@@ -26,7 +31,10 @@ class CategoryListWidget extends StatelessWidget {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('الأقسام', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+              Text(
+                'الأقسام',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+              ),
               const SizedBox(height: 10),
               _CategoryList(categories: state.categories),
             ],
@@ -35,7 +43,10 @@ class CategoryListWidget extends StatelessWidget {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('الأقسام', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+              Text(
+                'الأقسام',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+              ),
               const SizedBox(height: 10),
               _buildErrorView('فشل في تحميل الفئات'),
             ],
@@ -50,7 +61,9 @@ class CategoryListWidget extends StatelessWidget {
   Widget _buildLoadingIndicator(double height) {
     return SizedBox(
       height: height,
-      child: Center(child: CircularProgressIndicator(color: AppColors.orangeColor)),
+      child: Center(
+        child: CircularProgressIndicator(color: AppColors.orangeColor),
+      ),
     );
   }
 
@@ -63,7 +76,10 @@ class CategoryListWidget extends StatelessWidget {
           children: [
             Icon(Icons.error_outline, color: Colors.grey[400], size: 32),
             const SizedBox(height: 8),
-            Text(message, style: TextStyle(color: Colors.grey[600], fontSize: 14)),
+            Text(
+              message,
+              style: TextStyle(color: Colors.grey[600], fontSize: 14),
+            ),
           ],
         ),
       ),
@@ -82,32 +98,46 @@ class _CategoryList extends StatelessWidget {
       return SizedBox.shrink();
     }
     return SizedBox(
-      height: 90,
+      height: 120, // زيادة الارتفاع من 110 إلى 120 لاستيعاب الحجم الجديد
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         itemCount: categories.length,
         itemBuilder: (context, index) {
           final category = categories[index];
-          Color bgColor = Colors.white;
-          if (category.color != null && category.color!.startsWith('#')) {
+          Color bgColor = Colors.orange.shade100; // لون افتراضي أفضل
+
+          // تحسين معالجة الألوان
+          if (category.color != null && category.color!.isNotEmpty) {
             try {
-              bgColor = Color(int.parse(category.color!.replaceFirst('#', '0xff')));
+              // التعامل مع الألوان بصيغة hex
+              String colorString = category.color!;
+              if (colorString.startsWith('#')) {
+                colorString = colorString.replaceFirst('#', '0xff');
+              } else if (!colorString.startsWith('0x')) {
+                colorString = '0xff$colorString';
+              }
+              bgColor = Color(int.parse(colorString));
             } catch (e) {
-              bgColor = AppColors.lightGrayColor3;
+              print('خطأ في تحليل لون الفئة: $e');
+              bgColor = Colors.orange.shade100;
             }
           }
+
           return CategoryCard(
             imageUrl: category.imageUrl ?? '',
             categoryName: category.name,
             bgColor: bgColor,
             onTap: () async {
               await Navigator.push(
-                context, 
-                MaterialPageRoute(builder: (context) => CategoryScreen(
-                  categoryName: category.name,
-                  categoryId: category.id,
-                )),
+                context,
+                MaterialPageRoute(
+                  builder: (context) => CategoryScreen(
+                    categoryName: category.name,
+                    categoryId: category.id,
+                  ),
+                ),
               );
+              // إعادة تحميل الفئات بعد العودة
               context.read<CategoryBloc>().add(const FetchCategories());
             },
           );
@@ -115,4 +145,4 @@ class _CategoryList extends StatelessWidget {
       ),
     );
   }
-} 
+}

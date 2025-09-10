@@ -43,7 +43,6 @@ class _CategoryItemsScreenBody extends StatefulWidget {
   final String categoryId;
   final ProductBloc productBloc;
   const _CategoryItemsScreenBody({
-    super.key,
     required this.categoryName,
     required this.categoryId,
     required this.productBloc,

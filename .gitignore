@@ -46,3 +46,5 @@ app.*.map.json
 
 # Firebase service account key
 api/fouda-market-ccc8745b6872.json
+
+.vercel

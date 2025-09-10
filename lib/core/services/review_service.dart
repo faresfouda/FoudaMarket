@@ -85,7 +85,7 @@ class ReviewService {
       final reviews = querySnapshot.docs
           .map((doc) => ReviewModel.fromJson({...doc.data(), 'id': doc.id}))
           .toList();
-      
+
       return reviews;
     } catch (e) {
       throw Exception('فشل في جلب مراجعات المنتج: $e');
@@ -111,14 +111,20 @@ class ReviewService {
   }
 
   // جلب جميع المراجعات مع دعم التحميل التدريجي (pagination)
-  Future<List<ReviewModel>> getAllReviewsPaginated({int limit = 10, ReviewModel? lastReview}) async {
+  Future<List<ReviewModel>> getAllReviewsPaginated({
+    int limit = 10,
+    ReviewModel? lastReview,
+  }) async {
     try {
       var query = _firestore
           .collection(_collection)
           .orderBy('created_at', descending: true)
           .limit(limit);
       if (lastReview != null) {
-        final lastDoc = await _firestore.collection(_collection).doc(lastReview.id).get();
+        final lastDoc = await _firestore
+            .collection(_collection)
+            .doc(lastReview.id)
+            .get();
         if (lastDoc.exists) {
           query = query.startAfterDocument(lastDoc);
         }
@@ -133,7 +139,11 @@ class ReviewService {
   }
 
   // جلب مراجعات مستخدم معين مع دعم التحميل التدريجي (pagination)
-  Future<List<ReviewModel>> getUserReviewsPaginated(String userId, {int limit = 10, ReviewModel? lastReview}) async {
+  Future<List<ReviewModel>> getUserReviewsPaginated(
+    String userId, {
+    int limit = 10,
+    ReviewModel? lastReview,
+  }) async {
     try {
       var query = _firestore
           .collection(_collection)
@@ -141,7 +151,10 @@ class ReviewService {
           .orderBy('created_at', descending: true)
           .limit(limit);
       if (lastReview != null) {
-        final lastDoc = await _firestore.collection(_collection).doc(lastReview.id).get();
+        final lastDoc = await _firestore
+            .collection(_collection)
+            .doc(lastReview.id)
+            .get();
         if (lastDoc.exists) {
           query = query.startAfterDocument(lastDoc);
         }
@@ -156,7 +169,13 @@ class ReviewService {
   }
 
   // تحديث حالة المراجعة
-  Future<void> updateReviewStatus(String reviewId, ReviewStatus status, {String? adminNotes}) async {
+  Future<void> updateReviewStatus(
+    String reviewId,
+    ReviewStatus status, {
+    String? adminNotes,
+    required String adminId,
+    String? adminName,
+  }) async {
     try {
       String statusString;
       switch (status) {
@@ -174,7 +193,9 @@ class ReviewService {
 
       final updateData = {
         'status': statusString,
-        'updated_at': DateTime.now().toIso8601String(),
+        'updated_at': FieldValue.serverTimestamp(),
+        'updated_by': adminName ?? adminId,
+        'admin_id': adminId,
       };
 
       if (adminNotes != null) {
@@ -215,7 +236,9 @@ class ReviewService {
             .where((r) => r.isApproved)
             .map((r) => r.rating)
             .toList();
-        averageRating = approvedReviewRatings.reduce((a, b) => a + b) / approvedReviewRatings.length;
+        averageRating =
+            approvedReviewRatings.reduce((a, b) => a + b) /
+            approvedReviewRatings.length;
       }
 
       return {
@@ -237,7 +260,7 @@ class ReviewService {
       final textQuerySnapshot = await _firestore
           .collection(_collection)
           .where('review_text', isGreaterThanOrEqualTo: query)
-          .where('review_text', isLessThan: query + '\uf8ff')
+          .where('review_text', isLessThan: '$query\uf8ff')
           .limit(10)
           .get();
 
@@ -245,7 +268,7 @@ class ReviewService {
       final productQuerySnapshot = await _firestore
           .collection(_collection)
           .where('product_name', isGreaterThanOrEqualTo: query)
-          .where('product_name', isLessThan: query + '\uf8ff')
+          .where('product_name', isLessThan: '$query\uf8ff')
           .limit(10)
           .get();
 
@@ -253,21 +276,21 @@ class ReviewService {
       final userQuerySnapshot = await _firestore
           .collection(_collection)
           .where('user_name', isGreaterThanOrEqualTo: query)
-          .where('user_name', isLessThan: query + '\uf8ff')
+          .where('user_name', isLessThan: '$query\uf8ff')
           .limit(10)
           .get();
 
       // دمج النتائج وإزالة التكرار
       final allDocs = <String, ReviewModel>{};
-      
+
       for (final doc in textQuerySnapshot.docs) {
         allDocs[doc.id] = ReviewModel.fromJson({...doc.data(), 'id': doc.id});
       }
-      
+
       for (final doc in productQuerySnapshot.docs) {
         allDocs[doc.id] = ReviewModel.fromJson({...doc.data(), 'id': doc.id});
       }
-      
+
       for (final doc in userQuerySnapshot.docs) {
         allDocs[doc.id] = ReviewModel.fromJson({...doc.data(), 'id': doc.id});
       }
@@ -318,8 +341,10 @@ class ReviewService {
           userAvatar: 'https://randomuser.me/api/portraits/women/1.jpg',
           productId: 'product1',
           productName: 'طماطم بلدي',
-          productImage: 'https://images.unsplash.com/photo-1502741338009-cac2772e18bc',
-          reviewText: 'منتج ممتاز! وسعره مناسب. التسليم كان سريع والجودة رائع. أنصح بالشراء من هذا المتجر',
+          productImage:
+              'https://images.unsplash.com/photo-1502741338009-cac2772e18bc',
+          reviewText:
+              'منتج ممتاز! وسعره مناسب. التسليم كان سريع والجودة رائع. أنصح بالشراء من هذا المتجر',
           rating: 4.0,
           status: ReviewStatus.pending,
           createdAt: DateTime.now().subtract(const Duration(days: 7)),
@@ -333,8 +358,10 @@ class ReviewService {
           userAvatar: 'https://randomuser.me/api/portraits/men/2.jpg',
           productId: 'product2',
           productName: 'خبز بلدي',
-          productImage: 'https://images.unsplash.com/photo-1502741338009-cac2772e18bc',
-          reviewText: 'خبز بلدي ممتاز! الجودة، التغليف ممتاز والطعم رائع. سأطلب مرة أخرى بلا تردد.',
+          productImage:
+              'https://images.unsplash.com/photo-1502741338009-cac2772e18bc',
+          reviewText:
+              'خبز بلدي ممتاز! الجودة، التغليف ممتاز والطعم رائع. سأطلب مرة أخرى بلا تردد.',
           rating: 5.0,
           status: ReviewStatus.approved,
           createdAt: DateTime.now().subtract(const Duration(days: 3)),
@@ -348,8 +375,10 @@ class ReviewService {
           userAvatar: 'https://randomuser.me/api/portraits/women/3.jpg',
           productId: 'product3',
           productName: 'موز بلدي',
-          productImage: 'https://images.unsplash.com/photo-1502741338009-cac2772e18bc',
-          reviewText: 'الموز لم يكن طازجًا كما هو متوقع. بعض الحبات كانت ناضجة جدًا والتسليم تأخر كثيرًا.',
+          productImage:
+              'https://images.unsplash.com/photo-1502741338009-cac2772e18bc',
+          reviewText:
+              'الموز لم يكن طازجًا كما هو متوقع. بعض الحبات كانت ناضجة جدًا والتسليم تأخر كثيرًا.',
           rating: 2.0,
           status: ReviewStatus.rejected,
           createdAt: DateTime.now().subtract(const Duration(days: 5)),
@@ -363,8 +392,10 @@ class ReviewService {
           userAvatar: 'https://randomuser.me/api/portraits/men/4.jpg',
           productId: 'product2',
           productName: 'خبز بلدي',
-          productImage: 'https://images.unsplash.com/photo-1502741338009-cac2772e18bc',
-          reviewText: 'خبز بلدي فريش. وصل دافئ والطعم رائع. خدمة التوصيل سريعة ومميزة.',
+          productImage:
+              'https://images.unsplash.com/photo-1502741338009-cac2772e18bc',
+          reviewText:
+              'خبز بلدي فريش. وصل دافئ والطعم رائع. خدمة التوصيل سريعة ومميزة.',
           rating: 5.0,
           status: ReviewStatus.pending,
           createdAt: DateTime.now().subtract(const Duration(days: 1)),
@@ -380,4 +411,4 @@ class ReviewService {
       throw Exception('فشل في إنشاء المراجعات الوهمية: $e');
     }
   }
-} 
+}

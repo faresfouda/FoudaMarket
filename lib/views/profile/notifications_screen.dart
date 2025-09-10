@@ -4,7 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class NotificationsScreen extends StatefulWidget {
-  const NotificationsScreen({Key? key}) : super(key: key);
+  const NotificationsScreen({super.key});
 
   @override
   State<NotificationsScreen> createState() => _NotificationsScreenState();
@@ -91,7 +91,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   void _onScroll() {
-    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200 && !_isLoadingMore && _hasMore && !_isLoading) {
+    if (_scrollController.position.pixels >=
+            _scrollController.position.maxScrollExtent - 200 &&
+        !_isLoadingMore &&
+        _hasMore &&
+        !_isLoading) {
       _loadMoreNotifications();
     }
   }
@@ -126,7 +130,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   Row(
                     children: [
                       IconButton(
-                        icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black, size: 26),
+                        icon: const Icon(
+                          Icons.arrow_back_ios_new,
+                          color: Colors.black,
+                          size: 26,
+                        ),
                         onPressed: () => Navigator.of(context).pop(),
                       ),
                       const Expanded(
@@ -147,44 +155,71 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   if (user == null)
                     const Center(child: Text('يجب تسجيل الدخول لعرض الإشعارات'))
                   else if (_isLoading)
-                    const Expanded(child: Center(child: CircularProgressIndicator()))
+                    const Expanded(
+                      child: Center(child: CircularProgressIndicator()),
+                    )
                   else if (_notifications.isEmpty)
-                    const Expanded(child: Center(child: Text('لا توجد إشعارات بعد')))
+                    const Expanded(
+                      child: Center(child: Text('لا توجد إشعارات بعد')),
+                    )
                   else
                     Expanded(
                       child: RefreshIndicator(
                         onRefresh: () => _loadNotifications(refresh: true),
                         child: ListView.separated(
                           controller: _scrollController,
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                          itemCount: _notifications.length + (_isLoadingMore ? 1 : 0),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 8,
+                          ),
+                          itemCount:
+                              _notifications.length + (_isLoadingMore ? 1 : 0),
                           separatorBuilder: (_, __) => const Divider(),
                           itemBuilder: (context, i) {
                             if (i == _notifications.length) {
                               return const Padding(
                                 padding: EdgeInsets.symmetric(vertical: 16),
-                                child: Center(child: CircularProgressIndicator()),
+                                child: Center(
+                                  child: CircularProgressIndicator(),
+                                ),
                               );
                             }
-                            final notif = _notifications[i].data() as Map<String, dynamic>;
+                            final notif =
+                                _notifications[i].data()
+                                    as Map<String, dynamic>;
                             final title = notif['title'] ?? '';
                             final body = notif['body'] ?? '';
                             final timestamp = notif['timestamp'] as Timestamp?;
-                            final date = timestamp != null ? timestamp.toDate() : null;
+                            final date = timestamp?.toDate();
                             return ListTile(
-                              title: Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                              title: Text(
+                                title,
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                               subtitle: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(body, style: const TextStyle(fontSize: 15)),
+                                  Text(
+                                    body,
+                                    style: const TextStyle(fontSize: 15),
+                                  ),
                                   if (date != null)
                                     Text(
                                       '${date.year}/${date.month}/${date.day} - ${date.hour}:${date.minute.toString().padLeft(2, '0')}',
-                                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey,
+                                      ),
                                     ),
                                 ],
                               ),
-                              leading: const Icon(Icons.notifications, color: Colors.orange),
+                              leading: const Icon(
+                                Icons.notifications,
+                                color: Colors.orange,
+                              ),
                             );
                           },
                         ),
@@ -198,5 +233,4 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       ),
     );
   }
-} 
-
+}

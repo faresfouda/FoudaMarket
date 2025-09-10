@@ -1,4 +1,5 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -28,12 +29,18 @@ class NotificationService {
   Future<void> initialize() async {
     print('🔔 [NotificationService] Initializing...');
     
-    // طلب الصلاحيات
-    await _requestPermissions();
-    
-    // إعداد قنوات الإشعارات
-    await _setupNotificationChannels();
-    
+    // على الويب، تجاهل بعض الوظائف التي لا تعمل
+    if (kIsWeb) {
+      print('🔔 [NotificationService] Web platform detected - simplified initialization');
+      await _setupWebNotifications();
+    } else {
+      // طلب الصلاحيات
+      await _requestPermissions();
+
+      // إعداد قنوات الإشعارات
+      await _setupNotificationChannels();
+    }
+
     // حفظ التوكن
     await _saveTokenToFirestore();
     
@@ -41,6 +48,22 @@ class NotificationService {
     _setupMessageHandlers();
     
     print('🔔 [NotificationService] Initialized successfully');
+  }
+
+  /// إعداد الإشعارات للويب
+  Future<void> _setupWebNotifications() async {
+    try {
+      // طلب الصلاحيات للويب
+      NotificationSettings settings = await _messaging.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+
+      print('🔔 [NotificationService] Web notifications permission: ${settings.authorizationStatus}');
+    } catch (e) {
+      print('❌ [NotificationService] Error setting up web notifications: $e');
+    }
   }
 
   /// طلب صلاحيات الإشعارات
@@ -272,4 +295,4 @@ class NotificationService {
       print('❌ [NotificationService] Error subscribing to topics: $e');
     }
   }
-} 
+}

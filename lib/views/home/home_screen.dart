@@ -6,7 +6,6 @@ import 'package:fouda_market/theme/appcolors.dart';
 import 'package:fouda_market/blocs/category/category_bloc.dart';
 import 'package:fouda_market/blocs/product/product_bloc.dart';
 import 'package:fouda_market/blocs/address/address_bloc.dart';
-import 'package:fouda_market/views/category/category_screen.dart';
 import 'widgets/header.dart';
 import 'widgets/search_bar.dart' as custom_widgets;
 import 'widgets/banner_carousel.dart';
@@ -16,12 +15,13 @@ import 'package:fouda_market/components/loading_indicator.dart';
 import 'package:fouda_market/components/error_view.dart';
 import 'package:fouda_market/blocs/category/category_event.dart';
 import 'package:fouda_market/blocs/product/product_event.dart';
-import 'package:fouda_market/blocs/category/category_state.dart';
 import 'package:fouda_market/blocs/product/product_state.dart';
 import 'package:fouda_market/models/product_model.dart';
 import 'package:fouda_market/blocs/address/address_state.dart';
 import 'package:fouda_market/blocs/address/address_event.dart';
 import 'widgets/horizontal_product_list.dart';
+import 'screens/special_offers_screen.dart';
+import 'screens/best_sellers_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -30,37 +30,17 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMixin, WidgetsBindingObserver, RouteAware {
-  final PageController _pageController = PageController();
-  final List<String> _banners = [
-    'assets/home/offerbanner1.jpg',
-    'assets/home/offerbanner1.jpg',
-    'assets/home/offerbanner1.jpg',
-  ];
-  Timer? _autoScrollTimer;
+class _HomeScreenState extends State<HomeScreen>
+    with AutomaticKeepAliveClientMixin, WidgetsBindingObserver, RouteAware {
   bool _isDataLoaded = false;
   bool _isPageVisible = true;
   bool _isRefreshing = false;
   DateTime? _lastRefreshTime;
   bool _isPageActive = true;
+  bool _isInitialLoad = true;
 
   @override
   bool get wantKeepAlive => true;
-
-  void _startAutoScroll() {
-    _autoScrollTimer?.cancel();
-    _autoScrollTimer = Timer.periodic(Duration(seconds: 4), (timer) {
-      if (_pageController.hasClients && _isPageVisible && mounted && _isPageActive) {
-        int nextPage = _pageController.page!.round() + 1;
-        if (nextPage >= _banners.length) nextPage = 0;
-        _pageController.animateToPage(
-          nextPage,
-          duration: Duration(milliseconds: 500),
-          curve: Curves.easeInOut,
-        );
-      }
-    });
-  }
 
   void _loadInitialData() {
     if (!_isDataLoaded && mounted && !_isRefreshing && _isPageActive) {
@@ -74,13 +54,15 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
   void _loadAllData() {
     try {
       if (!mounted || !_isPageActive) return;
-      
+
       // تحميل البيانات الأولية للشاشة الرئيسية
       context.read<ProductBloc>().add(const FetchSpecialOffers(limit: 10));
       context.read<CategoryBloc>().add(const FetchCategories());
       context.read<ProductBloc>().add(const FetchBestSellers(limit: 10));
-      context.read<ProductBloc>().add(const FetchRecommendedProducts(limit: 10));
-      
+      context.read<ProductBloc>().add(
+        const FetchRecommendedProducts(limit: 10),
+      );
+
       // تحميل حالة المفضلة للمستخدم الحالي
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
@@ -102,18 +84,14 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
   void _refreshData() {
     if (mounted && !_isRefreshing && _isPageActive) {
       setState(() {
-        _isDataLoaded = false;
         _isRefreshing = true;
       });
-      
+
       _loadAllData();
-      // إعادة تشغيل التمرير التلقائي
-      _autoScrollTimer?.cancel();
-      _startAutoScroll();
-      
+
       // تحديث وقت آخر تحديث
       _lastRefreshTime = DateTime.now();
-      
+
       // إعادة تعيين حالة التحديث بعد فترة
       Future.delayed(Duration(seconds: 2), () {
         if (mounted) {
@@ -129,16 +107,16 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
     setState(() {
       _isPageVisible = isVisible;
     });
-    
-    if (isVisible && mounted && !_isRefreshing && _isPageActive) {
-      // تحديث البيانات عند العودة للصفحة
-      // تقليل الوقت المطلوب للتحديث عند العودة من صفحات أخرى
+
+    if (isVisible && mounted && !_isRefreshing && _isPageActive && !_isInitialLoad) {
+      // تحديث البيانات عند العودة للصفحة فقط إذا مر وقت كافٍ
       final now = DateTime.now();
-      final shouldRefresh = _lastRefreshTime == null || 
-          now.difference(_lastRefreshTime!).inSeconds > 10; // تقليل الوقت إلى 10 ثوان
-      
+      final shouldRefresh =
+          _lastRefreshTime == null ||
+          now.difference(_lastRefreshTime!).inMinutes > 2; // زيادة الوقت إلى دقيقتين
+
       if (shouldRefresh) {
-        Future.delayed(Duration(milliseconds: 200), () {
+        Future.delayed(Duration(milliseconds: 500), () {
           if (mounted && _isPageVisible && !_isRefreshing && _isPageActive) {
             _refreshData();
           }
@@ -153,32 +131,23 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
     WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadInitialData();
-      _startAutoScroll();
+      setState(() {
+        _isInitialLoad = false;
+      });
     });
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // تحميل البيانات عند تغيير التبعيات (مثل العودة للصفحة)
-    // إعادة تحميل البيانات عند العودة من صفحات أخرى
-    if (mounted && !_isRefreshing && _isPageActive) {
-      // تحقق من أن البيانات محملة بالفعل
-      if (_isDataLoaded) {
-        // إعادة تحميل البيانات عند العودة من صفحة أخرى
-        // تأخير قليل لتجنب التحديث المتكرر
-        Future.delayed(Duration(milliseconds: 100), () {
-          if (mounted && !_isRefreshing && _isPageActive) {
-            _refreshData();
-          }
-        });
-      } else {
-        // تحميل البيانات لأول مرة
+    // تحميل البيانات فقط في التحميل الأولي
+    if (_isInitialLoad && mounted && !_isRefreshing && _isPageActive) {
+      if (!_isDataLoaded) {
         _loadInitialData();
       }
     }
-    if (mounted) {
-      context.read<ProductBloc>().add(const ResetHomeProducts());
+    // إزالة استدعاء ResetHomeProducts من هنا لتجنب إعادة التحميل المفرطة
+    if (mounted && _isInitialLoad) {
       context.read<CategoryBloc>().add(const FetchCategories());
     }
   }
@@ -211,26 +180,21 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
   void didPopNext() {
     super.didPopNext();
     _isPageActive = true;
+
+    // تحديث المفضلة فقط دون إعادة تحميل جميع البيانات (مثل صفحة المنتج)
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       context.read<ProductBloc>().add(LoadFavorites(user.uid));
-      context.read<ProductBloc>().add(const ResetHomeProducts());
-      context.read<ProductBloc>().add(const FetchSpecialOffers(limit: 10));
-      context.read<ProductBloc>().add(const FetchBestSellers(limit: 10));
-      context.read<ProductBloc>().add(const FetchRecommendedProducts(limit: 10));
     }
-    setState(() {}); // إعادة بناء الصفحة
-    // إعادة تحميل البيانات عند العودة للصفحة
-    if (mounted && !_isRefreshing) {
-      Future.delayed(Duration(milliseconds: 200), () {
-        if (mounted && _isPageActive && !_isRefreshing) {
-          _refreshData();
-        }
-      });
-    }
+
+    // إعادة بناء الصفحة بدون إعادة تحميل البيانات
+    setState(() {});
+
+    // إزالة جميع استدعاءات ResetHomeProducts و FetchSpecialOffers وغيرها
+    // لأنها تسبب اختفاء المنتجات مؤقتاً
+
+    // تحديث العنوان فقط
     if (mounted) {
-      context.read<CategoryBloc>().add(const FetchCategories());
-      // تحميل العنوان الافتراضي عند العودة للصفحة
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
         context.read<AddressBloc>().add(LoadDefaultAddress(user.uid));
@@ -238,11 +202,6 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
     }
   }
 
-  @override
-  void didPushNext() {
-    super.didPushNext();
-    _isPageActive = false;
-  }
 
   @override
   void didPop() {
@@ -253,15 +212,13 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _autoScrollTimer?.cancel();
-    _pageController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     super.build(context); // مطلوب لـ AutomaticKeepAliveClientMixin
-    
+
     return BlocListener<ProductBloc, ProductState>(
       listener: (context, state) {
         if (state is FavoritesUpdated) {
@@ -269,61 +226,67 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
         }
       },
       child: BlocListener<AddressBloc, AddressState>(
-      listener: (context, state) {
-        if (state is AddressOperationSuccess) {
-          final user = FirebaseAuth.instance.currentUser;
-          if (user != null) {
-            context.read<AddressBloc>().add(LoadDefaultAddress(user.uid));
-          }
-        }
-      },
-      child: Scaffold(
-      backgroundColor: AppColors.whiteColor,
-      body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: () async {
-            if (!_isRefreshing) {
-              _refreshData();
-              await Future.delayed(Duration(milliseconds: 800));
+        listener: (context, state) {
+          if (state is AddressOperationSuccess) {
+            final user = FirebaseAuth.instance.currentUser;
+            if (user != null) {
+              context.read<AddressBloc>().add(LoadDefaultAddress(user.uid));
             }
-          },
-          color: AppColors.orangeColor,
-          backgroundColor: Colors.white,
-          strokeWidth: 3.0,
-          triggerMode: RefreshIndicatorTriggerMode.anywhere,
-          child: SingleChildScrollView(
-            physics: BouncingScrollPhysics(),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+          }
+        },
+        child: Scaffold(
+          backgroundColor: AppColors.whiteColor,
+          body: SafeArea(
+            child: RefreshIndicator(
+              onRefresh: () async {
+                if (!_isRefreshing) {
+                  _refreshData();
+                  await Future.delayed(Duration(milliseconds: 800));
+                }
+              },
+              color: AppColors.orangeColor,
+              backgroundColor: Colors.white,
+              strokeWidth: 3.0,
+              triggerMode: RefreshIndicatorTriggerMode.anywhere,
+              child: SingleChildScrollView(
+                physics: BouncingScrollPhysics(),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       Header(),
-                  const SizedBox(height: 18),
+                      const SizedBox(height: 18),
                       custom_widgets.SearchBar(),
-                  const SizedBox(height: 18),
-                      BannerCarousel(controller: _pageController, banners: _banners),
-                  const SizedBox(height: 18),
+                      const SizedBox(height: 18),
+                      const BannerCarousel(),
+                      const SizedBox(height: 18),
                       CategoryListWidget(),
-                  const SizedBox(height: 18),
-                  _buildProductSection('عروض خاصة', _getSpecialOffers),
-                  const SizedBox(height: 18),
-                  _buildProductSection('الأكثر مبيعاً', _getBestSellers),
-                  const SizedBox(height: 18),
-                  _buildRecommendedSection(),
-                  const SizedBox(height: 20),
-                ],
+                      const SizedBox(height: 18),
+                      _buildProductSection('عروض خاصة', _getSpecialOffers),
+                      const SizedBox(height: 18),
+                      _buildProductSection('الأكثر مبيعاً', _getBestSellers),
+                      const SizedBox(height: 18),
+                      _buildRecommendedSection(),
+                      const SizedBox(height: 20),
+                    ],
+                  ),
+                ),
               ),
             ),
           ),
         ),
       ),
-        ),
-      ),
     );
   }
 
-  Widget _buildProductSection(String title, List<ProductModel> Function(ProductState) getProducts) {
+  Widget _buildProductSection(
+    String title,
+    List<ProductModel> Function(ProductState) getProducts,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -350,15 +313,15 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
         const SizedBox(height: 10),
         BlocBuilder<ProductBloc, ProductState>(
           builder: (context, state) {
-            print('HomeScreen BlocBuilder state: ' + state.toString());
+            print('HomeScreen BlocBuilder state: $state');
             if (state is HomeProductsLoaded) {
               final products = getProducts(state);
-              final isLoading = title == 'عروض خاصة' 
+              final isLoading = title == 'عروض خاصة'
                   ? state.isLoadingSpecialOffers
-                  : title == 'الأكثر مبيعاً' 
-                      ? state.isLoadingBestSellers 
-                      : false;
-              
+                  : title == 'الأكثر مبيعاً'
+                  ? state.isLoadingBestSellers
+                  : false;
+
               if (isLoading) {
                 return _buildLoadingIndicator(240);
               } else {
@@ -379,7 +342,10 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('موصى به لك', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+        Text(
+          'موصى به لك',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+        ),
         const SizedBox(height: 10),
         BlocBuilder<ProductBloc, ProductState>(
           builder: (context, state) {
@@ -402,17 +368,11 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
   }
 
   Widget _buildLoadingIndicator(double height) {
-    return SizedBox(
-      height: height,
-      child: const LoadingIndicator(),
-    );
+    return SizedBox(height: height, child: const LoadingIndicator());
   }
 
   Widget _buildErrorView(String message) {
-    return SizedBox(
-      height: 90,
-      child: ErrorView(message: message),
-    );
+    return SizedBox(height: 90, child: ErrorView(message: message));
   }
 
   List<ProductModel> _getSpecialOffers(ProductState state) {
@@ -469,10 +429,7 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
                 children: [
                   const Text(
                     'اختر عنوان التوصيل',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
                   const Spacer(),
                   IconButton(
@@ -495,33 +452,48 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.location_off, size: 48, color: Colors.grey[400]),
+                            Icon(
+                              Icons.location_off,
+                              size: 48,
+                              color: Colors.grey[400],
+                            ),
                             const SizedBox(height: 16),
-                            Text('لا توجد عناوين', style: TextStyle(color: Colors.grey[600])),
+                            Text(
+                              'لا توجد عناوين',
+                              style: TextStyle(color: Colors.grey[600]),
+                            ),
                             const SizedBox(height: 16),
                             ElevatedButton(
-                                                          onPressed: () async {
-                              Navigator.pop(context);
-                              // تأخير قصير لتجنب مشاكل دورة حياة Widget
-                              await Future.delayed(Duration(milliseconds: 100));
-                              
-                              // التحقق من أن Widget لا يزال موجوداً
-                              if (!mounted) return;
-                              
-                              final result = await Navigator.pushNamed(context, '/delivery-address');
-                              
-                              // التحقق من أن Widget لا يزال موجوداً قبل استخدام context
-                              if (!mounted) return;
-                              
-                              // إذا تم إرجاع true، فهذا يعني أن هناك تغييراً حدث
-                              if (result == true) {
-                                final user = FirebaseAuth.instance.currentUser;
-                                if (user != null && mounted) {
-                                  // إعادة تحميل العنوان الافتراضي
-                                  context.read<AddressBloc>().add(LoadDefaultAddress(user.uid));
+                              onPressed: () async {
+                                Navigator.pop(context);
+                                // تأخير قصير لتجنب مشاكل دورة حياة Widget
+                                await Future.delayed(
+                                  Duration(milliseconds: 100),
+                                );
+
+                                // التحقق من أن Widget لا يزال موجوداً
+                                if (!mounted) return;
+
+                                final result = await Navigator.pushNamed(
+                                  context,
+                                  '/delivery-address',
+                                );
+
+                                // التحقق من أن Widget لا يزال موجوداً قبل استخدام context
+                                if (!mounted) return;
+
+                                // إذا تم إرجاع true، فهذا يعني أن هناك تغييراً حدث
+                                if (result == true) {
+                                  final user =
+                                      FirebaseAuth.instance.currentUser;
+                                  if (user != null && mounted) {
+                                    // إعادة تحميل العنوان الافتراضي
+                                    context.read<AddressBloc>().add(
+                                      LoadDefaultAddress(user.uid),
+                                    );
+                                  }
                                 }
-                              }
-                            },
+                              },
                               child: const Text('إضافة عنوان جديد'),
                             ),
                           ],
@@ -537,13 +509,19 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
                           margin: const EdgeInsets.only(bottom: 12),
                           child: ListTile(
                             leading: Icon(
-                              address.isDefault ? Icons.star : Icons.location_on,
-                              color: address.isDefault ? Colors.orange : Colors.grey,
+                              address.isDefault
+                                  ? Icons.star
+                                  : Icons.location_on,
+                              color: address.isDefault
+                                  ? Colors.orange
+                                  : Colors.grey,
                             ),
                             title: Text(
                               address.name,
                               style: TextStyle(
-                                fontWeight: address.isDefault ? FontWeight.bold : FontWeight.normal,
+                                fontWeight: address.isDefault
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
                               ),
                             ),
                             subtitle: Column(
@@ -565,7 +543,9 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
                                 : null,
                             onTap: () {
                               if (!address.isDefault) {
-                                context.read<AddressBloc>().add(SetDefaultAddress(user.uid, address.id));
+                                context.read<AddressBloc>().add(
+                                  SetDefaultAddress(user.uid, address.id),
+                                );
                               }
                               Navigator.pop(context);
                             },
@@ -591,22 +571,27 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
                     Navigator.pop(context);
                     // تأخير قصير لتجنب مشاكل دورة حياة Widget
                     await Future.delayed(Duration(milliseconds: 100));
-                    
+
                     // التحقق من أن Widget لا يزال موجوداً
                     if (!mounted) return;
-                    
+
                     try {
-                      final result = await Navigator.pushNamed(context, '/delivery-address');
-                      
+                      final result = await Navigator.pushNamed(
+                        context,
+                        '/delivery-address',
+                      );
+
                       // التحقق من أن Widget لا يزال موجوداً قبل استخدام context
                       if (!mounted) return;
-                      
+
                       // إذا تم إرجاع true، فهذا يعني أن هناك تغييراً حدث
                       if (result == true) {
                         final user = FirebaseAuth.instance.currentUser;
                         if (user != null && mounted) {
                           // إعادة تحميل العنوان الافتراضي
-                          context.read<AddressBloc>().add(LoadDefaultAddress(user.uid));
+                          context.read<AddressBloc>().add(
+                            LoadDefaultAddress(user.uid),
+                          );
                         }
                       }
                     } catch (e) {
@@ -614,16 +599,23 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
                       // محاولة بديلة باستخدام Navigator.of(context, rootNavigator: true)
                       if (!mounted) return;
                       try {
-                        final result = await Navigator.of(context, rootNavigator: true).pushNamed('/delivery-address');
+                        final result = await Navigator.of(
+                          context,
+                          rootNavigator: true,
+                        ).pushNamed('/delivery-address');
                         if (!mounted) return;
                         if (result == true) {
                           final user = FirebaseAuth.instance.currentUser;
                           if (user != null && mounted) {
-                            context.read<AddressBloc>().add(LoadDefaultAddress(user.uid));
+                            context.read<AddressBloc>().add(
+                              LoadDefaultAddress(user.uid),
+                            );
                           }
                         }
                       } catch (e2) {
-                        print('[DEBUG] Alternative navigation also failed: $e2');
+                        print(
+                          '[DEBUG] Alternative navigation also failed: $e2',
+                        );
                       }
                     }
                   },
@@ -651,8 +643,6 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
     );
 
     // بعد إغلاق الـ bottom sheet، أعد تحميل العنوان الافتراضي
-    if (user != null) {
-      context.read<AddressBloc>().add(LoadDefaultAddress(user.uid));
-    }
+    context.read<AddressBloc>().add(LoadDefaultAddress(user.uid));
   }
 }

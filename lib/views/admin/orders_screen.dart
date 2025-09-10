@@ -1,16 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:fouda_market/views/admin/order_details_screen.dart';
+import 'package:fouda_market/views/admin/order_details/order_details_screen.dart';
 import 'package:fouda_market/models/order_model.dart';
 import 'package:fouda_market/core/services/order_service.dart';
 import 'package:fouda_market/core/services/auth_service.dart';
 import '../../theme/appcolors.dart';
 import '../../components/search_field.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 
 class OrdersScreen extends StatefulWidget {
   final String? initialFilter;
-  const OrdersScreen({Key? key, this.initialFilter}) : super(key: key);
+  const OrdersScreen({super.key, this.initialFilter});
 
   @override
   State<OrdersScreen> createState() => _OrdersScreenState();
@@ -22,7 +20,8 @@ class _OrdersScreenState extends State<OrdersScreen> {
   late OrderStatus selectedStatus;
   final TextEditingController searchController = TextEditingController();
   final OrderService _orderService = OrderService();
-  
+  final AuthService _authService = AuthService();
+
   List<OrderModel> _allOrders = [];
   bool _isLoading = true;
   String? _error;
@@ -30,7 +29,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
   bool _hasMore = true;
   static const int _pageSize = 20;
   final ScrollController _scrollController = ScrollController();
-  
+
   @override
   void initState() {
     super.initState();
@@ -64,7 +63,9 @@ class _OrdersScreenState extends State<OrdersScreen> {
           _error = null;
         });
       }
-      final orders = await _orderService.getAllOrdersPaginated(limit: _pageSize);
+      final orders = await _orderService.getAllOrdersPaginated(
+        limit: _pageSize,
+      );
       if (mounted) {
         setState(() {
           _allOrders = orders;
@@ -110,7 +111,10 @@ class _OrdersScreenState extends State<OrdersScreen> {
   }
 
   void _onScroll() {
-    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200 && !_isLoadingMore && _hasMore) {
+    if (_scrollController.position.pixels >=
+            _scrollController.position.maxScrollExtent - 200 &&
+        !_isLoadingMore &&
+        _hasMore) {
       _loadMoreOrders();
     }
   }
@@ -118,9 +122,12 @@ class _OrdersScreenState extends State<OrdersScreen> {
   List<OrderModel> get filteredOrders {
     String query = searchController.text.trim();
     return _allOrders.where((order) {
-      bool matchesStatus = selectedStatus == OrderStatus.all || 
+      bool matchesStatus =
+          selectedStatus == OrderStatus.all ||
           _getOrderStatus(order.status) == selectedStatus;
-      bool matchesQuery = query.isEmpty ||
+      bool matchesQuery =
+          query.isEmpty ||
+          order.customerName?.contains(query) == true ||
           order.deliveryAddressName?.contains(query) == true ||
           order.id.contains(query);
       return matchesStatus && matchesQuery;
@@ -297,7 +304,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
   String _formatDate(DateTime date) {
     final now = DateTime.now();
     final difference = now.difference(date);
-    
+
     if (difference.inDays == 0) {
       return 'اليوم، ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
     } else if (difference.inDays == 1) {
@@ -364,7 +371,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                         ),
                       ),
                     );
-                  }).toList(),
+                  }),
                 ],
               ),
             ),
@@ -372,74 +379,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
             // أزرار الاختبار
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () async {
-                        try {
-                          final isConnected = await _orderService.testVercelApiConnection();
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(isConnected 
-                                ? '✅ الاتصال بـ Vercel API يعمل بشكل صحيح'
-                                : '❌ مشكلة في الاتصال بـ Vercel API'),
-                              backgroundColor: isConnected ? Colors.green : Colors.red,
-                            ),
-                          );
-                        } catch (e) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('❌ خطأ في اختبار الاتصال: $e'),
-                              backgroundColor: Colors.red,
-                            ),
-                          );
-                        }
-                      },
-                      icon: Icon(Icons.wifi, size: 16),
-                      label: Text('اختبار الاتصال', style: TextStyle(fontSize: 12)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
-                        foregroundColor: Colors.white,
-                        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                      ),
-                    ),
-                  ),
-                  SizedBox(width: 8),
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () async {
-                        try {
-                          final user = FirebaseAuth.instance.currentUser;
-                          if (user != null) {
-                            final fcmToken = await _orderService.getUserFcmToken(user.uid);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(fcmToken != null 
-                                  ? '✅ FCM Token موجود: ${fcmToken.substring(0, 20)}...'
-                                  : '❌ FCM Token غير موجود'),
-                                backgroundColor: fcmToken != null ? Colors.green : Colors.orange,
-                              ),
-                            );
-                          }
-                        } catch (e) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('❌ خطأ في فحص FCM Token: $e'),
-                              backgroundColor: Colors.red,
-                            ),
-                          );
-                        }
-                      },
-                      icon: Icon(Icons.token, size: 16),
-                      label: Text('فحص FCM Token', style: TextStyle(fontSize: 12)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.purple,
-                        foregroundColor: Colors.white,
-                        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                      ),
-                    ),
-                  ),
+              child: Row(children: [
                 ],
               ),
             ),
@@ -449,312 +389,305 @@ class _OrdersScreenState extends State<OrdersScreen> {
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : _error != null
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                'حدث خطأ في تحميل الطلبات',
-                                style: TextStyle(color: Colors.red),
-                              ),
-                              const SizedBox(height: 8),
-                              ElevatedButton(
-                                onPressed: () => _loadOrders(refresh: true),
-                                child: Text('إعادة المحاولة'),
-                              ),
-                            ],
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            'حدث خطأ في تحميل الطلبات',
+                            style: TextStyle(color: Colors.red),
                           ),
-                        )
-                      : filteredOrders.isEmpty
-                          ? Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.shopping_cart_outlined,
-                                    size: 64,
-                                    color: Colors.grey[400],
+                          const SizedBox(height: 8),
+                          ElevatedButton(
+                            onPressed: () => _loadOrders(refresh: true),
+                            child: Text('إعادة المحاولة'),
+                          ),
+                        ],
+                      ),
+                    )
+                  : filteredOrders.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.shopping_cart_outlined,
+                            size: 64,
+                            color: Colors.grey[400],
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'لا توجد طلبات',
+                            style: TextStyle(
+                              fontSize: 18,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : RefreshIndicator(
+                      onRefresh: () => _loadOrders(refresh: true),
+                      child: ListView.separated(
+                        controller: _scrollController,
+                        itemCount:
+                            filteredOrders.length + (_isLoadingMore ? 1 : 0),
+                        separatorBuilder: (context, index) =>
+                            const SizedBox(height: 10),
+                        itemBuilder: (context, index) {
+                          if (index == filteredOrders.length &&
+                              _isLoadingMore) {
+                            return const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 16.0),
+                              child: Center(child: CircularProgressIndicator()),
+                            );
+                          }
+                          final order = filteredOrders[index];
+                          final orderStatus = _getOrderStatus(order.status);
+                          return Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(14),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.grey.withOpacity(0.08),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    if (orderStatus != OrderStatus.all)
+                                      Flexible(
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 10,
+                                            vertical: 4,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: statusColor(
+                                              orderStatus,
+                                            ).withOpacity(0.15),
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            _getStatusText(order.status),
+                                            style: TextStyle(
+                                              color: statusColor(orderStatus),
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 13,
+                                            ),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                      ),
+                                    Flexible(
+                                      child: Text(
+                                        '#${order.id}',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                        textAlign: TextAlign.end,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  order.customerName ??
+                                      order.deliveryAddressName ??
+                                      'عميل غير محدد',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w500,
                                   ),
-                                  const SizedBox(height: 16),
-                                  Text(
-                                    'لا توجد طلبات',
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      color: Colors.grey[600],
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                Text(
+                                  _formatDate(order.createdAt),
+                                  style: TextStyle(
+                                    color: AppColors.lightGrayColor2,
+                                    fontSize: 13,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'ج.م ${order.total.toStringAsFixed(2)}',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 10),
+                                // صف الأزرار الأول
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: ElevatedButton.icon(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: statusColor(orderStatus),
+                                      foregroundColor: Colors.white,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 16,
+                                        vertical: 12,
+                                      ),
+                                      elevation: 3,
+                                    ),
+                                    onPressed: () async {
+                                      final newStatus =
+                                          await showStatusBottomSheet(
+                                            context,
+                                            orderStatus,
+                                          );
+                                      if (newStatus != null &&
+                                          newStatus != orderStatus) {
+                                        try {
+                                          // الحصول على معلومات المسؤول
+                                          final adminInfo = await _authService
+                                              .getCurrentAdminInfo();
+                                          if (adminInfo == null) {
+                                            throw Exception(
+                                              'غير مصرح لك بتحديث حالة الطلب',
+                                            );
+                                          }
+
+                                          await _orderService.updateOrderStatus(
+                                            order.id,
+                                            _getStatusForUpdate(newStatus),
+                                            adminId: adminInfo['id']!,
+                                            adminName: adminInfo['name'],
+                                          );
+                                          // Refresh orders after update
+                                          _loadOrders();
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                'تم تحديث حالة الطلب بنجاح',
+                                              ),
+                                              backgroundColor: Colors.green,
+                                            ),
+                                          );
+                                        } catch (e) {
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                'فشل في تحديث حالة الطلب: $e',
+                                              ),
+                                              backgroundColor: Colors.red,
+                                            ),
+                                          );
+                                        }
+                                      }
+                                    },
+                                    icon: const Icon(
+                                      Icons.edit,
+                                      size: 20,
+                                      color: Colors.white,
+                                    ),
+                                    label: const Text(
+                                      'تحديث الحالة',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                      ),
                                     ),
                                   ),
-                                ],
-                              ),
-                            )
-                          : RefreshIndicator(
-                              onRefresh: () => _loadOrders(refresh: true),
-              child: ListView.separated(
-                controller: _scrollController,
-                itemCount: filteredOrders.length + (_isLoadingMore ? 1 : 0),
-                separatorBuilder: (context, index) =>
-                    const SizedBox(height: 10),
-                itemBuilder: (context, index) {
-                  if (index == filteredOrders.length && _isLoadingMore) {
-                    return const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 16.0),
-                      child: Center(child: CircularProgressIndicator()),
-                    );
-                  }
-                  final order = filteredOrders[index];
-                                  final orderStatus = _getOrderStatus(order.status);
-                  return Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(14),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.grey.withOpacity(0.08),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                                            if (orderStatus != OrderStatus.all)
-                                              Flexible(
-                                                child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 4,
                                 ),
-                                decoration: BoxDecoration(
-                                  color: statusColor(
-                                                      orderStatus,
-                                  ).withOpacity(0.15),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                                    _getStatusText(order.status),
-                                  style: TextStyle(
-                                                      color: statusColor(orderStatus),
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 13,
-                                                    ),
-                                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ),
-                                            Flexible(
-                                              child: Text(
-                              '#${order.id}',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                                                ),
-                                                overflow: TextOverflow.ellipsis,
-                                                textAlign: TextAlign.end,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                                          order.deliveryAddressName ?? 'عميل غير محدد',
-                          style: const TextStyle(fontWeight: FontWeight.w500),
-                                          overflow: TextOverflow.ellipsis,
-                        ),
-                        Text(
-                                          _formatDate(order.createdAt),
-                          style: TextStyle(
-                            color: AppColors.lightGrayColor2,
-                            fontSize: 13,
-                          ),
-                                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                                          'ج.م ${order.total.toStringAsFixed(2)}',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 10),
-                        // صف الأزرار الأول
-                        Row(
-                          children: [
-                            Expanded(
-                              child: ElevatedButton.icon(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: statusColor(orderStatus),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 8,
-                                  ),
-                                ),
-                                onPressed: () async {
-                                  final newStatus = await showStatusBottomSheet(
-                                    context,
-                                    orderStatus,
-                                  );
-                                  if (newStatus != null &&
-                                      newStatus != orderStatus) {
-                                    try {
-                                      await _orderService.updateOrderStatus(
-                                        order.id,
-                                        _getStatusForUpdate(newStatus),
-                                      );
-                                      // Refresh orders after update
-                                      _loadOrders();
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(
-                                          content: Text('تم تحديث حالة الطلب بنجاح'),
-                                          backgroundColor: Colors.green,
-                                        ),
-                                      );
-                                    } catch (e) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(
-                                          content: Text('فشل في تحديث حالة الطلب: $e'),
-                                          backgroundColor: Colors.red,
-                                        ),
-                                      );
-                                    }
-                                  }
-                                },
-                                icon: const Icon(
-                                  Icons.edit,
-                                  size: 16,
-                                  color: Colors.white,
-                                ),
-                                label: const Text(
-                                  'تحديث الحالة',
-                                  style: TextStyle(color: Colors.white, fontSize: 12),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: ElevatedButton.icon(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.blue,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 8,
-                                  ),
-                                ),
-                                onPressed: () async {
-                                  try {
-                                    // جلب fcmToken للمستخدم
-                                    final userDoc = await FirebaseFirestore.instance
-                                        .collection('users')
-                                        .doc(order.userId)
-                                        .get();
-                                    final userData = userDoc.data();
-                                    final fcmToken = userData != null ? userData['fcmToken'] : null;
-                                    
-                                    if (fcmToken != null && fcmToken.isNotEmpty) {
-                                      await _orderService.testNotification(
-                                        fcmToken: fcmToken,
-                                        orderId: order.id,
-                                        status: order.status,
-                                      );
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(
-                                          content: Text('تم إرسال إشعار تجريبي'),
-                                          backgroundColor: Colors.blue,
-                                        ),
-                                      );
-                                    } else {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(
-                                          content: Text('لا يوجد FCM Token للمستخدم'),
-                                          backgroundColor: Colors.orange,
-                                        ),
-                                      );
-                                    }
-                                  } catch (e) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text('فشل في إرسال الإشعار التجريبي: $e'),
-                                        backgroundColor: Colors.red,
+                                const SizedBox(height: 8),
+                                // زر عرض التفاصيل في صف منفصل
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: ElevatedButton.icon(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: AppColors.primary,
+                                      foregroundColor: Colors.white,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(16),
                                       ),
-                                    );
-                                  }
-                                },
-                                icon: const Icon(
-                                  Icons.notifications,
-                                  size: 16,
-                                  color: Colors.white,
-                                ),
-                                label: const Text(
-                                  'اختبار الإشعار',
-                                  style: TextStyle(color: Colors.white, fontSize: 12),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        // زر عرض التفاصيل في صف منفصل
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton.icon(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primary,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 8,
-                              ),
-                            ),
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                      AdminOrderDetailsScreen(
-                                        orderNumber: order.id,
-                                        date: _formatDate(order.createdAt),
-                                        status: _getStatusText(order.status),
-                                        total: 'ج.م ${order.total.toStringAsFixed(2)}',
-                                        items: order.items.map((item) => {
-                                          'name': item.productName,
-                                          'qty': item.quantity.toString(),
-                                          'price': '${item.price.toStringAsFixed(2)} ج.م',
-                                          'image': item.productImage ?? 'assets/home/logo.jpg',
-                                        }).toList(),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 16,
+                                        vertical: 12,
                                       ),
+                                      elevation: 3,
+                                    ),
+                                    onPressed: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => AdminOrderDetailsScreen(
+                                            orderNumber: order.id,
+                                            date: _formatDate(order.createdAt),
+                                            status: _getStatusText(
+                                              order.status,
+                                            ),
+                                            total:
+                                                'ج.م ${order.total.toStringAsFixed(2)}',
+                                            items: order.items
+                                                .map(
+                                                  (item) => {
+                                                    'name': item.productName,
+                                                    'qty': item.quantity
+                                                        .toString(),
+                                                    'price':
+                                                        '${item.price.toStringAsFixed(2)} ج.م',
+                                                    'image':
+                                                        item.productImage ??
+                                                        'assets/home/logo.jpg',
+                                                  },
+                                                )
+                                                .toList(),
+                                            customerName: order.customerName,
+                                            customerPhone: order.customerPhone,
+                                            deliveryAddress:
+                                                order.deliveryAddress,
+                                            deliveryAddressName:
+                                                order.deliveryAddressName,
+                                            deliveryPhone: order.deliveryPhone,
+                                            deliveryNotes: order.deliveryNotes,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    icon: const Icon(
+                                      Icons.remove_red_eye,
+                                      size: 20,
+                                      color: Colors.white,
+                                    ),
+                                    label: const Text(
+                                      'عرض التفاصيل',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
                                 ),
-                              );
-                            },
-                            icon: const Icon(
-                              Icons.remove_red_eye,
-                              size: 18,
-                              color: Colors.white,
+                              ],
                             ),
-                            label: const Text(
-                              'عرض التفاصيل',
-                              style: TextStyle(color: Colors.white),
-                            ),
-                          ),
-                        ),
-                      ],
+                          );
+                        },
+                      ),
                     ),
-                  );
-                },
-                              ),
-              ),
             ),
           ],
         ),
@@ -762,4 +695,3 @@ class _OrdersScreenState extends State<OrdersScreen> {
     );
   }
 }
-
