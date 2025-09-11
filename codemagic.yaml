@@ -10,6 +10,14 @@ workflows:
         script: |
           flutter pub get
 
+      - name: Force iOS Deployment Target to 12.0
+        script: |
+          cd ios
+          if ! grep -q "platform :ios, '12.0'" Podfile; then
+            sed -i.bak "1s/^/platform :ios, '12.0'\n/" Podfile
+          fi
+          cd ..
+
       - name: Debug CocoaPods sources
         script: |
           cd ios
