@@ -43,12 +43,6 @@ class _ProductsCategoriesScreenState extends State<ProductsCategoriesScreen> {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        appBar: AppBar(
-          title: const Text('إدارة فئات المنتجات'),
-          backgroundColor: Colors.white,
-          foregroundColor: Colors.black,
-          elevation: 1,
-        ),
         backgroundColor: Colors.grey[50],
         body: BlocBuilder<CategoryBloc, CategoryState>(
           builder: (context, state) {

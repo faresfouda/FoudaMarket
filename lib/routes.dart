@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:fouda_market/views/cart/orders_screen.dart';
+import 'package:fouda_market/views/profile/orders_screen.dart';
+import 'package:fouda_market/views/profile/profile_screen.dart';
 // استيراد الشاشات الأساسية
 import 'views/admin/dashboard_screen.dart';
 import 'views/admin/data_entry_home_screen.dart';
@@ -28,6 +31,8 @@ class AppRoutes {
   static const String authWrapper = '/auth-wrapper';
   static const String main = '/main';
   static const String deliveryAddress = '/delivery-address';
+  static const String profile = '/profile';
+  static const String profileOrders = '/profile/orders';
 
   // مسارات الإدارة
   static const String adminDashboard = '/admin/dashboard';
@@ -61,6 +66,10 @@ Route<dynamic>? onGenerateRoute(RouteSettings settings) {
       return MaterialPageRoute(builder: (_) => AuthWrapper());
     case AppRoutes.deliveryAddress:
       return MaterialPageRoute(builder: (_) => DeliveryAddressScreen());
+    case AppRoutes.profile:
+      return MaterialPageRoute(builder: (_) => ProfileScreen());
+    case AppRoutes.profileOrders:
+      return MaterialPageRoute(builder: (_) => OrdersScreen());
 
     // مسارات الإدارة
     case AppRoutes.adminDashboard:

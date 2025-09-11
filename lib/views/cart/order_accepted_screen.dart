@@ -108,7 +108,7 @@ class OrderAcceptedScreen extends StatelessWidget {
                                 // الانتقال مباشرة لصفحة الطلبات
                                 Navigator.pushNamedAndRemoveUntil(
                                   context,
-                                  AppRoutes.main,
+                                  AppRoutes.profileOrders,
                                   (route) => false,
                                 );
                                 Future.delayed(const Duration(seconds: 5));

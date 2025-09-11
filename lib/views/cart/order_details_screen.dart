@@ -59,8 +59,14 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
           backgroundColor: AppColors.orangeColor,
           foregroundColor: Colors.white,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () {},
+            icon: const Icon(Icons.arrow_back_ios),
+            onPressed: () {
+              Navigator.pushNamedAndRemoveUntil(
+                  context,
+                  AppRoutes.profileOrders,
+                      (route) => false
+              );
+            },
           ),
         ),
         body: _isLoading

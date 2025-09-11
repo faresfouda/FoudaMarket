@@ -469,6 +469,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               finalTotal.toStringAsFixed(2),
               isTotal: true,
             ),
+            const SizedBox(height: 12),
+            // تحذير رسوم التوصيل
+            _buildDeliveryFeeWarning(),
           ],
         ),
       ),
@@ -726,6 +729,46 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       print('[ERROR] Failed to create order: $e');
       _showSnackBar('حدث خطأ أثناء إنشاء الطلب: $e', isError: true);
     }
+  }
+
+  Widget _buildDeliveryFeeWarning() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.orange[50],
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.orange[200]!),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.delivery_dining, color: Colors.orange[600], size: 20),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'تنبيه: رسوم التوصيل',
+                  style: TextStyle(
+                    color: Colors.orange[700],
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'سيتم إضافة رسوم توصيل في حدود 15-30 جنيه حسب العنوان',
+                  style: TextStyle(
+                    color: Colors.orange[600],
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showSnackBar(String message, {bool isError = false}) {

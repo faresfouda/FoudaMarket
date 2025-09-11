@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../models/product_model.dart';
+import '../../services/cloudinary_service.dart';
 
 class ProductService {
   static final ProductService _instance = ProductService._internal();
@@ -7,6 +8,7 @@ class ProductService {
   ProductService._internal();
 
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final CloudinaryService _cloudinaryService = CloudinaryService();
 
   // Basic product methods
   Future<List<ProductModel>> getProducts({int limit = 20}) async {
@@ -46,7 +48,20 @@ class ProductService {
   }
 
   Future<void> deleteProduct(String productId) async {
-    await _firestore.collection('products').doc(productId).delete();
+    try {
+      // الحصول على بيانات المنتج أولاً لاستخراج روابط الصور
+      final product = await getProduct(productId);
+
+      if (product != null && product.images.isNotEmpty) {
+        // حذف الصور من Cloudinary
+        await _cloudinaryService.deleteMultipleImages(product.images);
+      }
+
+      // حذف المنتج من Firebase
+      await _firestore.collection('products').doc(productId).delete();
+    } catch (e) {
+      throw Exception('فشل في حذف المنتج: $e');
+    }
   }
 
   // Category-based product methods
@@ -250,4 +265,4 @@ class ProductService {
       return [];
     }
   }
-} 
+}

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fouda_market/models/order_model.dart';
 import 'package:fouda_market/core/services/order_service.dart';
+import 'package:fouda_market/routes.dart';
 import 'package:fouda_market/theme/appcolors.dart';
 import 'package:fouda_market/views/cart/order_details_screen.dart' as order_details;
 
@@ -166,7 +167,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                           color: Colors.black,
                           size: 26,
                         ),
-                        onPressed: Navigator.of(context).pop,
+                        onPressed: () => Navigator.pushNamedAndRemoveUntil(context, AppRoutes.main, (route) => false),
                       ),
                       const Expanded(
                         child: Text(

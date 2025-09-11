@@ -158,6 +158,9 @@ class _AddReviewScreenState extends State<AddReviewScreen> {
       child: Scaffold(
         appBar: AppBar(
           title: const Text('إضافة مراجعة'),
+          leading: IconButton(onPressed: (){
+            Navigator.pop(context);
+          }, icon: Icon(Icons.arrow_back_ios)),
           centerTitle: true,
           backgroundColor: AppColors.primary,
           foregroundColor: Colors.white,
@@ -434,12 +437,6 @@ class _AddReviewScreenState extends State<AddReviewScreen> {
               ),
             ],
           ),
-        ),
-        floatingActionButton: FloatingActionButton(
-          onPressed: (_isSubmitting || _isOffline) ? null : _submitReview,
-          child: _isSubmitting
-              ? const CircularProgressIndicator(color: Colors.white)
-              : const Icon(Icons.send),
         ),
       ),
     );

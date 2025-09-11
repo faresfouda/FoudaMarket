@@ -98,7 +98,7 @@ class _AddEditPromoCodeScreenState extends State<AddEditPromoCodeScreen> {
         return Directionality(
           textDirection: TextDirection.rtl,
           child: Scaffold(
-            backgroundColor: Colors.white,
+            backgroundColor: const Color(0xFFF8F9FA),
             appBar: AppBar(
               backgroundColor: Colors.white,
               elevation: 0,
@@ -113,10 +113,16 @@ class _AddEditPromoCodeScreenState extends State<AddEditPromoCodeScreen> {
                 ),
               ),
               leading: IconButton(
-                icon: const Icon(Icons.arrow_back_ios, color: Colors.black),
+                icon: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(Icons.arrow_back_ios, color: Colors.black, size: 18),
+                ),
                 onPressed: () => Navigator.pop(context),
               ),
-              iconTheme: const IconThemeData(color: Colors.black),
             ),
             body: BlocListener<PromoCodeBloc, PromoCodeState>(
               listener: (context, state) {
@@ -153,227 +159,486 @@ class _AddEditPromoCodeScreenState extends State<AddEditPromoCodeScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _buildForm(),
-                      const Divider(height: 32, thickness: 1.2),
-                      // خيارات متقدمة
-                      const Text(
-                        'خيارات متقدمة',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // الحد الأقصى للخصم
-                      Row(
-                        children: [
-                          Checkbox(
-                            value: _hasMaxDiscount,
-                            onChanged: (value) {
-                              setState(() {
-                                _hasMaxDiscount = value ?? false;
-                                if (!_hasMaxDiscount) {
-                                  _maxDiscountAmountController.clear();
-                                }
-                              });
-                            },
-                            activeColor: AppColors.orangeColor,
-                          ),
-                          const Text('الحد الأقصى للخصم'),
-                        ],
-                      ),
-                      if (_hasMaxDiscount) ...[
-                        const SizedBox(height: 8),
-                        CustomTextField(
-                          controller: _maxDiscountAmountController,
-                          title: 'الحد الأقصى للخصم (جنيه)',
-                          hinttext: 'مثال: 50',
-                          button: null,
-                          keyboardType: TextInputType.number,
-                          validator: (value) {
-                            if (_hasMaxDiscount &&
-                                (value == null || value.trim().isEmpty)) {
-                              return 'يرجى إدخال الحد الأقصى للخصم';
-                            }
-                            if (value != null && value.trim().isNotEmpty) {
-                              final amount = double.tryParse(value);
-                              if (amount == null || amount <= 0) {
-                                return 'الحد الأقصى للخصم يجب أن يكون رقم موجب';
-                              }
-                            }
-                            return null;
-                          },
-                        ),
-                      ],
-
-                      // الحد الأدنى للطلب
-                      Row(
-                        children: [
-                          Checkbox(
-                            value: _hasMinOrderAmount,
-                            onChanged: (value) {
-                              setState(() {
-                                _hasMinOrderAmount = value ?? false;
-                                if (!_hasMinOrderAmount) {
-                                  _minOrderAmountController.clear();
-                                }
-                              });
-                            },
-                            activeColor: AppColors.orangeColor,
-                          ),
-                          const Text('الحد الأدنى للطلب'),
-                        ],
-                      ),
-                      if (_hasMinOrderAmount) ...[
-                        const SizedBox(height: 8),
-                        CustomTextField(
-                          controller: _minOrderAmountController,
-                          title: 'الحد الأدنى للطلب (جنيه)',
-                          hinttext: 'مثال: 100',
-                          button: null,
-                          keyboardType: TextInputType.number,
-                          validator: (value) {
-                            if (_hasMinOrderAmount &&
-                                (value == null || value.trim().isEmpty)) {
-                              return 'يرجى إدخال الحد الأدنى للطلب';
-                            }
-                            if (value != null && value.trim().isNotEmpty) {
-                              final amount = double.tryParse(value);
-                              if (amount == null || amount <= 0) {
-                                return 'الحد الأدنى للطلب يجب أن يكون رقم موجب';
-                              }
-                            }
-                            return null;
-                          },
-                        ),
-                      ],
-
-                      const SizedBox(height: 16),
-
-                      // عدد مرات الاستخدام الأقصى
-                      CustomTextField(
-                        controller: _maxUsageCountController,
-                        title: 'عدد مرات الاستخدام الأقصى',
-                        hinttext: 'مثال: 100',
-                        button: null,
-                        keyboardType: TextInputType.number,
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'يرجى إدخال عدد مرات الاستخدام الأقصى';
-                          }
-                          final count = int.tryParse(value);
-                          if (count == null || count <= 0) {
-                            return 'عدد مرات الاستخدام يجب أن يكون رقم موجب';
-                          }
-                          return null;
-                        },
-                      ),
                       const SizedBox(height: 24),
 
-                      // تاريخ انتهاء الصلاحية
-                      Text(
-                        'تاريخ انتهاء الصلاحية',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.mediumGrayColor,
+                      // قسم الخيارات المتقدمة
+                      Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.grey.withValues(alpha: 0.1),
+                              spreadRadius: 1,
+                              blurRadius: 10,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
                         ),
-                      ),
-                      const SizedBox(height: 8),
-                      InkWell(
-                        onTap: () => _selectExpiryDate(),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 12,
-                          ),
-                          decoration: BoxDecoration(
-                            border: Border.all(color: AppColors.blackColor),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.calendar_today,
-                                color: AppColors.blackColor,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: Colors.purple.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: const Icon(
+                                    Icons.settings,
+                                    color: Colors.purple,
+                                    size: 20,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                const Text(
+                                  'خيارات متقدمة',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.black87,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 20),
+
+                            // الحد الأقصى للخصم
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: Colors.grey[50],
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.grey[200]!),
                               ),
-                              const SizedBox(width: 8),
-                              Text(
-                                _selectedExpiryDate != null
-                                    ? '${_selectedExpiryDate.day}/${_selectedExpiryDate.month}/${_selectedExpiryDate.year}'
-                                    : 'اختر تاريخ انتهاء الصلاحية',
-                                style: TextStyle(
-                                  color: _selectedExpiryDate != null
-                                      ? AppColors.blackColor
-                                      : Colors.grey,
+                              child: Column(
+                                children: [
+                                  Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(8),
+                                        decoration: BoxDecoration(
+                                          color: Colors.orange.withValues(alpha: 0.1),
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: const Icon(
+                                          Icons.trending_up,
+                                          color: Colors.orange,
+                                          size: 18,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      const Expanded(
+                                        child: Text(
+                                          'الحد الأقصى للخصم',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 16,
+                                          ),
+                                        ),
+                                      ),
+                                      Switch(
+                                        value: _hasMaxDiscount,
+                                        onChanged: (value) {
+                                          setState(() {
+                                            _hasMaxDiscount = value;
+                                            if (!_hasMaxDiscount) {
+                                              _maxDiscountAmountController.clear();
+                                            }
+                                          });
+                                        },
+                                        activeColor: AppColors.orangeColor,
+                                      ),
+                                    ],
+                                  ),
+                                  if (_hasMaxDiscount) ...[
+                                    const SizedBox(height: 12),
+                                    CustomTextField(
+                                      controller: _maxDiscountAmountController,
+                                      title: 'الحد الأقصى للخصم (جنيه)',
+                                      hinttext: 'مثال: 50',
+                                      button: null,
+                                      keyboardType: TextInputType.number,
+                                      validator: (value) {
+                                        if (_hasMaxDiscount &&
+                                            (value == null || value.trim().isEmpty)) {
+                                          return 'يرجى إدخال الحد الأقصى للخصم';
+                                        }
+                                        if (value != null && value.trim().isNotEmpty) {
+                                          final amount = double.tryParse(value);
+                                          if (amount == null || amount <= 0) {
+                                            return 'الحد الأقصى للخصم يجب أن يكون رقم موجب';
+                                          }
+                                        }
+                                        return null;
+                                      },
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+
+                            const SizedBox(height: 16),
+
+                            // الحد الأدنى للطلب
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: Colors.grey[50],
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.grey[200]!),
+                              ),
+                              child: Column(
+                                children: [
+                                  Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(8),
+                                        decoration: BoxDecoration(
+                                          color: Colors.indigo.withValues(alpha: 0.1),
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: const Icon(
+                                          Icons.trending_down,
+                                          color: Colors.indigo,
+                                          size: 18,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      const Expanded(
+                                        child: Text(
+                                          'الحد الأدنى للطلب',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 16,
+                                          ),
+                                        ),
+                                      ),
+                                      Switch(
+                                        value: _hasMinOrderAmount,
+                                        onChanged: (value) {
+                                          setState(() {
+                                            _hasMinOrderAmount = value;
+                                            if (!_hasMinOrderAmount) {
+                                              _minOrderAmountController.clear();
+                                            }
+                                          });
+                                        },
+                                        activeColor: AppColors.orangeColor,
+                                      ),
+                                    ],
+                                  ),
+                                  if (_hasMinOrderAmount) ...[
+                                    const SizedBox(height: 12),
+                                    CustomTextField(
+                                      controller: _minOrderAmountController,
+                                      title: 'الحد الأدنى للطلب (جنيه)',
+                                      hinttext: 'مثال: 100',
+                                      button: null,
+                                      keyboardType: TextInputType.number,
+                                      validator: (value) {
+                                        if (_hasMinOrderAmount &&
+                                            (value == null || value.trim().isEmpty)) {
+                                          return 'يرجى إدخال الحد الأدنى للطلب';
+                                        }
+                                        if (value != null && value.trim().isNotEmpty) {
+                                          final amount = double.tryParse(value);
+                                          if (amount == null || amount <= 0) {
+                                            return 'الحد الأدنى للطلب يجب أن يكون رقم موجب';
+                                          }
+                                        }
+                                        return null;
+                                      },
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+
+                            const SizedBox(height: 16),
+
+                            // عدد مرات الاستخدام الأقصى
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: Colors.grey[50],
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.grey[200]!),
+                              ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: Colors.teal.withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: const Icon(
+                                      Icons.repeat,
+                                      color: Colors.teal,
+                                      size: 18,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: CustomTextField(
+                                      controller: _maxUsageCountController,
+                                      title: 'عدد مرات الاستخدام الأقصى',
+                                      hinttext: 'مثال: 100',
+                                      button: null,
+                                      keyboardType: TextInputType.number,
+                                      validator: (value) {
+                                        if (value == null || value.trim().isEmpty) {
+                                          return 'يرجى إدخال عدد مرات الاستخدام الأقصى';
+                                        }
+                                        final count = int.tryParse(value);
+                                        if (count == null || count <= 0) {
+                                          return 'عدد مرات الاستخدام يجب أن يكون رقم موجب';
+                                        }
+                                        return null;
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                            const SizedBox(height: 16),
+
+                            // تاريخ انتهاء الصلاحية
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: Colors.grey[50],
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.grey[200]!),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(8),
+                                        decoration: BoxDecoration(
+                                          color: Colors.red.withValues(alpha: 0.1),
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: const Icon(
+                                          Icons.schedule,
+                                          color: Colors.red,
+                                          size: 18,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      const Text(
+                                        'تاريخ انتهاء الصلاحية',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 16,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 12),
+                                  InkWell(
+                                    onTap: () => _selectExpiryDate(),
+                                    child: Container(
+                                      padding: const EdgeInsets.all(16),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(10),
+                                        border: Border.all(color: Colors.grey[300]!),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Icon(
+                                            Icons.calendar_today,
+                                            color: AppColors.orangeColor,
+                                            size: 20,
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: Text(
+                                              '${_selectedExpiryDate.day}/${_selectedExpiryDate.month}/${_selectedExpiryDate.year}',
+                                              style: const TextStyle(
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                          ),
+                                          Icon(
+                                            Icons.arrow_drop_down,
+                                            color: Colors.grey[600],
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                  if (_expiryDateError != null) ...[
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      _expiryDateError!,
+                                      style: const TextStyle(
+                                        color: Colors.red,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+
+                            const SizedBox(height: 16),
+
+                            // تفعيل الكود
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: _isActive
+                                    ? Colors.green.withValues(alpha: 0.05)
+                                    : Colors.red.withValues(alpha: 0.05),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: _isActive
+                                      ? Colors.green.withValues(alpha: 0.2)
+                                      : Colors.red.withValues(alpha: 0.2),
                                 ),
                               ),
-                            ],
-                          ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: (_isActive ? Colors.green : Colors.red).withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Icon(
+                                      _isActive ? Icons.check_circle : Icons.cancel,
+                                      color: _isActive ? Colors.green : Colors.red,
+                                      size: 18,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          _isActive ? 'الكود مفعل' : 'الكود غير مفعل',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 16,
+                                            color: _isActive ? Colors.green[700] : Colors.red[700],
+                                          ),
+                                        ),
+                                        Text(
+                                          _isActive
+                                              ? 'يمكن للمستخدمين استخدام هذا الكود'
+                                              : 'لن يتمكن المستخدمون من استخدام هذا الكود',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: _isActive ? Colors.green[600] : Colors.red[600],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Switch(
+                                    value: _isActive,
+                                    onChanged: (value) {
+                                      setState(() {
+                                        _isActive = value;
+                                      });
+                                    },
+                                    activeColor: Colors.green,
+                                    inactiveThumbColor: Colors.red,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      if (_expiryDateError != null) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          _expiryDateError!,
-                          style: const TextStyle(
-                            color: Colors.red,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                      const SizedBox(height: 24),
 
-                      // تفعيل الكود
-                      Row(
-                        children: [
-                          Checkbox(
-                            value: _isActive,
-                            onChanged: (value) {
-                              setState(() {
-                                _isActive = value ?? true;
-                              });
-                            },
-                            activeColor: AppColors.orangeColor,
-                          ),
-                          const Text('تفعيل الكود'),
-                        ],
-                      ),
                       const SizedBox(height: 32),
 
-                      // زر الحفظ
-                      SizedBox(
+                      // زر الحفظ المحسن
+                      Container(
                         width: double.infinity,
+                        height: 60,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              AppColors.orangeColor,
+                              AppColors.orangeColor.withValues(alpha: 0.8),
+                            ],
+                            begin: Alignment.centerLeft,
+                            end: Alignment.centerRight,
+                          ),
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.orangeColor.withValues(alpha: 0.3),
+                              spreadRadius: 1,
+                              blurRadius: 8,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
                         child: ElevatedButton(
                           onPressed: _isLoading ? null : _savePromoCode,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.orangeColor,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            backgroundColor: Colors.transparent,
+                            shadowColor: Colors.transparent,
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: BorderRadius.circular(16),
                             ),
                           ),
                           child: _isLoading
-                              ? const SizedBox(
-                                  height: 20,
-                                  width: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                      Colors.white,
+                              ? Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const SizedBox(
+                                      height: 20,
+                                      width: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                      ),
                                     ),
-                                  ),
+                                    const SizedBox(width: 12),
+                                    Text(
+                                      widget.promoCode == null ? 'جاري الإنشاء...' : 'جاري التحديث...',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
                                 )
-                              : Text(
-                                  widget.promoCode == null
-                                      ? 'إنشاء كود الخصم'
-                                      : 'تحديث كود الخصم',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                              : Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      widget.promoCode == null ? Icons.add_circle : Icons.update,
+                                      color: Colors.white,
+                                      size: 24,
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Text(
+                                      widget.promoCode == null ? 'إنشاء كود الخصم' : 'تحديث كود الخصم',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                         ),
                       ),
@@ -392,225 +657,450 @@ class _AddEditPromoCodeScreenState extends State<AddEditPromoCodeScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Card(
-          elevation: 2,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+        // قسم المعلومات الأساسية
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withValues(alpha: 0.1),
+                spreadRadius: 1,
+                blurRadius: 10,
+                offset: const Offset(0, 3),
+              ),
+            ],
           ),
-          margin: const EdgeInsets.only(bottom: 20),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                      Icons.confirmation_number,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: AppColors.orangeColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      Icons.info_outline,
                       color: AppColors.orangeColor,
                       size: 20,
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: CustomTextField(
-                        controller: _codeController,
-                        title: 'كود الخصم',
-                        hinttext: 'مثال: FOUDA10',
-                        button: null,
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'يرجى إدخال كود الخصم';
-                          }
-                          if (value.trim().length < 3) {
-                            return 'كود الخصم يجب أن يكون 3 أحرف على الأقل';
-                          }
-                          return null;
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.description,
-                      color: AppColors.orangeColor,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: CustomTextField(
-                        controller: _descriptionController,
-                        title: 'وصف كود الخصم',
-                        hinttext: 'مثال: خصم 10% على جميع المنتجات',
-                        button: null,
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'يرجى إدخال وصف كود الخصم';
-                          }
-                          return null;
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'نوع الخصم:',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.orangeColor,
                   ),
+                  const SizedBox(width: 12),
+                  const Text(
+                    'المعلومات الأساسية',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+
+              // كود الخصم
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.grey[50],
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey[200]!),
                 ),
-                Row(
+                child: Row(
                   children: [
-                    Expanded(
-                      child: RadioListTile<int>(
-                        value: 0,
-                        groupValue: _discountType,
-                        onChanged: (val) =>
-                            setState(() => _discountType = val!),
-                        title: Row(
-                          children: [
-                            Icon(
-                              Icons.percent,
-                              color: AppColors.orangeColor,
-                              size: 18,
-                            ),
-                            const SizedBox(width: 4),
-                            Flexible(
-                              child: Text(
-                                'نسبة مئوية',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
-                        subtitle: const Text(
-                          'مثال: 10% من قيمة الطلب',
-                          style: TextStyle(color: Colors.grey),
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: AppColors.orangeColor.withValues(alpha: 0.1),
+                        borderRadius: const BorderRadius.only(
+                          topRight: Radius.circular(12),
+                          bottomRight: Radius.circular(12),
                         ),
                       ),
-                    ),
-                    Expanded(
-                      child: RadioListTile<int>(
-                        value: 1,
-                        groupValue: _discountType,
-                        onChanged: (val) =>
-                            setState(() => _discountType = val!),
-                        title: Row(
-                          children: [
-                            Icon(
-                              Icons.attach_money,
-                              color: AppColors.orangeColor,
-                              size: 18,
-                            ),
-                            const SizedBox(width: 4),
-                            Flexible(
-                              child: Text(
-                                'مبلغ ثابت',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
-                        subtitle: const Text(
-                          'مثال: 50 جنيه خصم مباشر',
-                          style: TextStyle(color: Colors.grey),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                if (_discountType == 0) ...[
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.percent,
+                      child: Icon(
+                        Icons.local_offer,
                         color: AppColors.orangeColor,
-                        size: 18,
+                        size: 24,
                       ),
-                      const SizedBox(width: 4),
-                      Expanded(
+                    ),
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
                         child: CustomTextField(
-                          controller: _discountPercentageController,
-                          title: 'نسبة الخصم (%)',
-                          hinttext: 'مثال: 10',
+                          controller: _codeController,
+                          title: 'كود الخصم',
+                          hinttext: 'مثال: FOUDA10',
                           button: null,
-                          keyboardType: TextInputType.numberWithOptions(
-                            decimal: true,
-                          ),
                           validator: (value) {
                             if (value == null || value.trim().isEmpty) {
-                              return 'يرجى إدخال نسبة الخصم';
+                              return 'يرجى إدخال كود الخصم';
                             }
-                            final percentage = double.tryParse(value);
-                            if (percentage == null ||
-                                percentage <= 0 ||
-                                percentage > 100) {
-                              return 'نسبة الخصم يجب أن تكون بين 1 و 100';
+                            if (value.trim().length < 3) {
+                              return 'كود الخصم يجب أن يكون 3 أحرف على الأقل';
                             }
                             return null;
                           },
                         ),
                       ),
-                    ],
-                  ),
-                  const Padding(
-                    padding: EdgeInsets.only(top: 4, right: 32),
-                    child: Text(
-                      'أدخل نسبة مئوية فقط إذا كان الخصم نسبي',
-                      style: TextStyle(color: Colors.grey, fontSize: 12),
                     ),
-                  ),
-                ],
-                if (_discountType == 1) ...[
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.attach_money,
-                        color: AppColors.orangeColor,
-                        size: 18,
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // وصف الكود
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.grey[50],
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey[200]!),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: AppColors.orangeColor.withValues(alpha: 0.1),
+                        borderRadius: const BorderRadius.only(
+                          topRight: Radius.circular(12),
+                          bottomRight: Radius.circular(12),
+                        ),
                       ),
-                      const SizedBox(width: 4),
-                      Expanded(
+                      child: Icon(
+                        Icons.description,
+                        color: AppColors.orangeColor,
+                        size: 24,
+                      ),
+                    ),
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
                         child: CustomTextField(
-                          controller: _fixedAmountController,
-                          title: 'مبلغ خصم ثابت (جنيه)',
-                          hinttext: 'مثال: 50',
+                          controller: _descriptionController,
+                          title: 'وصف كود الخصم',
+                          hinttext: 'مثال: خصم 10% على جميع المنتجات',
                           button: null,
-                          keyboardType: TextInputType.numberWithOptions(
-                            decimal: true,
-                          ),
                           validator: (value) {
                             if (value == null || value.trim().isEmpty) {
-                              return 'يرجى إدخال مبلغ الخصم الثابت';
-                            }
-                            final amount = double.tryParse(value);
-                            if (amount == null || amount <= 0) {
-                              return 'مبلغ الخصم الثابت يجب أن يكون رقم موجب';
+                              return 'يرجى إدخال وصف كود الخصم';
                             }
                             return null;
                           },
                         ),
                       ),
-                    ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 20),
+
+        // قسم نوع الخصم
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withValues(alpha: 0.1),
+                spreadRadius: 1,
+                blurRadius: 10,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.green.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(
+                      Icons.monetization_on,
+                      color: Colors.green,
+                      size: 20,
+                    ),
                   ),
-                  const Padding(
-                    padding: EdgeInsets.only(top: 4, right: 32),
-                    child: Text(
-                      'أدخل مبلغًا فقط إذا كان الخصم ثابتًا',
-                      style: TextStyle(color: Colors.grey, fontSize: 12),
+                  const SizedBox(width: 12),
+                  const Text(
+                    'نوع الخصم',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
                     ),
                   ),
                 ],
+              ),
+              const SizedBox(height: 16),
+
+              // خيارات نوع الخصم
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.grey[50],
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey[200]!),
+                ),
+                child: Column(
+                  children: [
+                    // خيار النسبة المئوية
+                    InkWell(
+                      onTap: () => setState(() => _discountType = 0),
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(12),
+                        topRight: Radius.circular(12),
+                      ),
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: _discountType == 0
+                              ? AppColors.orangeColor.withValues(alpha: 0.1)
+                              : Colors.transparent,
+                          borderRadius: const BorderRadius.only(
+                            topLeft: Radius.circular(12),
+                            topRight: Radius.circular(12),
+                          ),
+                          border: _discountType == 0
+                              ? Border.all(color: AppColors.orangeColor, width: 2)
+                              : null,
+                        ),
+                        child: Row(
+                          children: [
+                            Radio<int>(
+                              value: 0,
+                              groupValue: _discountType,
+                              onChanged: (val) => setState(() => _discountType = val!),
+                              activeColor: AppColors.orangeColor,
+                            ),
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.blue.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Icon(
+                                Icons.percent,
+                                color: Colors.blue,
+                                size: 20,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            const Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'نسبة مئوية',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                  Text(
+                                    'مثال: 10% من قيمة الطلب',
+                                    style: TextStyle(
+                                      color: Colors.grey,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    const Divider(height: 1),
+
+                    // خيار المبلغ الثابت
+                    InkWell(
+                      onTap: () => setState(() => _discountType = 1),
+                      borderRadius: const BorderRadius.only(
+                        bottomLeft: Radius.circular(12),
+                        bottomRight: Radius.circular(12),
+                      ),
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: _discountType == 1
+                              ? AppColors.orangeColor.withValues(alpha: 0.1)
+                              : Colors.transparent,
+                          borderRadius: const BorderRadius.only(
+                            bottomLeft: Radius.circular(12),
+                            bottomRight: Radius.circular(12),
+                          ),
+                          border: _discountType == 1
+                              ? Border.all(color: AppColors.orangeColor, width: 2)
+                              : null,
+                        ),
+                        child: Row(
+                          children: [
+                            Radio<int>(
+                              value: 1,
+                              groupValue: _discountType,
+                              onChanged: (val) => setState(() => _discountType = val!),
+                              activeColor: AppColors.orangeColor,
+                            ),
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.green.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Icon(
+                                Icons.attach_money,
+                                color: Colors.green,
+                                size: 20,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            const Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'مبلغ ثابت',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                  Text(
+                                    'مثال: 50 جنيه خصم مباشر',
+                                    style: TextStyle(
+                                      color: Colors.grey,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // حقل قيمة الخصم
+              if (_discountType == 0) ...[
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withValues(alpha: 0.05),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.blue.withValues(alpha: 0.2)),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.withValues(alpha: 0.1),
+                          borderRadius: const BorderRadius.only(
+                            topRight: Radius.circular(12),
+                            bottomRight: Radius.circular(12),
+                          ),
+                        ),
+                        child: const Icon(
+                          Icons.percent,
+                          color: Colors.blue,
+                          size: 24,
+                        ),
+                      ),
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: CustomTextField(
+                            controller: _discountPercentageController,
+                            title: 'نسبة الخصم (%)',
+                            hinttext: 'مثال: 10',
+                            button: null,
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return 'يرجى إدخال نسبة الخصم';
+                              }
+                              final percentage = double.tryParse(value);
+                              if (percentage == null || percentage <= 0 || percentage > 100) {
+                                return 'نسبة الخصم يجب أن تكون بين 1 و 100';
+                              }
+                              return null;
+                            },
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ],
-            ),
+
+              if (_discountType == 1) ...[
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.green.withValues(alpha: 0.05),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.green.withValues(alpha: 0.2)),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.green.withValues(alpha: 0.1),
+                          borderRadius: const BorderRadius.only(
+                            topRight: Radius.circular(12),
+                            bottomRight: Radius.circular(12),
+                          ),
+                        ),
+                        child: const Icon(
+                          Icons.attach_money,
+                          color: Colors.green,
+                          size: 24,
+                        ),
+                      ),
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: CustomTextField(
+                            controller: _fixedAmountController,
+                            title: 'مبلغ خصم ثابت (جنيه)',
+                            hinttext: 'مثال: 50',
+                            button: null,
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return 'يرجى إدخال مبلغ الخصم الثابت';
+                              }
+                              final amount = double.tryParse(value);
+                              if (amount == null || amount <= 0) {
+                                return 'مبلغ الخصم الثابت يجب أن يكون رقم موجب';
+                              }
+                              return null;
+                            },
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
           ),
         ),
       ],

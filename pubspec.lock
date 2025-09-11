@@ -535,7 +535,7 @@ packages:
     source: hosted
     version: "0.1.4+1"
   flutter_launcher_icons:
-    dependency: "direct main"
+    dependency: "direct dev"
     description:
       name: flutter_launcher_icons
       sha256: "526faf84284b86a4cb36d20a5e45147747b7563d921373d4ee0559c54fcdbcea"
@@ -556,7 +556,7 @@ packages:
     source: sdk
     version: "0.0.0"
   flutter_native_splash:
-    dependency: "direct main"
+    dependency: "direct dev"
     description:
       name: flutter_native_splash
       sha256: "8321a6d11a8d13977fa780c89de8d257cce3d841eecfb7a4cadffcc4f12d82dc"
@@ -685,14 +685,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "4.1.2"
-  icons_launcher:
-    dependency: "direct main"
-    description:
-      name: icons_launcher
-      sha256: "2949eef3d336028d89133f69ef221d877e09deed04ebd8e738ab4a427850a7a2"
-      url: "https://pub.dev"
-    source: hosted
-    version: "3.0.1"
   image:
     dependency: transitive
     description:
@@ -765,6 +757,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.2.1+1"
+  import_sorter:
+    dependency: "direct dev"
+    description:
+      name: import_sorter
+      sha256: eb15738ccead84e62c31e0208ea4e3104415efcd4972b86906ca64a1187d0836
+      url: "https://pub.dev"
+    source: hosted
+    version: "4.6.0"
   intl:
     dependency: transitive
     description:
@@ -1210,6 +1210,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.7.4"
+  tint:
+    dependency: transitive
+    description:
+      name: tint
+      sha256: "9652d9a589f4536d5e392cf790263d120474f15da3cf1bee7f1fdb31b4de5f46"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.0.1"
   typed_data:
     dependency: transitive
     description:

@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../models/category_model.dart';
+import '../../services/cloudinary_service.dart';
 
 class CategoryService {
   static final CategoryService _instance = CategoryService._internal();
@@ -9,6 +10,7 @@ class CategoryService {
 
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final CloudinaryService _cloudinaryService = CloudinaryService();
 
   // Helper method to check if current user is admin
   Future<bool> _isCurrentUserAdmin() async {
@@ -65,10 +67,28 @@ class CategoryService {
     // التحقق من صلاحيات المدير قبل الحذف
     final isAdmin = await _isCurrentUserAdmin();
     if (!isAdmin) {
-      throw Exception('غير مسموح! صلاحية حذف الفئات مقتصرة على المدير فقط');
+      throw Exception('غير مسموح! صل��حية حذف الفئات مقتصرة على المدير فقط');
     }
 
-    await _firestore.collection('categories').doc(categoryId).delete();
+    try {
+      // الحصول على بيانات الفئة أولاً لاستخ��اج رابط الصورة
+      final categoryDoc = await _firestore.collection('categories').doc(categoryId).get();
+
+      if (categoryDoc.exists) {
+        final categoryData = categoryDoc.data()!;
+        final imageUrl = categoryData['image_url'] as String?;
+
+        if (imageUrl != null && imageUrl.isNotEmpty) {
+          // حذف الصورة من Cloudinary
+          await _cloudinaryService.deleteImageByUrl(imageUrl);
+        }
+      }
+
+      // حذف الفئة من Firebase
+      await _firestore.collection('categories').doc(categoryId).delete();
+    } catch (e) {
+      throw Exception('فشل في حذف الفئة: $e');
+    }
   }
 
   // Pagination methods
