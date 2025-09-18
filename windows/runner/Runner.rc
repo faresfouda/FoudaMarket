@@ -90,12 +90,12 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "com.example" "\0"
-            VALUE "FileDescription", "deliveryapp" "\0"
+            VALUE "FileDescription", "Fouda Market" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "deliveryapp" "\0"
+            VALUE "InternalName", "Fouda Market" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2025 com.example. All rights reserved." "\0"
-            VALUE "OriginalFilename", "deliveryapp.exe" "\0"
-            VALUE "ProductName", "deliveryapp" "\0"
+            VALUE "OriginalFilename", "Fouda Market.exe" "\0"
+            VALUE "ProductName", "Fouda Market" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

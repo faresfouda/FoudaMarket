@@ -1,6 +1,6 @@
 {
-    "name": "deliveryapp",
-    "short_name": "deliveryapp",
+    "name": "Fouda Market",
+    "short_name": "Fouda Market",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

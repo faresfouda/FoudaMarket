@@ -1,11 +1,11 @@
-import 'package:fodamarket/components/Button.dart';
+import 'package:fouda_market/components/Button.dart';
 import 'package:flutter/material.dart';
-import 'package:fodamarket/theme/appcolors.dart';
-import 'package:fodamarket/views/SignIn/SignIn.dart';
-import 'package:get/get.dart';
+import 'package:fouda_market/theme/appcolors.dart';
+import 'package:fouda_market/views/auth/auth_selection_screen.dart';
 
 class OnBording extends StatelessWidget {
-  const OnBording({super.key});
+  final VoidCallback? onFinish;
+  const OnBording({super.key, this.onFinish});
 
   @override
   Widget build(BuildContext context) {
@@ -57,7 +57,11 @@ class OnBording extends StatelessWidget {
               SizedBox(height: 20),
               Button(
                 onPressed: () {
-                  Get.to(SignIn());
+                  if (onFinish != null) {
+                    onFinish!();
+                  } else {
+                    Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => AuthSelectionScreen()));
+                  }
                 },
                 buttonContent: Text(
                   'اطلب دلوقتي',

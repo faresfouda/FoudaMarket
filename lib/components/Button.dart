@@ -6,10 +6,12 @@ class Button extends StatelessWidget {
     required this.onPressed,
     required this.buttonContent,
     required this.buttonColor,
+    this.borderColor,
   });
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
   final Widget buttonContent;
   final Color buttonColor;
+  final Color? borderColor;
 
   @override
   Widget build(BuildContext context) {
@@ -19,7 +21,12 @@ class Button extends StatelessWidget {
         backgroundColor: WidgetStatePropertyAll(buttonColor),
         minimumSize: WidgetStatePropertyAll(Size(353, 67)),
         shape: WidgetStatePropertyAll(
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: borderColor != null
+                ? BorderSide(color: borderColor!, width: 1.5)
+                : BorderSide.none,
+          ),
         ),
       ),
       child: buttonContent,

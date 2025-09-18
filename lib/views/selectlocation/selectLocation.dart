@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:fodamarket/components/Button.dart';
-import 'package:fodamarket/components/CustomTextField.dart';
-import 'package:fodamarket/components/navigatorbutton.dart';
-import 'package:fodamarket/theme/appcolors.dart';
-import 'package:fodamarket/views/login/Login.dart';
+import 'package:fouda_market/components/Button.dart';
+import 'package:fouda_market/components/CustomTextField.dart';
+import 'package:fouda_market/components/navigatorbutton.dart';
+import 'package:fouda_market/theme/appcolors.dart';
+import 'package:fouda_market/views/auth/auth_selection_screen.dart';
 
 class Selectlocation extends StatelessWidget {
   const Selectlocation({super.key});
@@ -57,7 +57,7 @@ class Selectlocation extends StatelessWidget {
                   Button(
                     onPressed: () {
                       Navigator.of(context).push(
-                        MaterialPageRoute(builder: (context) => Login()),
+                        MaterialPageRoute(builder: (context) => AuthSelectionScreen()),
                       );
                     },
                     buttonContent: Text(
