@@ -9,11 +9,14 @@ import '../../routes.dart';
 import '../../components/connection_aware_widget.dart';
 
 class CompleteProfileScreen extends StatefulWidget {
-  final String phone;
+  final String? phone;
+  final String? email;
   final String uid;
+
   const CompleteProfileScreen({
     super.key,
-    required this.phone,
+    this.phone,
+    this.email,
     required this.uid,
   });
 
@@ -25,34 +28,49 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   bool _isLoading = false;
-  bool _isOffline = false; // جديد
+  bool _isOffline = false;
 
   Future<void> _saveProfile() async {
     if (!_formKey.currentState!.validate()) return;
+
     setState(() {
       _isLoading = true;
     });
+
     try {
+      // تحديد مقدم الخدمة بناءً على البيانات المتوفرة
+      String authProvider = 'phone';
+      if (widget.email != null && widget.phone == null) {
+        authProvider = 'email';
+      } else if (widget.email != null && widget.phone != null) {
+        authProvider = 'multiple';
+      }
+
       await FirebaseFirestore.instance.collection('users').doc(widget.uid).set({
-        'id': widget.uid,
+        'uid': widget.uid,
         'name': _nameController.text.trim(),
-        'phone': widget.phone,
-        'email': '', // إضافة حقل email فارغ للتناسق
+        'phone': widget.phone ?? '',
+        'email': widget.email ?? '',
         'role': 'user',
+        'isEmailVerified': widget.email != null,
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
-        'authProvider': 'phone',
+        'authProviders': [authProvider],
+        'profileCompleted': true,
       });
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('تم حفظ البيانات بنجاح')));
-      // Use BLoC to update auth state instead of direct emit
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('تم حفظ البيانات بنجاح')),
+      );
+
       BlocProvider.of<AuthBloc>(context).add(AuthCheckRequested());
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('فشل حفظ البيانات')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('خطأ في حفظ البيانات: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     } finally {
       setState(() {
         _isLoading = false;
@@ -74,71 +92,106 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
         listener: (context, state) {
           if (state is Authenticated) {
             if (state.userProfile != null) {
-              switch (state.userProfile!.role) {
-                case 'admin':
-                  Navigator.of(context).pushNamedAndRemoveUntil(
-                    AppRoutes.adminDashboard,
-                    (route) => false,
-                  );
-                  break;
-                case 'data_entry':
-                  Navigator.of(context).pushNamedAndRemoveUntil(
-                    AppRoutes.dataEntryHome,
-                    (route) => false,
-                  );
-                  break;
-                case 'user':
-                default:
-                  Navigator.of(
-                    context,
-                  ).pushNamedAndRemoveUntil(AppRoutes.main, (route) => false);
-              }
-            } else {
-              // منع الدخول بدون ملف شخصي
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('خطأ في بيانات المستخدم'),
-                  backgroundColor: Colors.red,
-                ),
+              Navigator.of(context).pushNamedAndRemoveUntil(
+                AppRoutes.authWrapper,
+                (route) => false,
               );
-              context.read<AuthBloc>().add(SignOutRequested());
             }
           }
         },
         child: Scaffold(
+          backgroundColor: Colors.white,
           appBar: AppBar(
             backgroundColor: Colors.transparent,
             elevation: 0,
             automaticallyImplyLeading: false,
-            title: Text(
-              'إكمال البيانات',
-              style: TextStyle(
-                color: AppColors.blackColor,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            centerTitle: true,
           ),
-          body: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
+          body: SingleChildScrollView(
+            padding: const EdgeInsets.all(20.0),
             child: Form(
               key: _formKey,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'يرجى إدخال اسمك لإكمال التسجيل',
+                    'أكمل ملفك الشخصي',
                     style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w700,
+                      fontSize: 26,
+                      fontWeight: FontWeight.w600,
                       color: AppColors.blackColor,
                     ),
                   ),
-                  SizedBox(height: 32),
+                  SizedBox(height: 8),
+                  Text(
+                    'أدخل اسمك لإكمال إنشاء الحساب',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w400,
+                      color: AppColors.mediumGrayColor,
+                    ),
+                  ),
+                  SizedBox(height: 30),
+
+                  // عرض معلومات الاتصال
+                  if (widget.phone != null)
+                    Container(
+                      padding: EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.green.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.green.shade200),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.phone, color: Colors.green.shade600),
+                          SizedBox(width: 8),
+                          Text(
+                            'رقم الهاتف: ${widget.phone}',
+                            style: TextStyle(color: Colors.green.shade800),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                  if (widget.email != null)
+                    Container(
+                      margin: EdgeInsets.only(top: widget.phone != null ? 8 : 0),
+                      padding: EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.blue.shade200),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.email, color: Colors.blue.shade600),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'البريد الإلكتروني: ${widget.email}',
+                              style: TextStyle(color: Colors.blue.shade800),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                  SizedBox(height: 20),
+
+                  Text(
+                    'الاسم الكامل',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.mediumGrayColor,
+                    ),
+                  ),
+                  SizedBox(height: 8),
                   TextFormField(
                     controller: _nameController,
                     decoration: InputDecoration(
-                      labelText: 'الاسم الكامل',
+                      hintText: 'أدخل اسمك الكامل',
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -146,49 +199,49 @@ class _CompleteProfileScreenState extends State<CompleteProfileScreen> {
                         borderSide: BorderSide(color: AppColors.orangeColor),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      hintText: 'أدخل اسمك الكامل',
+                      contentPadding: EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
                     ),
-                    style: TextStyle(fontSize: 18),
-                    validator: (value) => value == null || value.isEmpty
-                        ? 'يرجى إدخال الاسم'
-                        : null,
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'يرجى إدخال اسمك الكامل';
+                      }
+                      if (value.trim().length < 2) {
+                        return 'الاسم يجب أن يكون حرفين على الأقل';
+                      }
+                      return null;
+                    },
                   ),
+
                   SizedBox(height: 40),
+
                   SizedBox(
                     width: double.infinity,
-                    height: 52,
+                    height: 50,
                     child: ElevatedButton(
+                      onPressed: _isLoading ? null : _saveProfile,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.orangeColor,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      onPressed: (_isLoading || _isOffline)
-                          ? null
-                          : _saveProfile,
                       child: _isLoading
                           ? CircularProgressIndicator(color: Colors.white)
                           : Text(
-                              'حفظ ومتابعة',
+                              'حفظ البيانات',
                               style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
                                 color: Colors.white,
                               ),
                             ),
                     ),
                   ),
-                  SizedBox(height: 16),
-                  Center(
-                    child: Text(
-                      'رقم هاتفك: ${widget.phone}',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: AppColors.mediumGrayColor,
-                      ),
-                    ),
-                  ),
+
+                  SizedBox(height: 20),
                 ],
               ),
             ),

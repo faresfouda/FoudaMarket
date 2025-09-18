@@ -8,6 +8,7 @@ import 'package:fouda_market/views/auth/sign_up_screen.dart';
 import 'package:fouda_market/blocs/auth/index.dart';
 import '../../routes.dart';
 import '../../components/connection_aware_widget.dart';
+import '../../core/services/google_auth_service.dart';
 
 class LoginScreen extends StatefulWidget {
   final String? preFilledEmail;
@@ -19,11 +20,13 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginState extends State<LoginScreen> {
+  final GoogleAuthService _googleAuthService = GoogleAuthService();
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _emailController;
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
   bool _isLoading = false;
+  bool _isGoogleLoading = false;
   bool _isOffline = false; // جديد
 
   @override

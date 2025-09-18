@@ -48,6 +48,30 @@ class _DataEntryHomeScreenState extends State<DataEntryHomeScreen> {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
+        appBar: _selectedIndex == 3 // إخفاء AppBar في صفحة الحساب (index 3)
+            ? null
+            : AppBar(
+                backgroundColor: Colors.white,
+                elevation: 0,
+                title: Text(
+                  _titles[_selectedIndex],
+                  style: const TextStyle(
+                    color: Colors.black,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 22,
+                  ),
+                ),
+                actions: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                    child: const CircleAvatar(
+                      backgroundImage: AssetImage('assets/home/logo.jpg'),
+                      radius: 18,
+                    ),
+                  ),
+                ],
+                iconTheme: const IconThemeData(color: Colors.black),
+              ),
         body: IndexedStack(
           index: _selectedIndex,
           children: _screens,

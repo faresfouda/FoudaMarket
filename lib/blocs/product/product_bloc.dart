@@ -50,6 +50,7 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
     on<AddToFavorites>(_onAddToFavorites);
     on<RemoveFromFavorites>(_onRemoveFromFavorites);
     on<CheckFavoriteStatus>(_onCheckFavoriteStatus);
+    on<ResetProductState>(_onResetProductState);
     on<ResetHomeProducts>((event, emit) async {
       print('ResetHomeProducts event received');
       emit(ProductsLoading());
@@ -80,15 +81,29 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
     FetchProducts event,
     Emitter<ProductState> emit,
   ) async {
-    if (state is ProductsLoading) return;
-    emit(ProductsLoading());
+    // Prevent duplicate loading requests for the same category
+    if (state is ProductsLoading && _currentCategoryId == event.categoryId) return;
+
+    // Only emit loading if we're switching to a different category or state
+    if (_currentCategoryId != event.categoryId || state is! ProductsLoaded) {
+      emit(ProductsLoading());
+    }
+
     try {
+      // Reset internal state when switching categories
+      if (_currentCategoryId != event.categoryId) {
+        _allProducts = [];
+        _hasMore = true;
+      }
+
       _currentCategoryId = event.categoryId;
+
       final products = await _firebaseService.getProductsForCategoryPaginated(
         categoryId: event.categoryId,
         limit: event.limit,
         lastProduct: event.lastProduct,
       );
+
       if (products.isEmpty) {
         _allProducts = [];
         _hasMore = false;
@@ -227,7 +242,7 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
       );
       emit(ProductsSearchLoaded(products, event.query));
     } catch (e) {
-      emit(ProductsError('Failed to search visible products:  e.toString()}'));
+      emit(ProductsError('فشل في البحث عن المنتجات: ${e.toString()}'));
     }
   }
 
@@ -421,8 +436,8 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
     Emitter<ProductState> emit,
   ) async {
     try {
-      // التحقق من وجود البيانات مسبقاً لتجنب الوميض
-      if (state is HomeProductsLoaded) {
+      // التحقق من وجود البيانات مسبقاً لتجنب الوميض للصفحة الرئيسية فقط
+      if (state is HomeProductsLoaded && event.limit == 10) {
         final currentState = state as HomeProductsLoaded;
         if (currentState.bestSellers.isNotEmpty && !currentState.isLoadingBestSellers) {
           // البيانات موجودة بالفعل، لا حاجة لإعادة التحميل
@@ -437,22 +452,31 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
       final products = await _firebaseService.getBestSellers(limit: event.limit);
       _bestSellers = products;
 
-      if (state is HomeProductsLoaded) {
+      // إذا كان هذا طلب من الصفحة الرئيسية (limit = 10)، أرسل HomeProductsLoaded
+      if (state is HomeProductsLoaded && event.limit == 10) {
         final currentState = state as HomeProductsLoaded;
         emit(currentState.copyWith(
           bestSellers: products,
           isLoadingBestSellers: false,
         ));
-      } else {
+      }
+      // إذا كان هذا طلب من صفحة الأكثر مبيعاً (limit > 10)، أرسل BestSellersLoaded
+      else if (event.limit > 10) {
+        emit(BestSellersLoaded(products));
+      }
+      // للحالات الأخرى
+      else {
         emit(HomeProductsLoaded(
           specialOffers: _specialOffers,
           bestSellers: products,
           recommendedProducts: _recommendedProducts,
+          isLoadingSpecialOffers: false,
           isLoadingBestSellers: false,
+          isLoadingRecommended: false,
         ));
       }
     } catch (e) {
-      if (state is HomeProductsLoaded) {
+      if (state is HomeProductsLoaded && event.limit == 10) {
         final currentState = state as HomeProductsLoaded;
         emit(currentState.copyWith(isLoadingBestSellers: false));
       }
@@ -466,7 +490,7 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
   ) async {
     try {
       // التحقق من وجود البيانات مسبقاً لتجنب الوميض
-      if (state is HomeProductsLoaded) {
+      if (state is HomeProductsLoaded && event.limit == 10) {
         final currentState = state as HomeProductsLoaded;
         if (currentState.specialOffers.isNotEmpty && !currentState.isLoadingSpecialOffers) {
           // البيانات موجودة بالفعل، لا حاجة لإعادة التحميل
@@ -481,13 +505,20 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
       final products = await _firebaseService.getSpecialOffers(limit: event.limit);
       _specialOffers = products;
 
-      if (state is HomeProductsLoaded) {
+      // إذا كان هذا طلب من الصفحة الرئيسية (limit = 10)، أرسل HomeProductsLoaded
+      if (state is HomeProductsLoaded && event.limit == 10) {
         final currentState = state as HomeProductsLoaded;
         emit(currentState.copyWith(
           specialOffers: products,
           isLoadingSpecialOffers: false,
         ));
-      } else {
+      }
+      // إذا كان هذا طلب من صفحة العروض الخاصة (limit > 10)، أرسل SpecialOffersLoaded
+      else if (event.limit > 10) {
+        emit(SpecialOffersLoaded(products));
+      }
+      // للحالات الأخرى
+      else {
         emit(HomeProductsLoaded(
           specialOffers: products,
           bestSellers: _bestSellers,
@@ -496,7 +527,7 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
         ));
       }
     } catch (e) {
-      if (state is HomeProductsLoaded) {
+      if (state is HomeProductsLoaded && event.limit == 10) {
         final currentState = state as HomeProductsLoaded;
         emit(currentState.copyWith(isLoadingSpecialOffers: false));
       }
@@ -690,5 +721,18 @@ class ProductBloc extends Bloc<ProductEvent, ProductState> {
     } catch (e) {
       emit(FavoritesError('Failed to check favorite status: ${e.toString()}'));
     }
+  }
+
+  void _onResetProductState(
+    ResetProductState event,
+    Emitter<ProductState> emit,
+  ) {
+    // إعادة تعيين جميع المتغيرات الداخلية
+    _allProducts = [];
+    _hasMore = true;
+    _currentCategoryId = null;
+
+    // إرسال حالة أولية نظيفة
+    emit(ProductsInitial());
   }
 }

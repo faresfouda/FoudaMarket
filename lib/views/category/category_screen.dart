@@ -37,7 +37,6 @@ class _CategoryScreenState extends State<CategoryScreen> {
       widget.categoryId,
       limit: 20,
     ));
-
     // Setup infinite scroll
     _scrollController.addListener(_onScroll);
   }

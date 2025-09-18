@@ -68,3 +68,4 @@ class EmailVerificationRequired extends AuthState {
   @override
   List<Object?> get props => [email];
 }
+

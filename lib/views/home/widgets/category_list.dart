@@ -7,6 +7,9 @@ import 'package:fouda_market/models/category_model.dart';
 import 'package:fouda_market/views/category/category_screen.dart';
 import 'package:fouda_market/components/category_card.dart';
 import 'package:fouda_market/theme/appcolors.dart';
+import 'package:fouda_market/blocs/product/product_bloc.dart';
+
+import '../../../blocs/product/product_event.dart';
 
 class CategoryListWidget extends StatelessWidget {
   const CategoryListWidget({super.key});
@@ -128,17 +131,32 @@ class _CategoryList extends StatelessWidget {
             categoryName: category.name,
             bgColor: bgColor,
             onTap: () async {
-              await Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => CategoryScreen(
-                    categoryName: category.name,
-                    categoryId: category.id,
+              try {
+                // Set the current category first
+                context.read<ProductBloc>().add(SetCurrentCategory(category.id));
+
+                // Navigate to category screen
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => CategoryScreen(
+                      categoryName: category.name,
+                      categoryId: category.id,
+                    ),
                   ),
-                ),
-              );
-              // إعادة تحميل الفئات بعد العودة
-              context.read<CategoryBloc>().add(const FetchCategories());
+                );
+
+                // Remove unnecessary category refresh that's causing performance issues
+                // Categories don't change frequently, so no need to refresh on every navigation
+              } catch (e) {
+                print('خطأ في التنقل إلى الفئة: $e');
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('خطأ في فتح القسم: ${category.name}'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
             },
           );
         },

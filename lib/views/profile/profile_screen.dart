@@ -175,6 +175,18 @@ class ProfileScreen extends StatelessWidget {
                             );
                           },
                         ),
+                        if (state is! Guest) ...[
+                          _ProfileListTile(
+                            title: 'إدارة الحسابات المربوطة',
+                            iconPath: 'assets/home/Orders icon.svg', // يمكن تغيير الأيقونة
+                            onTap: () {
+                              Navigator.pushNamed(
+                                context,
+                                AppRoutes.linkedAccounts,
+                              );
+                            },
+                          ),
+                        ],
                         _ProfileListTile(
                           title: 'عنوان التوصيل',
                           iconPath: 'assets/home/Delicery address.svg',

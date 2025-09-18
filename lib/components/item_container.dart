@@ -26,7 +26,7 @@ class ProductCard extends StatelessWidget {
   bool _isBaseUnitAvailable() {
     if (product.units != null && product.units!.isNotEmpty) {
       final primaryUnit = product.units!.firstWhere(
-        (unit) => unit.isPrimary,
+            (unit) => unit.isPrimary,
         orElse: () => product.units!.first,
       );
       return primaryUnit.isActive;
@@ -65,24 +65,24 @@ class ProductCard extends StatelessWidget {
                       borderRadius: BorderRadius.circular(12.0),
                       child: product.images.isNotEmpty
                           ? CachedImage(
-                              imageUrl: product.images.first,
-                              width: 80, // تقليل حجم الصورة
-                              height: 80,
-                              fit: BoxFit.cover,
-                            )
+                        imageUrl: product.images.first,
+                        width: 80, // تقليل حجم الصورة
+                        height: 80,
+                        fit: BoxFit.cover,
+                      )
                           : Container(
-                              width: 80,
-                              height: 80,
-                              decoration: BoxDecoration(
-                                color: Colors.grey[200],
-                                borderRadius: BorderRadius.circular(12.0),
-                              ),
-                              child: Icon(
-                                Icons.image_not_supported,
-                                size: 30,
-                                color: Colors.grey[400],
-                              ),
-                            ),
+                        width: 80,
+                        height: 80,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[200],
+                          borderRadius: BorderRadius.circular(12.0),
+                        ),
+                        child: Icon(
+                          Icons.image_not_supported,
+                          size: 30,
+                          color: Colors.grey[400],
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 6.0), // تقليل المسافة
@@ -208,11 +208,11 @@ class ProductCard extends StatelessWidget {
                             bool isBaseUnitAvailable = true;
                             String selectedUnit;
                             double selectedPrice;
-                            
+
                             if (product.units != null && product.units!.isNotEmpty) {
                               // البحث عن الوحدة الأساسية أولاً
                               final primaryUnit = product.units!.firstWhere(
-                                (unit) => unit.isPrimary,
+                                    (unit) => unit.isPrimary,
                                 orElse: () => product.units!.first,
                               );
                               selectedUnit = primaryUnit.name;
@@ -225,7 +225,7 @@ class ProductCard extends StatelessWidget {
                               // إذا لم تكن هناك وحدات، نفترض أن الوحدة الأساسية متوفرة
                               isBaseUnitAvailable = true;
                             }
-                            
+
                             if (!isBaseUnitAvailable) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
@@ -236,7 +236,7 @@ class ProductCard extends StatelessWidget {
                               );
                               return;
                             }
-                            
+
                             final cartItem = CartItemModel(
                               id: '', // سيتم إنشاؤه تلقائياً من Firebase
                               userId: user.uid,
@@ -249,9 +249,9 @@ class ProductCard extends StatelessWidget {
                               createdAt: DateTime.now(),
                               updatedAt: DateTime.now(),
                             );
-                            
+
                             context.read<CartBloc>().add(AddToCart(cartItem));
-                            
+
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: Text('تم إضافة ${product.name} ($selectedUnit) إلى السلة'),
@@ -278,8 +278,8 @@ class ProductCard extends StatelessWidget {
                             borderRadius: BorderRadius.circular(16.0),
                           ),
                           child: Icon(
-                            Icons.add, 
-                            color: Colors.white, 
+                            Icons.add,
+                            color: Colors.white,
                             size: 18,
                           ), // تقليل حجم الأيقونة
                         ),

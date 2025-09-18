@@ -34,5 +34,14 @@
 </head>
 <body>
   <script src="flutter_bootstrap.js" async></script>
+  <script>
+    window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', {
+      'size': 'invisible',
+      'callback': (response) => {
+        // reCAPTCHA solved
+        console.log('reCAPTCHA solved:', response);
+      }
+    });
+  </script>
 </body>
 </html>

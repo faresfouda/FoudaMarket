@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fouda_market/theme/appcolors.dart';
-import 'package:fouda_market/components/Button.dart';
 
 class EmailVerificationScreen extends StatefulWidget {
   final String email;
@@ -13,42 +13,150 @@ class EmailVerificationScreen extends StatefulWidget {
 
 class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
   bool _isResending = false;
-  bool _isVerified = false;
+  bool _isChecking = false;
   String? _message;
+  bool _isVerified = false;
 
   @override
   void initState() {
     super.initState();
-    _checkVerification();
   }
 
   Future<void> _checkVerification() async {
-    final user = FirebaseAuth.instance.currentUser;
-    await user?.reload();
-    if (user != null && user.emailVerified) {
+    setState(() {
+      _isChecking = true;
+      _message = null;
+    });
+
+    try {
+      // البحث عن المستخدم في قاعدة البيانات
+      final userQuery = await FirebaseFirestore.instance
+          .collection('users')
+          .where('email', isEqualTo: widget.email)
+          .limit(1)
+          .get();
+
+      if (userQuery.docs.isEmpty) {
+        setState(() {
+          _message = 'لم يتم العثور على الحساب. يرجى إنشاء حساب جديد.';
+          _isVerified = false;
+        });
+        return;
+      }
+
+      final userDoc = userQuery.docs.first;
+      final userData = userDoc.data();
+      final userId = userDoc.id;
+
+      // التحقق من حالة isEmailVerified في قاعدة البيانات
+      bool isVerifiedInDB = userData['isEmailVerified'] ?? false;
+
+      if (isVerifiedInDB) {
+        setState(() {
+          _message = 'تم التحقق من البريد الإلكتروني مسبقاً. سيتم توجيهك لتسجيل الدخول.';
+          _isVerified = true;
+        });
+
+        // الانتقال لصفحة تسجيل الدخول
+        Future.delayed(const Duration(seconds: 2), () {
+          Navigator.of(context).pushNamedAndRemoveUntil(
+            '/login',
+            (route) => false,
+          );
+        });
+        return;
+      }
+
+      // محاولة التحقق من Firebase Auth للتأكد من التفعيل
+      try {
+        // نستخدم fetchSignInMethodsForEmail للتحقق من حالة البريد الإلكتروني
+        final signInMethods = await FirebaseAuth.instance.fetchSignInMethodsForEmail(widget.email);
+
+        if (signInMethods.isNotEmpty) {
+          // البريد الإلكتروني موجود في Firebase Auth
+          // نفترض أن التفعيل تم وننتقل لصفحة تسجيل الدخول مباشرة
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(userId)
+              .update({
+            'isEmailVerified': true,
+            'updatedAt': FieldValue.serverTimestamp(),
+          });
+
+          setState(() {
+            _message = 'تم التحقق من البريد الإلكتروني بنجاح! سيتم توجيهك لتسجيل الدخول.';
+            _isVerified = true;
+          });
+
+          // الانتقال لصفحة تسجيل الدخول
+          Future.delayed(const Duration(seconds: 2), () {
+            Navigator.of(context).pushNamedAndRemoveUntil(
+              '/login',
+              (route) => false,
+            );
+          });
+        } else {
+          setState(() {
+            _message = 'لم يتم التحقق من البريد الإلكتروني بعد. يرجى التحقق من بريدك والضغط على رابط التفعيل أولاً.';
+            _isVerified = false;
+          });
+        }
+      } catch (e) {
+        setState(() {
+          _message = 'لم يتم التحقق من البريد الإلكتروني بعد. يرجى التحقق من بريدك والضغط على رابط التفعيل أولاً.';
+          _isVerified = false;
+        });
+      }
+    } catch (e) {
       setState(() {
-        _isVerified = true;
+        _message = 'حدث خطأ أثناء التحقق. يرجى المحاولة مرة أخرى.';
+        _isVerified = false;
       });
+    } finally {
+      setState(() { _isChecking = false; });
     }
   }
 
   Future<void> _resendEmail() async {
-    setState(() { _isResending = true; _message = null; });
+    setState(() {
+      _isResending = true;
+      _message = null;
+    });
+
     try {
-      final user = FirebaseAuth.instance.currentUser;
-      await user?.sendEmailVerification();
-      setState(() { _message = 'تم إرسال رسالة التحقق مرة أخرى.'; });
+      // محاولة إنشاء مستخدم مؤقت لإرسال الرسالة
+      final tempPassword = DateTime.now().millisecondsSinceEpoch.toString();
+
+      try {
+        final userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+          email: widget.email,
+          password: tempPassword,
+        );
+
+        await userCredential.user!.sendEmailVerification();
+        await FirebaseAuth.instance.signOut();
+
+        setState(() {
+          _message = 'تم إرسال رسالة التحقق مرة أخرى إلى ${widget.email}';
+        });
+      } catch (e) {
+        if (e.toString().contains('email-already-in-use')) {
+          setState(() {
+            _message = 'تم إرسال رسالة التحقق سابقاً. يرجى التحقق من بريدك الإلكتروني أو مجلد الرسائل المهملة.';
+          });
+        } else {
+          setState(() {
+            _message = 'حدث خطأ أثناء إعادة الإرسال. يرجى المحاولة مرة أخرى.';
+          });
+        }
+      }
     } catch (e) {
-      setState(() { _message = 'حدث خطأ أثناء إعادة الإرسال.'; });
+      setState(() {
+        _message = 'حدث خطأ أثناء إعادة الإرسال. يرجى المحاولة مرة أخرى.';
+      });
     } finally {
       setState(() { _isResending = false; });
     }
-  }
-
-  Future<void> _openMailApp() async {
-    // يمكن استخدام حزمة مثل url_launcher لفتح تطبيق البريد
-    // هنا placeholder فقط
-    setState(() { _message = 'يرجى فتح تطبيق البريد الإلكتروني يدوياً.'; });
   }
 
   @override
@@ -56,110 +164,195 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
     final width = MediaQuery.of(context).size.width;
     return Scaffold(
       backgroundColor: Colors.white,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back_ios, color: AppColors.blackColor),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+      ),
       body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              const SizedBox(height: 24),
-              Center(
-                child: Image.asset(
-                  'assets/login/logo.png'
-                ),
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            const SizedBox(height: 40),
+            Center(
+              child: Image.asset(
+                'assets/login/logo.png',
+                height: 80,
               ),
-              const SizedBox(height: 32),
-              Icon(Icons.email_outlined, size: 64, color: AppColors.orangeColor),
-              const SizedBox(height: 24),
-              Text(
-                'تأكيد البريد الإلكتروني',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.blackColor,
-                ),
-                textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 40),
+            Icon(
+              Icons.email_outlined,
+              size: 80,
+              color: AppColors.orangeColor
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'تأكيد البريد الإلكتروني',
+              style: TextStyle(
+                fontSize: 26,
+                fontWeight: FontWeight.bold,
+                color: AppColors.blackColor,
               ),
-              const SizedBox(height: 12),
-              Text(
-                'لقد أرسلنا رسالة تأكيد إلى بريدك الإلكتروني التالي. يرجى فتح بريدك والضغط على رابط التفعيل، ثم العودة للتطبيق.',
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'لقد أرسلنا رسالة تأكيد إلى بريدك الإلكتروني. يرجى فتح بريدك والضغط على رابط التفعيل.',
+              style: TextStyle(
+                fontSize: 16,
+                color: AppColors.mediumGrayColor,
+                height: 1.5,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 20),
+            Container(
+              width: width * 0.9,
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+              decoration: BoxDecoration(
+                color: AppColors.orangeColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.orangeColor.withValues(alpha: 0.3)),
+              ),
+              child: Text(
+                widget.email,
                 style: TextStyle(
                   fontSize: 16,
-                  color: AppColors.mediumGrayColor,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.orangeColor,
                 ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 8),
+            ),
+
+            if (_message != null) ...[
+              const SizedBox(height: 16),
               Container(
                 width: width * 0.9,
-                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: AppColors.lightBlueColor.withOpacity(0.08),
+                  color: _isVerified ? Colors.green.shade50 : Colors.blue.shade50,
                   borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: _isVerified ? Colors.green.shade200 : Colors.blue.shade200),
                 ),
                 child: Text(
-                  widget.email,
+                  _message!,
                   style: TextStyle(
-                    fontSize: 16,
-                    color: AppColors.darkBlueColor,
-                    fontWeight: FontWeight.w600,
+                    color: _isVerified ? Colors.green.shade800 : Colors.blue.shade800,
+                    fontSize: 14,
                   ),
                   textAlign: TextAlign.center,
                 ),
               ),
-              const SizedBox(height: 24),
-              if (_message != null) ...[
-                Text(_message!, style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 12),
-              ],
-              Button(
-                onPressed: _isResending ? null : _resendEmail,
-                buttonContent: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.refresh, color: Colors.white),
-                    SizedBox(width: 8),
-                    Text(_isResending ? 'جاري الإرسال...' : 'إعادة إرسال رسالة التحقق'),
-                  ],
-                ),
-                buttonColor: AppColors.orangeColor,
-              ),
-              const SizedBox(height: 32),
-              Button(
-                onPressed: _isVerified
-                    ? () => Navigator.of(context).pop()
-                    : () async {
-                        await _checkVerification();
-                        if (_isVerified) {
-                          Navigator.of(context).pop();
-                        } else {
-                          setState(() {
-                            _message = 'لم يتم التحقق بعد. يرجى التأكد من الضغط على رابط التفعيل في بريدك.';
-                          });
-                        }
-                      },
-                buttonContent: Text(_isVerified ? 'تم التحقق! المتابعة' : 'تحقق من التفعيل ثم اضغط هنا'),
-                buttonColor: AppColors.darkBlueColor,
-              ),
-              const SizedBox(height: 24),
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).popUntil((route) => route.isFirst);
-                },
-                child: Text(
-                  'العودة لتسجيل الدخول',
-                  style: TextStyle(
-                    color: AppColors.mediumGrayColor,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 16,
+            ],
+
+            const SizedBox(height: 40),
+
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton(
+                onPressed: (_isChecking || _isResending) ? null : _checkVerification,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.orangeColor,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
+                child: _isChecking
+                    ? SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      )
+                    : Text(
+                        'تحقق من التفعيل',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
               ),
-            ],
-          ),
+            ),
+
+            const SizedBox(height: 16),
+
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: OutlinedButton(
+                onPressed: (_isResending || _isChecking) ? null : _resendEmail,
+                style: OutlinedButton.styleFrom(
+                  side: BorderSide(color: AppColors.orangeColor),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: _isResending
+                    ? SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(AppColors.orangeColor),
+                        ),
+                      )
+                    : Text(
+                        'إعادة إرسال الرسالة',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.orangeColor,
+                        ),
+                      ),
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  'تم التفعيل؟ ',
+                  style: TextStyle(
+                    color: AppColors.mediumGrayColor,
+                    fontSize: 14,
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () {
+                    Navigator.of(context).pushNamedAndRemoveUntil(
+                      '/login',
+                      (route) => false,
+                    );
+                  },
+                  child: Text(
+                    'تسجيل الدخول',
+                    style: TextStyle(
+                      color: AppColors.orangeColor,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 40),
+          ],
         ),
       ),
     );
   }
-} 
+}

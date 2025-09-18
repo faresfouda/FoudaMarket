@@ -221,25 +221,23 @@ class ProductService {
     try {
       var query = _firestore
           .collection('products')
-          .where('original_price', isGreaterThan: 0)
+          .where('is_special_offer', isEqualTo: true)
           .where('is_visible', isEqualTo: true)
           .orderBy('created_at', descending: true)
           .limit(limit);
+      
       if (lastProduct != null) {
         query = query.startAfter([lastProduct.createdAt]);
       }
+      
       final querySnapshot = await query.get();
       final products = querySnapshot.docs.map((doc) {
         final data = doc.data();
         data['id'] = doc.id;
         return ProductModel.fromJson(data);
       }).toList();
-      final specialOffers = products.where((product) {
-        return product.originalPrice != null && 
-               product.originalPrice! > 0 &&
-               product.price < product.originalPrice!;
-      }).toList();
-      return specialOffers;
+      
+      return products;
     } catch (e) {
       print('Error getting special offers: $e');
       return [];

@@ -284,42 +284,51 @@ class _CartScreenState extends State<CartScreen> with RouteAware {
   }
 
   Widget _buildBottomBar(double total) {
-    return Container(
-      color: Colors.transparent,
-      padding: const EdgeInsets.all(12.0),
-      child: Container(
-        height: 60,
-        decoration: BoxDecoration(
-          color: AppColors.orangeColor,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Material(
+    return BlocBuilder<AddressBloc, AddressState>(
+      builder: (context, addressState) {
+        final hasDefaultAddress = addressState is DefaultAddressLoaded &&
+                                  addressState.defaultAddress != null;
+
+        return Container(
           color: Colors.transparent,
-          child: InkWell(
-            borderRadius: BorderRadius.circular(12),
-            onTap: () => _navigateToCheckout(),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(
-                  Icons.shopping_cart_checkout,
-                  color: Colors.white,
-                  size: 24,
+          padding: const EdgeInsets.all(12.0),
+          child: Container(
+            height: 60,
+            decoration: BoxDecoration(
+              color: hasDefaultAddress ? AppColors.orangeColor : Colors.grey[400],
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: hasDefaultAddress ? () => _navigateToCheckout() : null,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.shopping_cart_checkout,
+                      color: hasDefaultAddress ? Colors.white : Colors.grey[600],
+                      size: 24,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      hasDefaultAddress
+                        ? 'إتمام الطلب - ${total.toStringAsFixed(2)} جنيه'
+                        : 'أضف عنوان توصيل لإتمام الطلب',
+                      style: TextStyle(
+                        color: hasDefaultAddress ? Colors.white : Colors.grey[600],
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 8),
-                Text(
-                  'إتمام الطلب - ${total.toStringAsFixed(2)} جنيه',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
@@ -345,6 +354,20 @@ class _CartScreenState extends State<CartScreen> with RouteAware {
           backgroundColor: Colors.red,
         ),
       );
+      return;
+    }
+
+    // التحقق من وجود عنوان افتراضي
+    final addressState = context.read<AddressBloc>().state;
+    if (addressState is! DefaultAddressLoaded || addressState.defaultAddress == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('يرجى إضافة عنوان توصيل لإتمام الطلب'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      // توجيه المستخدم لشاشة العناوين
+      Navigator.pushNamed(context, '/delivery-address');
       return;
     }
 

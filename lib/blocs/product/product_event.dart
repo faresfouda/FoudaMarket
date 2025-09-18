@@ -199,3 +199,7 @@ class LoadMoreAllProducts extends ProductEvent {
 class ResetHomeProducts extends ProductEvent {
   const ResetHomeProducts();
 }
+
+class ResetProductState extends ProductEvent {
+  const ResetProductState();
+}

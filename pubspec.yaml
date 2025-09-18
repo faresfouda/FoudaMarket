@@ -37,7 +37,8 @@ dependencies:
   firebase_analytics: ^10.8.4
   firebase_crashlytics: ^3.5.4
   firebase_remote_config: ^4.3.4
-  
+  google_sign_in: ^6.2.1
+
   # Storage & Security
   flutter_secure_storage: ^9.0.0
   path_provider: ^2.1.2

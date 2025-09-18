@@ -407,30 +407,6 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     );
   }
 
-  Widget _buildPromoCodeSummary() {
-    if (_appliedPromoCode == null || !_isPromoCodeValid)
-      return const SizedBox.shrink();
-    final isFixed =
-        _appliedPromoCode!.fixedAmount != null &&
-        _appliedPromoCode!.fixedAmount! > 0;
-    return Row(
-      children: [
-        Icon(Icons.discount, color: Colors.green),
-        const SizedBox(width: 8),
-        Text(
-          isFixed
-              ? 'خصم ${_appliedPromoCode!.fixedAmount!.toStringAsFixed(2)} جنيه'
-              : 'خصم ${_appliedPromoCode!.discountPercentage.toStringAsFixed(2)}%',
-          style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
-        ),
-        const Spacer(),
-        Text(
-          '-${_discountAmount.toStringAsFixed(2)} جنيه',
-          style: TextStyle(color: Colors.green),
-        ),
-      ],
-    );
-  }
 
   Widget _buildOrderDetailsSection(
     CartLoaded cartState,
